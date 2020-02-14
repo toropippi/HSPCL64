@@ -1,0 +1,19 @@
+#include "HSPCL64.as"
+
+	HCLinit
+	prg=HCLCreateProgram("kern.cl")
+	krn=HCLCreateKernel(prg,"vecAdd")
+	clmemm=HCLCreateBuffer(256*4)
+	
+	dim inta,4:inta=1,2,3,4
+	HCLWriteBuffer clmemm,inta,4*4,0,0
+	HCLSetKernel krn,0,clmemm
+	
+	HCLDoKrn1 krn,4,4
+	
+	HCLReadBuffer clmemm,inta,16,0,0
+	mes "1+1="+inta.0
+	mes "2+2="+inta.1
+	mes "3+3="+inta.2
+	mes "4+4="+inta.3
+	

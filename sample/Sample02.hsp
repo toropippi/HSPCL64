@@ -1,0 +1,9 @@
+#include "HSPCL64.as"
+
+	HCLinit
+	dim_i64 testd,77
+	mes testd.0
+	mes testd.1
+	mes "int64型の配列変数のサイズ(byte)"+varsize(testd)
+	stop
+

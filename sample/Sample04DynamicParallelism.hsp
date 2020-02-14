@@ -1,0 +1,26 @@
+#include "HSPCL64.as"
+
+	HCLinit
+	HCLSetDev 0
+	prg=HCLCreateProgram("kern2.cl")
+	krn=HCLCreateKernel(prg,"VectorAdd")
+	clmemA=HCLCreateBuffer(256*4)
+	clmemB=HCLCreateBuffer(256*4)
+	clmemC=HCLCreateBuffer(256*4)
+	
+	dim inta,256:repeat 256:inta.cnt=cnt:loop
+	HCLWriteBuffer clmemA,inta,256*4,0,0 
+	HCLWriteBuffer clmemB,inta,256*4,0,0
+	HCLWriteBuffer clmemC,inta,256*4,0,0
+	HCLSetKernel krn,0,clmemA
+	HCLSetKernel krn,1,clmemB
+	HCLSetKernel krn,2,clmemC
+	
+	HCLDoKrn1 krn,1,1
+	
+	HCLReadBuffer clmemC,inta,256*4,0,0
+
+		repeat 256
+		mes inta.cnt
+		if ginfo_cy>470:pos ginfo_cx+37,0
+		loop
