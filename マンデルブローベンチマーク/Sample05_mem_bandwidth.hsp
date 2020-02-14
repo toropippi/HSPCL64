@@ -1,0 +1,31 @@
+#include "HSPCL64.as"
+	HCLinit	
+	HCLSetDevice 0
+
+	prg=HCLCreateProgram("bandwidth.cl")
+	krn=HCLCreateKernel(prg,"t1")
+	N=1024*1024*1024//1GB
+	OUT=HCLCreateBuffer(N)
+	dim host_OUT,N/4
+	HCLSetKernel krn,0,OUT
+
+	//最初のカーネル実行によるオーバーヘッドみないなのを消費
+	HCLDoKrn1 krn,N/4,128
+	HCLFinish
+	
+	//ここから計測
+	loopnum=128*4
+	time=gettime(5)*60000+gettime(6)*1000+gettime(7)
+		repeat loopnum
+		HCLDoKrn1 krn,N/4,128
+		loop
+	HCLFinish
+	time=gettime(5)*60000+gettime(6)*1000+gettime(7)-time
+	if time<0:time+=60*60000
+
+	//CPUにもどす
+	HCLReadBuffer OUT,host_OUT,N,0,0
+	
+	mes "time"+0.001*time
+	if time==0.0:time=0.00000001
+	mes "コアれす"+(1.0*loopnum/(0.001*time))+"GB/s"
