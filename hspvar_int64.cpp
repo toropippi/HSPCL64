@@ -139,16 +139,6 @@ static void HspVarInt64_Alloc( PVal *pval, const PVal *pval2 )
 	pval->size = size;
 }
 
-/*
-static void *HspVarInt64_ArrayObject( PVal *pval, int *mptype )
-{
-	//		配列要素の指定 (文字列/連想配列用)
-	//
-	throw HSPERR_UNSUPPORTED_FUNCTION;
-	return NULL;
-}
-*/
-
 // Size
 static int HspVarInt64_GetSize( const PDAT *pval )
 {
@@ -215,7 +205,7 @@ static void HspVarInt64_GtI( PDAT *pval, const void *val )
 // Lt
 static void HspVarInt64_LtI( PDAT *pval, const void *val )
 {
-	*((int *)pval) = ( *GetPtr(pval) < *((INT64 *)(val)) );//もともとINT64じゃなくてfloatだったバグがあった
+	*((int *)pval) = ( *GetPtr(pval) < *((INT64 *)(val)) );
 	*aftertype = HSPVAR_FLAG_INT;
 }
 
