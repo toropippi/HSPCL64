@@ -1,8 +1,8 @@
 #include "HSPCL64.as"
 
 	HCLinit
-	if HCLGetDevCount()=0:dialog "対応ビデオカードがありません。終了します",1:end
-
+	if HCLGetDevCount()==0:dialog "対応ビデオカードがありません。終了します",1:end
+	
 	repeat HCLGetDevCount()
 		screen cnt,1280,840
 		HCLSetDev cnt

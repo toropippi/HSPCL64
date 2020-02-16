@@ -31,6 +31,7 @@
 #cmd HCLSetKrns $1C
 #cmd HCLGetSetCommandQueue $1D
 #cmd HCLSetCommandQueue $1E
+#cmd _ExHCLSetCommandQueueMax $1F
 
 
 #cmd _ConvRGBtoBGR 		$93

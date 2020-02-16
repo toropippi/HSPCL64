@@ -3,24 +3,20 @@
 //		HSP3.0 plugin sample
 //		onion software/onitama 2004/9
 //
-
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #include <windows.h>
-//#include <iostream>
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include "hsp3plugin.h"
 #include "hsp3struct.h"
 #include "hspvar_int64.h"
-
 #include <CL/cl.h>
 
 
-#define MAX_PLATFORM_IDS 32 //platform_idの最大値
-#define MAX_DEVICE_IDS 2048 //一度に取得できるdeviceの最大値
-#define COMMANDQUEUE_PER_DEVICE 16//1デバイスあたりのコマンドキュー
-
+const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
+const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
+int COMMANDQUEUE_PER_DEVICE = 2;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//デバイスの数
 int bufferout[1024 * 4];
 
@@ -38,7 +34,7 @@ void _ConvRGBAtoRGB(void);
 void _ConvRGBtoRGBA(void);
 void retmeserr(cl_int ret);//clEnqueueNDRangeKernel で失敗した時出すエラーメッセージをまとめた関数
 void retmeserr2(cl_int ret);//clReadで失敗した時出すエラーメッセージをまとめた関数
-
+void retmeserr3(cl_int ret);//clCreateCommandQueueで失敗した時出すエラーメッセージをまとめた関数
 
 
 
@@ -62,6 +58,7 @@ INT64 Code_geti32i64() {
 	int chk = code_getprm();							// パラメーターを取得(型は問わない)
 	int type = mpval->flag;							// パラメーターの型を取得
 	void* ppttr;
+
 	int sizeofff;
 	switch (type) {
 	case 8:								// パラメーターがint64だった時
@@ -78,8 +75,8 @@ INT64 Code_geti32i64() {
 	}
 	default:
 		puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+		break;
 	}
-	INT64 reti64;
 	return *(INT64*)ppttr;
 }
 
@@ -250,7 +247,7 @@ static void *reffunc( int *type_res, int cmd )
 		}
 		else
 		{
-			source_str = (char*)malloc(1024 * 1024 * 64);
+			source_str = new char[1024 * 1024 * 64];
 			source_size = fread(source_str, 1, 1024 * 1024 * 64, fp);
 			
 			// Build the program
@@ -258,7 +255,8 @@ static void *reffunc( int *type_res, int cmd )
 			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
 			if (err0 != CL_SUCCESS) {
 				size_t len;
-				char buffer[1024 * 2048];
+				char* buffer;
+				buffer = new char[1024 * 1024 * 2];
 				clGetProgramBuildInfo(program, device_id[clsetdev],
 					CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
 				MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
@@ -377,7 +375,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x18://clCreateProgramWithSource(str "   ")
 	{
 		char *source_str;
-		source_str = (char*)malloc(1024*1024*32);
+		source_str = new char[1024 * 1024 * 64];
 		source_str = code_gets();								// 文字列を取得
 
 		int saizu = sizeof(source_str);
@@ -386,7 +384,8 @@ static void *reffunc( int *type_res, int cmd )
 		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
 		if (err0 != CL_SUCCESS) {
 			size_t len;
-			char buffer[2048 * 64];
+			char* buffer;
+			buffer = new char[1024 * 1024 * 2];
 			clGetProgramBuildInfo(program, device_id[clsetdev],
 				CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
 			MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
@@ -410,14 +409,14 @@ static void *reffunc( int *type_res, int cmd )
 		ref_int32val = (int)clsetdev;
 		break;
 	}
-
+	
 	case 0x1D://HCLGetSetCommandQueue
 	{
 		fInt = true;
 		ref_int32val = (int)clsetque;
 		break;
 	}
-
+	
 
 
 
@@ -585,37 +584,58 @@ static int cmdfunc(int cmd)
 
 	case 0x08://HCLinit
 	{
+		cl_int errcode_ret;
 		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;
 		cl_uint ret_num_platforms;
 		clGetPlatformIDs(MAX_PLATFORM_IDS, platform_id, &ret_num_platforms);
 
 		dev_num = 0;
-		for (int i = 0; i < ret_num_platforms; i++) {
+		for (int i = 0; i < (int)ret_num_platforms; i++) {
 			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, NULL, &ret_num_devices);
 			dev_num += ret_num_devices;
 		}
+
+		if (dev_num == 0)
+		{
+			MessageBox(NULL, "No OpenCL Devices", "error", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+			break;
+		}
+
 		device_id = new cl_device_id[dev_num];
-		dev_num = 0;
-		for (int i = 0; i < ret_num_platforms; i++) {
-			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, device_id + dev_num, &ret_num_devices);
-			dev_num += ret_num_devices;
+		cl_device_id* _device_id;
+		_device_id = new cl_device_id[MAX_DEVICE_IDS];
+		
+		int dev_num_ = 0;
+		for (int i = 0; i < (int)ret_num_platforms; i++) {
+			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, &_device_id[0], &ret_num_devices);
+			
+			for (int i=0;i< (int)ret_num_devices;i++)
+			{
+				device_id[dev_num_+i] = _device_id[i];
+			}
+			dev_num_ += ret_num_devices;
 		}
 		//////////デバイス情報を取得しまくっているところ
 
 		//ここでコンテキストとコマンドキュー生成
 		context = new cl_context[dev_num];
-		command_queue = new cl_command_queue[dev_num*COMMANDQUEUE_PER_DEVICE];
+		command_queue = new cl_command_queue[dev_num * COMMANDQUEUE_PER_DEVICE];
 
+		p1 = code_getdi(0);		// パラメータ1:数値、引数
+		
 		for (int k = 0; k < dev_num; k++)
 		{//コンテキストとコマンド級ーを作る
 			context[k] = clCreateContext(NULL, 1, &device_id[k], NULL, NULL, NULL);
 			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
 			{
 				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
-					clCreateCommandQueue(context[k], device_id[k], CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_PROFILING_ENABLE, NULL);
+					clCreateCommandQueue(context[k], device_id[k], p1, &errcode_ret);
+				if (errcode_ret != CL_SUCCESS) retmeserr3(errcode_ret);
 			}
 		}
+		
 		break;
 	}
 
@@ -629,7 +649,7 @@ static int cmdfunc(int cmd)
 
 		int type = mpval->flag;							// パラメーターの型を取得
 		void* ppttr;
-		int sizeofff;
+		int sizeofff=-1;
 		switch (type) {
 		case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
 		{
@@ -657,6 +677,8 @@ static int cmdfunc(int cmd)
 		}
 		default:
 			puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+			sizeofff = -1;
+			break;
 		}
 
 		int p4 = code_getdi(0);		// パラメータ4:ローカルメモリーフラグ
@@ -729,7 +751,6 @@ static int cmdfunc(int cmd)
 
 	case 0x0F:	// HCLReadBuffer
 	{
-		
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 
@@ -1017,10 +1038,16 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-
+	
 	case 0x1E://HCLSetCommandQueue
 	{
-		clsetdev = code_getdi(0);
+		clsetque = code_getdi(0);
+		break;
+	}
+
+	case 0x1F:	// _ExHCLSetCommandQueueMax
+	{
+		COMMANDQUEUE_PER_DEVICE = code_getdi(0);
 		break;
 	}
 
@@ -1271,6 +1298,34 @@ void retmeserr2(cl_int ret)
 
 }
 
+void retmeserr3(cl_int ret)
+{
+	switch (ret) {							//分岐
+	case CL_INVALID_CONTEXT:
+		MessageBox(NULL, "CL_INVALID_CONTEXT:if context is not a valid context.\\nコンテキストが有効なコンテキストでない場合", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_DEVICE:
+		MessageBox(NULL, "CL_INVALID_DEVICE:if device is not a valid device or is not associated with context\\nデバイスが有効なデバイスではない場合、またはコンテキストに関連付けられていない場合", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "CL_INVALID_VALUE: if values specified in properties are not valid.\\nプロパティで指定された値が無効な場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_QUEUE_PROPERTIES:
+		MessageBox(NULL, "CL_INVALID_QUEUE_PROPERTIES:if values specified in properties are valid but are not supported by the device.プロパティで指定された値は有効であるが、デバイスでサポートされていない場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.\\nホスト上のOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
 
 
 static void _ConvRGBtoBGR(void)
