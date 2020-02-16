@@ -29,6 +29,9 @@
 #cmd HCLGetDevCount $1A
 #cmd HCLGetSetDevice $1B
 #cmd HCLSetKrns $1C
+#cmd HCLGetSetCommandQueue $1D
+#cmd HCLSetCommandQueue $1E
+
 
 #cmd _ConvRGBtoBGR 		$93
 #cmd _ConvRGBAtoRGB 		$94
@@ -547,7 +550,7 @@
 
 
 
-#module
+#module _HCLModule_
 #defcfunc HCLGetDeviceInfo_s int a
 	ptrk=0:szs=0
 	HCLGetDeviceInfo a,ptrk,szs
@@ -580,7 +583,6 @@
 	}else{
 		return str(int64(0))
 	}
-
 
 
 

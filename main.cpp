@@ -18,27 +18,35 @@
 
 
 #define MAX_PLATFORM_IDS 32 //platform_idの最大値
-#define MAX_DEVICE_IDS 1024 //devicesの最大値
+#define MAX_DEVICE_IDS 2048 //一度に取得できるdeviceの最大値
+#define COMMANDQUEUE_PER_DEVICE 16//1デバイスあたりのコマンドキュー
 
-int gplatkz = 0;//プラットフォームの数  2
-int gdevkz = 0;//デバイスの数  4
-
+int dev_num = 0;//デバイスの数
 int bufferout[1024 * 4];
-cl_platform_id platform_id[MAX_PLATFORM_IDS];
+
+cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
 cl_mem mem_obj;
 cl_program program;
 cl_kernel kernel;
-cl_event dmyevent;
-cl_event *ddmyevent = &dmyevent;
-int clsetdev = 0;
+int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
+int clsetque = 0;//OpenCLで現在メインとなっているque
 
-void newcmd48(void);
-void newcmd49(void);
-void newcmd50(void);
+void _ConvRGBtoBGR(void);
+void _ConvRGBAtoRGB(void);
+void _ConvRGBtoRGBA(void);
 void retmeserr(cl_int ret);//clEnqueueNDRangeKernel で失敗した時出すエラーメッセージをまとめた関数
 void retmeserr2(cl_int ret);//clReadで失敗した時出すエラーメッセージをまとめた関数
+
+
+
+
+
+
+
+
+
 
 //自作関数
 //int64だけを読み込むやつ
@@ -76,10 +84,7 @@ INT64 Code_geti32i64() {
 }
 
 
-struct nandemooiiii {
-	cl_device_id dev;
-};
-nandemooiiii *gpus;
+
 
 
 
@@ -245,16 +250,16 @@ static void *reffunc( int *type_res, int cmd )
 		}
 		else
 		{
-			source_str = (char*)malloc(1024*1024);
-			source_size = fread(source_str, 1, 1024 * 1024, fp);
+			source_str = (char*)malloc(1024 * 1024 * 64);
+			source_size = fread(source_str, 1, 1024 * 1024 * 64, fp);
 			
 			// Build the program
 			program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&source_size, NULL);
-			cl_int err0 = clBuildProgram(program, 1, &gpus[clsetdev].dev, NULL, NULL, NULL);
+			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
 			if (err0 != CL_SUCCESS) {
 				size_t len;
-				char buffer[2048 * 64];
-				clGetProgramBuildInfo(program, gpus[clsetdev].dev,
+				char buffer[1024 * 2048];
+				clGetProgramBuildInfo(program, device_id[clsetdev],
 					CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
 				MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
 				puterror(HSPERR_UNKNOWN_CODE);
@@ -331,10 +336,6 @@ static void *reffunc( int *type_res, int cmd )
 		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE,
 			prm1, NULL, &errcode_ret);
 		
-		int dnryndtyd = 0;
-		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev], mem_obj, 0, 1,
-			1, &dnryndtyd, 0, NULL, NULL);
-		
 		switch (errcode_ret) {							//分岐
 
 		case CL_INVALID_CONTEXT:
@@ -367,9 +368,6 @@ static void *reffunc( int *type_res, int cmd )
 			break;
 		}
 
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		clFinish(command_queue[clsetdev]);
-
 		ref_int64val = (INT64)mem_obj;
 		break;
 	}
@@ -385,11 +383,11 @@ static void *reffunc( int *type_res, int cmd )
 		int saizu = sizeof(source_str);
 
 		program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&saizu, NULL);
-		cl_int err0 = clBuildProgram(program, 1, &gpus[clsetdev].dev, NULL, NULL, NULL);
+		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
 		if (err0 != CL_SUCCESS) {
 			size_t len;
 			char buffer[2048 * 64];
-			clGetProgramBuildInfo(program, gpus[clsetdev].dev,
+			clGetProgramBuildInfo(program, device_id[clsetdev],
 				CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
 			MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
 			puterror(HSPERR_UNKNOWN_CODE);
@@ -402,10 +400,9 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x1A://HCLGetDevCount
 	{
 		fInt = true;
-		ref_int32val = (int)gdevkz;
+		ref_int32val = (int)dev_num;
 		break;
 	}
-
 
 	case 0x1B://HCLGetSetDevice
 	{
@@ -413,6 +410,15 @@ static void *reffunc( int *type_res, int cmd )
 		ref_int32val = (int)clsetdev;
 		break;
 	}
+
+	case 0x1D://HCLGetSetCommandQueue
+	{
+		fInt = true;
+		ref_int32val = (int)clsetque;
+		break;
+	}
+
+
 
 
 
@@ -579,41 +585,37 @@ static int cmdfunc(int cmd)
 
 	case 0x08://HCLinit
 	{
-		cl_device_id device_id[MAX_DEVICE_IDS];
+		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;
 		cl_uint ret_num_platforms;
-		cl_int ret = clGetPlatformIDs(MAX_PLATFORM_IDS, platform_id, &ret_num_platforms);
-		gplatkz = ret_num_platforms;
+		clGetPlatformIDs(MAX_PLATFORM_IDS, platform_id, &ret_num_platforms);
 
-		int gkw = 0;
-
-		if (gplatkz != 0) {
-			for (int i = 0; i < gplatkz; i++) {
-				ret = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, device_id, &ret_num_devices);
-				gkw += ret_num_devices;
-			}
-			gpus = new struct nandemooiiii[gkw];
-			int w = 0;
-			for (int i = 0; i < gplatkz; i++) {
-				ret = clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, device_id, &ret_num_devices);
-				for (int j = 0; j<int(ret_num_devices); j++)
-				{
-					gpus[w].dev = device_id[j];
-					w++;
-				}
-			}
-		}//////////デバイス情報を取得しまくっているところ
-
-
-		context = new cl_context[gkw];
-		command_queue = new cl_command_queue[gkw];
-
-		for (int k = 0; k < gkw; k++) {//コンテキストとコマンド級ーを作る
-			context[k] = clCreateContext(NULL, 1, &gpus[k].dev, NULL, NULL, &ret);
-			command_queue[k] = clCreateCommandQueue(context[k], gpus[k].dev, CL_QUEUE_PROFILING_ENABLE, &ret);
+		dev_num = 0;
+		for (int i = 0; i < ret_num_platforms; i++) {
+			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, NULL, &ret_num_devices);
+			dev_num += ret_num_devices;
 		}
+		device_id = new cl_device_id[dev_num];
+		dev_num = 0;
+		for (int i = 0; i < ret_num_platforms; i++) {
+			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, device_id + dev_num, &ret_num_devices);
+			dev_num += ret_num_devices;
+		}
+		//////////デバイス情報を取得しまくっているところ
 
-		gdevkz = gkw;
+		//ここでコンテキストとコマンドキュー生成
+		context = new cl_context[dev_num];
+		command_queue = new cl_command_queue[dev_num*COMMANDQUEUE_PER_DEVICE];
+
+		for (int k = 0; k < dev_num; k++)
+		{//コンテキストとコマンド級ーを作る
+			context[k] = clCreateContext(NULL, 1, &device_id[k], NULL, NULL, NULL);
+			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
+			{
+				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
+					clCreateCommandQueue(context[k], device_id[k], CL_QUEUE_PROFILING_ENABLE | CL_QUEUE_PROFILING_ENABLE, NULL);
+			}
+		}
 		break;
 	}
 
@@ -684,12 +686,12 @@ static int cmdfunc(int cmd)
 		size_t ptryes = code_getdi(0);
 		cl_int ret;
 		if (ptryes != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm1, 1, NULL, &p4, &ptryes, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm1, 1, NULL, &p4, &ptryes, 0, NULL, NULL);
 		}
 		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm1, 1, NULL, &p4, NULL, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm1, 1, NULL, &p4, NULL, 0, NULL, NULL);
 		}
-		//if (ret != CL_SUCCESS) { retmeserr(ret); }
+		if (ret != CL_SUCCESS) { retmeserr(ret); }
 
 		break;
 	}
@@ -717,10 +719,10 @@ static int cmdfunc(int cmd)
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
 		
-		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev], (cl_mem)prm1, p7, prm4,
+		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char *)((pval->pt) + prm5), 0, NULL, NULL);
 		
-		//if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
 	}
 
@@ -747,10 +749,10 @@ static int cmdfunc(int cmd)
 
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev], (cl_mem)prm1, p7, prm4,
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char *)((pval->pt) + prm5), 0, NULL, NULL);
 		
-		//if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
 	}
 
@@ -763,7 +765,7 @@ static int cmdfunc(int cmd)
 
 	case 0x11:	// HCLFinish//デバイスにある全部のタスク待ち
 	{
-		cl_int ret = clFinish(command_queue[clsetdev]);
+		cl_int ret = clFinish(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
 
 		switch (ret) {							//分岐
 
@@ -793,7 +795,7 @@ static int cmdfunc(int cmd)
 		cl_device_info devinfoi = code_getdi(0);
 		size_t szt = 0;
 		
-		clGetDeviceInfo(gpus[clsetdev].dev, devinfoi, sizeof(bufferout), &bufferout, &szt);
+		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), &bufferout, &szt);
 		INT64 *datp = (INT64 *)&bufferout[0];
 		PVal *pval;
 		APTR aptr;
@@ -815,7 +817,7 @@ static int cmdfunc(int cmd)
 		INT64 prm4 = Code_geti32i64();// コピーサイズ
 		INT64 prm5 = Code_geti32i64();// コピー先オフセット
 		INT64 prm6 = Code_geti32i64();// コピー元オフセット
-		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev], (cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, 0, NULL, NULL);
+		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, 0, NULL, NULL);
 
 
 		switch (ret) {							//分岐
@@ -897,10 +899,10 @@ static int cmdfunc(int cmd)
 
 		cl_int ret;
 		if (ptryes[0] != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm2, p3, NULL, p4, ptryes, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, p3, NULL, p4, ptryes, 0, NULL, NULL);
 		}
 		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm2, p3, NULL, p4, NULL, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, p3, NULL, p4, NULL, 0, NULL, NULL);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		break;
@@ -936,6 +938,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+
 	case 0x19://HCLDoKrn1_sub
 	{
 		INT64 prm2 = Code_getint64();		// パラメータ1:カーネル
@@ -947,12 +950,12 @@ static int cmdfunc(int cmd)
 
 		cl_int ret;
 		if (p4_1 != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm2, 1, NULL, &p4_1, &p5, 0, NULL, NULL);//1回目は無事終わる
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, 1, NULL, &p4_1, &p5, 0, NULL, NULL);//1回目は無事終わる
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		if (p4_2 != 0) {
 			p5 = p4_2;
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev], (cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, 0, NULL, NULL);
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		break;
@@ -972,8 +975,7 @@ static int cmdfunc(int cmd)
 		int chk;
 		int type;
 
-
-		for (int i = 0; i < 20; i++) {
+		for (int i = 0; i < 32; i++) {
 			chk = code_getprm();							// パラメーターを取得(型は問わない)
 			if (chk <= PARAM_END) {
 				break;										// パラメーター省略時の処理
@@ -1016,6 +1018,11 @@ static int cmdfunc(int cmd)
 	}
 
 
+	case 0x1E://HCLSetCommandQueue
+	{
+		clsetdev = code_getdi(0);
+		break;
+	}
 
 
 
@@ -1048,13 +1055,13 @@ static int cmdfunc(int cmd)
 
 
 	case 0x93:								// newcmd31 //convRGBtoBGR
-		newcmd48();
+		_ConvRGBtoBGR();
 		break;
 	case 0x94:								// newcmd31 //convRGBAtoRGB
-		newcmd49();
+		_ConvRGBAtoRGB();
 		break;
 	case 0x95:								// newcmd31 //convRGBtoRGBA
-		newcmd50();
+		_ConvRGBtoRGBA();
 		break;
 
 
@@ -1266,7 +1273,7 @@ void retmeserr2(cl_int ret)
 
 
 
-static void newcmd48(void)
+static void _ConvRGBtoBGR(void)
 {
 	PVal *pval1;
 	APTR aptr1;	//配列変数の取得
@@ -1296,7 +1303,7 @@ static void newcmd48(void)
 		dmptr2[i] = dmptr1[i + 2];
 	}
 }
-static void newcmd49(void)
+static void _ConvRGBAtoRGB(void)
 {
 	PVal *pval1;
 	APTR aptr1;	//配列変数の取得
@@ -1329,7 +1336,7 @@ static void newcmd49(void)
 		dmptr2[idx1 + 2] = dmptr1[idx2 + 2];
 	}
 }
-static void newcmd50(void)
+static void _ConvRGBtoRGBA(void)
 {
 	PVal *pval1;
 	APTR aptr1;	//配列変数の取得
