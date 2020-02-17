@@ -32,6 +32,14 @@
 #cmd HCLGetSetCommandQueue $1D
 #cmd HCLSetCommandQueue $1E
 #cmd _ExHCLSetCommandQueueMax $1F
+#cmd _ExHCLSetCommandQueueProperties $20
+#cmd HCLFlush $21
+#cmd HCLGetLastEvent $22
+#cmd HCLSetEvent $23
+#cmd HCLSetNumEventList $24
+
+
+
 
 
 #cmd _ConvRGBtoBGR 		$93

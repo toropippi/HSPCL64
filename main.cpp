@@ -16,6 +16,7 @@
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
+const int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 2;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//デバイスの数
 int bufferout[1024 * 4];
@@ -26,8 +27,12 @@ cl_command_queue *command_queue;
 cl_mem mem_obj;
 cl_program program;
 cl_kernel kernel;
+cl_event* ev;//HCLiniで実体化される。本来コマンドキューが別ならevent変数も別に用意するべきだがとりあえず全コマンドキュー共通とする
+cl_event lastev;//最後にコマンドキューにいれた命令のevent
 int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
+int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
+int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ
 
 void _ConvRGBtoBGR(void);
 void _ConvRGBAtoRGB(void);
@@ -418,6 +423,11 @@ static void *reffunc( int *type_res, int cmd )
 	}
 	
 
+	case 0x22://HCLGetLastEvent
+	{
+		ref_int64val = (INT64)lastev;
+		break;
+	}
 
 
 
@@ -622,8 +632,6 @@ static int cmdfunc(int cmd)
 		//ここでコンテキストとコマンドキュー生成
 		context = new cl_context[dev_num];
 		command_queue = new cl_command_queue[dev_num * COMMANDQUEUE_PER_DEVICE];
-
-		p1 = code_getdi(0);		// パラメータ1:数値、引数
 		
 		for (int k = 0; k < dev_num; k++)
 		{//コンテキストとコマンド級ーを作る
@@ -631,11 +639,13 @@ static int cmdfunc(int cmd)
 			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
 			{
 				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
-					clCreateCommandQueue(context[k], device_id[k], p1, &errcode_ret);
+					clCreateCommandQueue(context[k], device_id[k], cmd_properties, &errcode_ret);
 				if (errcode_ret != CL_SUCCESS) retmeserr3(errcode_ret);
 			}
 		}
 		
+		//最後にevent変数生成
+		ev = new cl_event[CL_EVENT_MAX];
 		break;
 	}
 
@@ -707,11 +717,25 @@ static int cmdfunc(int cmd)
 		size_t p4 = code_getdi(1);
 		size_t ptryes = code_getdi(0);
 		cl_int ret;
+
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = ev;
+		}
+
+
 		if (ptryes != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm1, 1, NULL, &p4, &ptryes, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm1, 1, NULL, &p4, &ptryes, num_event_wait_list, ev_, &lastev);
 		}
 		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm1, 1, NULL, &p4, NULL, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm1, 1, NULL, &p4, NULL, num_event_wait_list, ev_, &lastev);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 
@@ -740,9 +764,18 @@ static int cmdfunc(int cmd)
 		
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
-		
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else 
+		{
+			ev_ = ev;
+		}
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
-			prm3, (char *)((pval->pt) + prm5), 0, NULL, NULL);
+			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
+		
 		
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -770,8 +803,17 @@ static int cmdfunc(int cmd)
 
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = ev;
+		}
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
-			prm3, (char *)((pval->pt) + prm5), 0, NULL, NULL);
+			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
 		
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -838,7 +880,17 @@ static int cmdfunc(int cmd)
 		INT64 prm4 = Code_geti32i64();// コピーサイズ
 		INT64 prm5 = Code_geti32i64();// コピー先オフセット
 		INT64 prm6 = Code_geti32i64();// コピー元オフセット
-		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, 0, NULL, NULL);
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = ev;
+		}
+		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+			(cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, num_event_wait_list, ev_, &lastev);
 
 
 		switch (ret) {							//分岐
@@ -919,11 +971,23 @@ static int cmdfunc(int cmd)
 
 
 		cl_int ret;
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = ev;
+		}
+
 		if (ptryes[0] != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, p3, NULL, p4, ptryes, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm2, p3, NULL, p4, ptryes, num_event_wait_list, ev_, &lastev);
 		}
 		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, p3, NULL, p4, NULL, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm2, p3, NULL, p4, NULL, num_event_wait_list, ev_, &lastev);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		break;
@@ -970,13 +1034,25 @@ static int cmdfunc(int cmd)
 		size_t p4_2 = p4 - p4_1;//問題の端数
 
 		cl_int ret;
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = ev;
+		}
+
 		if (p4_1 != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, 1, NULL, &p4_1, &p5, 0, NULL, NULL);//1回目は無事終わる
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm2, 1, NULL, &p4_1, &p5, num_event_wait_list, ev_, &lastev);//1回目は無事終わる
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		if (p4_2 != 0) {
 			p5 = p4_2;
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, 0, NULL, NULL);
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, num_event_wait_list, ev_, &lastev);
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		break;
@@ -1051,7 +1127,43 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+	case 0x20:	// _ExHCLSetCommandQueueProperties
+	{
+		cmd_properties = code_getdi(0);
+		break;
+	}
 
+	case 0x21:	// HCLFlush//コマンドキューのブロッキングみたいな
+	{
+		cl_int ret = clFlush(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
+		switch (ret) {							//分岐
+		case CL_INVALID_COMMAND_QUEUE:
+			MessageBox(NULL, "CL_INVALID_COMMAND_QUEUE: if command_queue is not a valid command-queue", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+			break;
+		case CL_OUT_OF_HOST_MEMORY:
+			MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+			break;
+		}
+		break;
+	}
+
+
+	case 0x23:	// HCLSetEvent
+	{
+		cl_event tmp = (cl_event)Code_getint64();
+		p2 = code_getdi(0);
+		ev[p2] = tmp;
+		break;
+	}
+
+	case 0x24:	// HCLSetNumEventList
+	{
+		num_event_wait_list = code_getdi(0);
+		break;
+	}
+	
 
 
 
