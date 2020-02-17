@@ -34,11 +34,8 @@
 #cmd _ExHCLSetCommandQueueMax $1F
 #cmd _ExHCLSetCommandQueueProperties $20
 #cmd HCLFlush $21
-#cmd HCLGetLastEvent $22
-#cmd HCLSetEvent $23
-#cmd HCLSetNumEventList $24
-
-
+#cmd HCLSetWaitEventList_1 $22
+#cmd HCLSetWaitEventList_a $23
 
 
 

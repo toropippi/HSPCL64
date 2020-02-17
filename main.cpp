@@ -27,12 +27,13 @@ cl_command_queue *command_queue;
 cl_mem mem_obj;
 cl_program program;
 cl_kernel kernel;
-cl_event* ev;//HCLiniで実体化される。本来コマンドキューが別ならevent変数も別に用意するべきだがとりあえず全コマンドキュー共通とする
-cl_event lastev;//最後にコマンドキューにいれた命令のevent
+cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
+cl_event* event_wait_list;//HCLinitで実体化
+
 int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
-int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ
+int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
 
 void _ConvRGBtoBGR(void);
 void _ConvRGBAtoRGB(void);
@@ -423,16 +424,6 @@ static void *reffunc( int *type_res, int cmd )
 	}
 	
 
-	case 0x22://HCLGetLastEvent
-	{
-		ref_int64val = (INT64)lastev;
-		break;
-	}
-
-
-
-	
-
 
 
 
@@ -645,7 +636,8 @@ static int cmdfunc(int cmd)
 		}
 		
 		//最後にevent変数生成
-		ev = new cl_event[CL_EVENT_MAX];
+		cppeventlist = new cl_event[CL_EVENT_MAX];
+		event_wait_list = new cl_event[CL_EVENT_MAX];
 		break;
 	}
 
@@ -711,13 +703,22 @@ static int cmdfunc(int cmd)
 	
 
 
-	case 0x0D:	// HCLDoKrn1 int p1,int p2,int p3
+	case 0x0D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
 	{
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
 		size_t p4 = code_getdi(1);
 		size_t ptryes = code_getdi(0);
-		cl_int ret;
 
+		cl_int ret;
+		//outevent関連
+		int outeventptr = code_getdi(-1);
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0) 
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
@@ -725,21 +726,20 @@ static int cmdfunc(int cmd)
 		}
 		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
 
 
 		if (ptryes != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &p4, &ptryes, num_event_wait_list, ev_, &lastev);
+				(cl_kernel)prm1, 1, NULL, &p4, &ptryes, num_event_wait_list, ev_, outevent);
 		}
 		else {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &p4, NULL, num_event_wait_list, ev_, &lastev);
+				(cl_kernel)prm1, 1, NULL, &p4, NULL, num_event_wait_list, ev_, outevent);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		clReleaseEvent(lastev);
-
+		num_event_wait_list = 0;
 		break;
 	}
 
@@ -765,20 +765,33 @@ static int cmdfunc(int cmd)
 		
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
 			ev_ = NULL;
 		}
-		else 
+		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
+
+
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
-			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
+			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		clReleaseEvent(lastev);
+
+		num_event_wait_list = 0;
 		break;
 	}
 
@@ -804,6 +817,16 @@ static int cmdfunc(int cmd)
 
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
@@ -811,12 +834,14 @@ static int cmdfunc(int cmd)
 		}
 		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
+
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
-			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
+			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		clReleaseEvent(lastev);
+
+		num_event_wait_list = 0;
 		break;
 	}
 
@@ -881,6 +906,16 @@ static int cmdfunc(int cmd)
 		INT64 prm4 = Code_geti32i64();// コピーサイズ
 		INT64 prm5 = Code_geti32i64();// コピー先オフセット
 		INT64 prm6 = Code_geti32i64();// コピー元オフセット
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
@@ -888,11 +923,13 @@ static int cmdfunc(int cmd)
 		}
 		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
+
 		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, num_event_wait_list, ev_, &lastev);
-		clReleaseEvent(lastev);
+			(cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4,num_event_wait_list, ev_, outevent);
+
+		num_event_wait_list = 0;
 
 		switch (ret) {							//分岐
 		case CL_INVALID_COMMAND_QUEUE:
@@ -972,6 +1009,16 @@ static int cmdfunc(int cmd)
 
 
 		cl_int ret;
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
@@ -979,19 +1026,20 @@ static int cmdfunc(int cmd)
 		}
 		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
 
 		if (ptryes[0] != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, p3, NULL, p4, ptryes, num_event_wait_list, ev_, &lastev);
+				(cl_kernel)prm2, p3, NULL, p4, ptryes, num_event_wait_list, ev_, outevent);
 		}
 		else {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, p3, NULL, p4, NULL, num_event_wait_list, ev_, &lastev);
+				(cl_kernel)prm2, p3, NULL, p4, NULL, num_event_wait_list, ev_, outevent);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		clReleaseEvent(lastev);
+
+		num_event_wait_list = 0;
 		break;
 	}
 
@@ -1036,6 +1084,22 @@ static int cmdfunc(int cmd)
 		size_t p4_2 = p4 - p4_1;//問題の端数
 
 		cl_int ret;
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		cl_event* outevent2 = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+			if (p4_2 != 0) 
+			{
+				clReleaseEvent(cppeventlist[(outeventptr + 1) % CL_EVENT_MAX]);
+				outevent2 = &cppeventlist[(outeventptr + 1) % CL_EVENT_MAX];
+			}
+		}
+		//wait event list関連
 		cl_event* ev_;
 		if (num_event_wait_list == 0)
 		{
@@ -1043,21 +1107,21 @@ static int cmdfunc(int cmd)
 		}
 		else
 		{
-			ev_ = ev;
+			ev_ = event_wait_list;
 		}
 
 		if (p4_1 != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, 1, NULL, &p4_1, &p5, num_event_wait_list, ev_, &lastev);//1回目は無事終わる
+				(cl_kernel)prm2, 1, NULL, &p4_1, &p5, num_event_wait_list, ev_, outevent);//1回目は無事終わる
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		if (p4_2 != 0) {
 			p5 = p4_2;
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, num_event_wait_list, ev_, &lastev);
+				(cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, num_event_wait_list, ev_, outevent2);
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
-		clReleaseEvent(lastev);
+		num_event_wait_list = 0;
 		break;
 	}
 
@@ -1153,22 +1217,35 @@ static int cmdfunc(int cmd)
 	}
 
 
-	case 0x23:	// HCLSetEvent
+	case 0x22:	//HCLSetWaitEventList_1 int p1
 	{
-		cl_event tmp = (cl_event)Code_getint64();
-		p2 = code_getdi(0);
-		ev[p2] = tmp;
+		p1 = code_getdi(0);
+		num_event_wait_list = 1;
+		event_wait_list[0] = cppeventlist[p1];
 		break;
 	}
 
-	case 0x24:	// HCLSetNumEventList
+
+	case 0x23:	//HCLSetWaitEventList_a int num,array a
 	{
 		num_event_wait_list = code_getdi(0);
+
+		PVal* pval1;
+		APTR aptr1;	//配列変数の取得
+		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp1;
+		void* ptr1;
+		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		for (int i = 0; i < num_event_wait_list; i++)
+		{
+			p2 = *((size_t*)ptr1 + i);
+			event_wait_list[i] = cppeventlist[p2];
+		}
+		
 		break;
 	}
-	
-
-
 
 
 
