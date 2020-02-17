@@ -738,6 +738,7 @@ static int cmdfunc(int cmd)
 				(cl_kernel)prm1, 1, NULL, &p4, NULL, num_event_wait_list, ev_, &lastev);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
+		clReleaseEvent(lastev);
 
 		break;
 	}
@@ -776,8 +777,8 @@ static int cmdfunc(int cmd)
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
 		
-		
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		clReleaseEvent(lastev);
 		break;
 	}
 
@@ -814,8 +815,8 @@ static int cmdfunc(int cmd)
 		}
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, &lastev);
-		
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		clReleaseEvent(lastev);
 		break;
 	}
 
@@ -891,7 +892,7 @@ static int cmdfunc(int cmd)
 		}
 		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
 			(cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4, num_event_wait_list, ev_, &lastev);
-
+		clReleaseEvent(lastev);
 
 		switch (ret) {							//•ªŠò
 		case CL_INVALID_COMMAND_QUEUE:
@@ -990,6 +991,7 @@ static int cmdfunc(int cmd)
 				(cl_kernel)prm2, p3, NULL, p4, NULL, num_event_wait_list, ev_, &lastev);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
+		clReleaseEvent(lastev);
 		break;
 	}
 
@@ -1055,6 +1057,7 @@ static int cmdfunc(int cmd)
 				(cl_kernel)prm2, 1, &p4_1, &p4_2, &p5, num_event_wait_list, ev_, &lastev);
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
+		clReleaseEvent(lastev);
 		break;
 	}
 

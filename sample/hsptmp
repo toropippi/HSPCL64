@@ -3,7 +3,7 @@
 	//_ExHCLSetCommandQueueMax 2
 	HCLinit
 	HCLSetDev 2
-	HCLSetCommandQueue 0
+	//HCLSetCommandQueue 0
 	prg=HCLCreateProgram("kern.cl")
 	krn=HCLCreateKernel(prg,"vecAdd")
 	n=256
@@ -22,15 +22,6 @@
 		HCLDoKrn1 krn,n,n
 		loop
 	wait 10
-	if cnt\16==15{
-		HCLinit:HCLSetDev 2
-		HCLSetCommandQueue 0
-		prg=HCLCreateProgram("kern.cl")
-		krn=HCLCreateKernel(prg,"vecAdd")
-		n=256
-		clmemm=HCLCreateBuffer(n*4)
-		HCLSetKernel krn,0,clmemm
-	}
 	loop
 	
 	end
