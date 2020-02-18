@@ -36,7 +36,7 @@
 #cmd HCLFlush $21
 #cmd HCLSetWaitEventList_1 $22
 #cmd HCLSetWaitEventList_a $23
-
+#cmd _ExHCLResizeEventList $24
 
 
 #cmd _ConvRGBtoBGR 		$93

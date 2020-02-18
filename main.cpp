@@ -16,7 +16,7 @@
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
-const int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
+int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 2;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//デバイスの数
 int bufferout[1024 * 4];
@@ -1243,10 +1243,19 @@ static int cmdfunc(int cmd)
 			p2 = *((size_t*)ptr1 + i);
 			event_wait_list[i] = cppeventlist[p2];
 		}
-		
 		break;
 	}
 
+
+	case 0x24:	// _ExHCLResizeEventList
+	{
+		CL_EVENT_MAX = code_getdi(65536);
+		delete[] cppeventlist;
+		delete[] event_wait_list;
+		cppeventlist = new cl_event[CL_EVENT_MAX];
+		event_wait_list = new cl_event[CL_EVENT_MAX];
+		break;
+	}
 
 
 
