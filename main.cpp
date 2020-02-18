@@ -579,7 +579,6 @@ static int cmdfunc(int cmd)
 
 
 
-
 	case 0x08://HCLinit
 	{
 		cl_int errcode_ret;
