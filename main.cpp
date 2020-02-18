@@ -20,7 +20,7 @@ int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 2;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//デバイスの数
 int bufferout[1024 * 4];
-
+char bugchar[1024 * 1024];
 cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
@@ -41,9 +41,8 @@ void _ConvRGBtoRGBA(void);
 void retmeserr(cl_int ret);//clEnqueueNDRangeKernel で失敗した時出すエラーメッセージをまとめた関数
 void retmeserr2(cl_int ret);//clReadで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr3(cl_int ret);//clCreateCommandQueueで失敗した時出すエラーメッセージをまとめた関数
-
-
-
+void retmeserr4(cl_int ret);//clCreateContextで失敗した時出すエラーメッセージをまとめた関数
+void mes(char* strc, int val);
 
 
 
@@ -261,11 +260,9 @@ static void *reffunc( int *type_res, int cmd )
 			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
 			if (err0 != CL_SUCCESS) {
 				size_t len;
-				char* buffer;
-				buffer = new char[1024 * 1024 * 2];
 				clGetProgramBuildInfo(program, device_id[clsetdev],
-					CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
-				MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
+					CL_PROGRAM_BUILD_LOG, sizeof(bugchar), bugchar, &len);
+				MessageBox(NULL, (LPCSTR)bugchar, "Error on OpenCL code", MB_OK);
 				puterror(HSPERR_UNKNOWN_CODE);
 			}
 			fclose(fp);
@@ -589,11 +586,15 @@ static int cmdfunc(int cmd)
 		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;
 		cl_uint ret_num_platforms;
+
+		cl_device_id* _device_id;
+		_device_id = new cl_device_id[MAX_DEVICE_IDS];
+
 		clGetPlatformIDs(MAX_PLATFORM_IDS, platform_id, &ret_num_platforms);
 
 		dev_num = 0;
 		for (int i = 0; i < (int)ret_num_platforms; i++) {
-			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, NULL, &ret_num_devices);
+			clGetDeviceIDs(platform_id[i], CL_DEVICE_TYPE_ALL, MAX_DEVICE_IDS, _device_id, &ret_num_devices);
 			dev_num += ret_num_devices;
 		}
 
@@ -604,9 +605,8 @@ static int cmdfunc(int cmd)
 			break;
 		}
 
+
 		device_id = new cl_device_id[dev_num];
-		cl_device_id* _device_id;
-		_device_id = new cl_device_id[MAX_DEVICE_IDS];
 		
 		int dev_num_ = 0;
 		for (int i = 0; i < (int)ret_num_platforms; i++) {
@@ -626,7 +626,9 @@ static int cmdfunc(int cmd)
 		
 		for (int k = 0; k < dev_num; k++)
 		{//コンテキストとコマンド級ーを作る
-			context[k] = clCreateContext(NULL, 1, &device_id[k], NULL, NULL, NULL);
+			context[k] = clCreateContext(NULL, 1, &device_id[k], NULL, NULL, &errcode_ret);
+			if (errcode_ret != CL_SUCCESS) retmeserr4(errcode_ret);
+
 			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
 			{
 				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
@@ -1528,6 +1530,43 @@ void retmeserr3(cl_int ret)
 	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 }
 
+void retmeserr4(cl_int ret)
+{
+	switch (ret) {							//分岐
+	case CL_INVALID_PLATFORM:
+		MessageBox(NULL, "CL_INVALID_PLATFORM:if properties is NULL and no platform could be selected or if platform value specified in properties is not a valid platform.", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "CL_INVALID_VALUE:CL_INVALID_VALUE if context property name in properties is not a supported property name; if devices is NULL; if num_devices is equal to zero; or if pfn_notify is NULL but user_data is not NULL.", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_DEVICE:
+		MessageBox(NULL, "CL_INVALID_DEVICE: if devices contains an invalid device or are not associated with the specified platform.", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_DEVICE_NOT_AVAILABLE:
+		MessageBox(NULL, "CL_DEVICE_NOT_AVAILABLE if a device in devices is currently not available even though the device was returned by clGetDeviceIDs.", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
+
+
+
+
+
+
+
+
+
 
 static void _ConvRGBtoBGR(void)
 {
@@ -1656,6 +1695,29 @@ static void _ConvRGBtoRGBA(void)
 	}
 }
 
+
+
+
+
+
+
+
+
+void mes(char* strc, int val)
+{
+	char c[10];
+	c[0] = val % 1000000000 / 100000000 + 48;
+	c[1] = val % 100000000 / 10000000 + 48;
+	c[2] = val % 10000000 / 1000000 + 48;
+	c[3] = val % 1000000 / 100000 + 48;
+	c[4] = val % 100000 / 10000 + 48;
+	c[5] = val % 10000 / 1000 + 48;
+	c[6] = val % 1000 / 100 + 48;
+	c[7] = val % 100 / 10 + 48;
+	c[8] = val % 10 + 48;
+	c[9] = 0;
+	MessageBox(NULL, c, strc, 0);
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
