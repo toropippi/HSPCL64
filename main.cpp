@@ -12,6 +12,7 @@
 #include "hsp3struct.h"
 #include "hspvar_int64.h"
 #include <CL/cl.h>
+#include <map>
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
@@ -28,13 +29,22 @@ cl_program program;
 cl_kernel kernel;
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化
+std::map < cl_kernel, std::string >  nums;
+
+struct EventStruct
+{
+	INT64 k;//kernel idやらコピーサイズやら
+	int globalsize;
+	int localsize;
+};
+
+EventStruct* evinfo;
+
 
 int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
 int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
-
-size_t *time_resolution;//各デバイスごとの時間解像度。OpenCLデバイスには、デバイスの周波数や電力状態が変わっても正確に時間を計測できることが求められています。CL_DEVICE_PROFILING_TIMER_RESOLUTION で、タイマーの解像度、つまり、タイマーがインクリメントされるごとに何ナノ秒経過するかを取得できます。
 
 void _ConvRGBtoBGR(void);
 void _ConvRGBAtoRGB(void);
@@ -43,6 +53,9 @@ void retmeserr(cl_int ret);//clEnqueueNDRangeKernel で失敗した時出すエラーメッセ
 void retmeserr2(cl_int ret);//clReadで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr3(cl_int ret);//clCreateCommandQueueで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr4(cl_int ret);//clCreateContextで失敗した時出すエラーメッセージをまとめた関数
+void retmeserr5(cl_int ret);
+void retmeserr6(cl_int ret);
+void retmeserr7(cl_int ret);
 void mes(char* strc, int val);
 
 
@@ -327,6 +340,10 @@ static void *reffunc( int *type_res, int cmd )
 			break;
 		}
 
+		//kernelと文字列を紐づけ
+		std::string str = std::string(p);
+		nums[kernel] = str;
+
 		break;
 	}
 
@@ -429,46 +446,58 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x25://HCLGetEventStartTime
 	{
 		int eventid = code_geti();
-		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &ref_int64val, NULL);
+		ref_int64val = 0;
+		cl_int ret;
+		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &ref_int64val, NULL);
+		if (ret != CL_SUCCESS) retmeserr5(ret);
+		break;
 	}
 
 	case 0x26://HCLGetEventEndTime
 	{
 		int eventid = code_geti();
-		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &ref_int64val, NULL);
+		ref_int64val = 0;
+		cl_int ret;
+		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &ref_int64val, NULL);
+		if (ret != CL_SUCCESS) retmeserr5(ret);
+		break;
 	}
-
+	/*
 	case 0x27://HCLGetEventStartTime_d
 	{
+		
 		fDouble = true;
 		int eventid = code_geti();
-		INT64 t;
-		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &t, NULL);
-		ref_doubleval = (double)t;
+		INT64 t = 0;
+		cl_int ret;
+		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &t, NULL);
+		retmeserr5(ret);
+		ref_doubleval = (double)t * (double)time_resolution[clsetdev];
+		break;
 	}
 
 	case 0x28://HCLGetEventEndTime_d
 	{
 		fDouble = true;
 		int eventid = code_geti();
-		INT64 t;
-		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &t, NULL);
-		ref_doubleval = (double)t;
+		INT64 t = 0;
+		cl_int ret;
+		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &t, NULL);
+		retmeserr5(ret);
+		ref_doubleval = (double)t * (double)time_resolution[clsetdev];
+		break;
 	}
+	*/
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+	case 0x29://HCLGetEventStatus
+	{
+		fInt = true;
+		int eventid = code_geti();
+		cl_int ret;
+		ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_EXECUTION_STATUS, 4, &ref_int32val, NULL);
+		if (ret != CL_SUCCESS) retmeserr5(ret);
+		break;
+	}
 
 
 
@@ -669,17 +698,16 @@ static int cmdfunc(int cmd)
 				if (errcode_ret != CL_SUCCESS) retmeserr3(errcode_ret);
 			}
 		}
-		
-		//各デバイスの時間解像度を取得
-		time_resolution = new size_t[dev_num];
-		for (int i = 0; i < dev_num; i++) 
-		{
-			clGetDeviceInfo(device_id[i], CL_DEVICE_PROFILING_TIMER_RESOLUTION, sizeof(size_t),&time_resolution[i], NULL);
-		}
 
 		//最後にevent変数生成
 		cppeventlist = new cl_event[CL_EVENT_MAX];
 		event_wait_list = new cl_event[CL_EVENT_MAX];
+		evinfo = new EventStruct[CL_EVENT_MAX];
+		for (int i = 0; i < CL_EVENT_MAX; i++) 
+		{
+			cppeventlist[i] = NULL;
+			event_wait_list[i] = NULL;
+		}
 		break;
 	}
 
@@ -758,6 +786,9 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm1;
+			evinfo[outeventptr].globalsize = p4;
+			evinfo[outeventptr].localsize = ptryes;
 		}
 		//wait event list関連
 		cl_event* ev_;
@@ -814,6 +845,9 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm3;
+			evinfo[outeventptr].globalsize = 0;
+			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
 		cl_event* ev_;
@@ -866,6 +900,9 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm3;
+			evinfo[outeventptr].globalsize = 0;
+			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
 		cl_event* ev_;
@@ -955,6 +992,9 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm4;
+			evinfo[outeventptr].globalsize = 0;
+			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
 		cl_event* ev_;
@@ -1013,8 +1053,8 @@ static int cmdfunc(int cmd)
 	{
 		INT64 prm2 = Code_getint64();		// カーネル
 		p3 = code_getdi(1);		// work_dim
-		size_t p4[3];
-		size_t ptryes[3];
+		size_t p4[3] = { 1,1,1 };
+		size_t ptryes[3] = { 1,1,1 };
 
 		if (p3 == 1) {
 			p4[0] = code_getdi(1);
@@ -1032,7 +1072,8 @@ static int cmdfunc(int cmd)
 
 				p4[0] = *(size_t *)ptr1;
 				p4[1] = *((size_t *)ptr1 + 1);
-				p4[2] = *((size_t *)ptr1 + 2);
+				if (p3 == 3)
+					p4[2] = *((size_t *)ptr1 + 2);
 
 				PVal *pval2;
 				APTR aptr2;	//配列変数の取得
@@ -1044,7 +1085,8 @@ static int cmdfunc(int cmd)
 
 				ptryes[0] = *(size_t *)ptr2;
 				ptryes[1] = *((size_t *)ptr2 + 1);
-				ptryes[2] = *((size_t *)ptr2 + 2);
+				if (p3 == 3)
+					ptryes[2] = *((size_t *)ptr2 + 2);
 			}
 		}
 
@@ -1057,6 +1099,9 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm2;
+			evinfo[outeventptr].globalsize = p4[0] * p4[1] * p4[2];
+			evinfo[outeventptr].localsize = ptryes[0] * ptryes[1] * ptryes[2];
 		}
 		//wait event list関連
 		cl_event* ev_;
@@ -1069,7 +1114,8 @@ static int cmdfunc(int cmd)
 			ev_ = event_wait_list;
 		}
 
-		if (ptryes[0] != 0) {
+		if (ptryes[0] != 0) 
+		{
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
 				(cl_kernel)prm2, p3, NULL, p4, ptryes, num_event_wait_list, ev_, outevent);
 		}
@@ -1122,7 +1168,6 @@ static int cmdfunc(int cmd)
 		if (p5 == 0) { p5 = 64; }
 		size_t p4_1 = (p4 / p5)*p5;//p5で割り切れる数字に
 		size_t p4_2 = p4 - p4_1;//問題の端数
-
 		cl_int ret;
 
 		//outevent関連
@@ -1133,10 +1178,16 @@ static int cmdfunc(int cmd)
 		{
 			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm2;
+			evinfo[outeventptr].globalsize = p4_1;
+			evinfo[outeventptr].localsize = p5;
 			if (p4_2 != 0) 
 			{
 				clReleaseEvent(cppeventlist[(outeventptr + 1) % CL_EVENT_MAX]);
 				outevent2 = &cppeventlist[(outeventptr + 1) % CL_EVENT_MAX];
+				evinfo[(outeventptr + 1) % CL_EVENT_MAX].k = prm2;
+				evinfo[(outeventptr + 1) % CL_EVENT_MAX].globalsize = p4_2;
+				evinfo[(outeventptr + 1) % CL_EVENT_MAX].localsize = p5;
 			}
 		}
 		//wait event list関連
@@ -1286,12 +1337,180 @@ static int cmdfunc(int cmd)
 	case 0x24:	// _ExHCLResizeEventList
 	{
 		CL_EVENT_MAX = code_getdi(65536);
-		delete[] cppeventlist;
-		delete[] event_wait_list;
-		cppeventlist = new cl_event[CL_EVENT_MAX];
-		event_wait_list = new cl_event[CL_EVENT_MAX];
 		break;
 	}
+
+
+
+
+	case 0x2A:	// HCLWaitForEvent
+	{
+		int n = code_getdi(0);
+		event_wait_list[0] = cppeventlist[n];
+		cl_int ret = clWaitForEvents(1, event_wait_list);
+		if (ret != CL_SUCCESS) retmeserr6(ret);
+		break;
+	}
+
+
+	case 0x2B:	// HCLWaitForEvents int num,array a
+	{
+		int n = code_getdi(0);
+		PVal* pval1;
+		APTR aptr1;	//配列変数の取得
+		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp1;
+		void* ptr1;
+		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		for (int i = 0; i < n; i++)
+		{
+			p2 = *((size_t*)ptr1 + i);
+			event_wait_list[i] = cppeventlist[p2];
+		}
+
+		cl_int ret = clWaitForEvents(n, event_wait_list);
+		if (ret != CL_SUCCESS) retmeserr6(ret);
+		break;
+	}
+
+
+
+	case 0x2C:	// HCLWaitForEvent_Sleep
+	{
+		int eventid = code_getdi(0);
+		int waitstep = code_getdi(1000 * 60 * 60);
+		int steptime = code_getdi(10);
+		cl_int ret;
+		int stt = 0;
+		for (int i = 0; i < waitstep; i++)
+		{
+			ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_EXECUTION_STATUS, 4, &stt, NULL);
+			if (ret != CL_SUCCESS) retmeserr5(ret);
+			if (stt <= CL_COMPLETE)break;
+			Sleep(steptime);
+		}
+		break;
+	}
+
+
+
+	case 0x2D:	// HCLWaitForEvents_sleep int num,array a
+	{
+		int n = code_getdi(0);
+		PVal* pval1;
+		APTR aptr1;	//配列変数の取得
+		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp1;
+		void* ptr1;
+		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		int waitstep = code_getdi(1000 * 60 * 60);
+		int steptime = code_getdi(10);
+		cl_int ret;
+		int stt = 0;
+		int flag;
+
+		for (int j = 0; j < waitstep; j++)
+		{
+			flag = 0;
+			for (int i = 0; i < n; i++) 
+			{
+				p2 = *((size_t*)ptr1 + i);
+				ret = clGetEventInfo(cppeventlist[p2], CL_EVENT_COMMAND_EXECUTION_STATUS, 4, &stt, NULL);
+				if (ret != CL_SUCCESS) retmeserr5(ret);
+				if (stt <= CL_COMPLETE)flag++;
+			}
+			if (flag == n)break;
+			Sleep(steptime);
+		}
+		break;
+	}
+
+
+	case 0x2E:	//HCLSetWaitEventList_16 int p1
+	{
+		for (num_event_wait_list = 0; num_event_wait_list < 16; num_event_wait_list++)
+		{
+			p1 = code_getdi(-1);
+			if (p1 >= 0) 
+			{
+				event_wait_list[num_event_wait_list] = cppeventlist[p1];
+			}
+			else { break; }
+		}
+		break;
+	}
+
+
+
+	case 0x2F://HCLGetEventAllCommandInfo int eventid,str ptrk,int strsize,int64 data,int64 commandtype
+	{
+		int eventid = code_geti();//eventid
+		cl_command_type cmt;
+		int strsize = 0;
+		INT64 data, commandtype;
+		std::string s;
+		s = "";
+		cl_int ret;
+		ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_TYPE, sizeof(cl_command_type), &cmt, NULL);
+		if (ret != CL_SUCCESS) retmeserr5(ret);
+
+		switch (cmt)
+		{
+		case CL_COMMAND_NDRANGE_KERNEL:
+		{
+			s = nums[(cl_kernel)evinfo[eventid].k];
+			strsize = s.length();
+			data = evinfo[eventid].globalsize * 4294967296 + evinfo[eventid].localsize;
+			break;
+		}
+
+		case CL_COMMAND_WRITE_BUFFER:
+		case CL_COMMAND_COPY_BUFFER:
+		case CL_COMMAND_READ_BUFFER:
+		{
+			data = evinfo[eventid].k;
+			break;
+		}
+		default:
+			break;
+		}
+
+		for (int i = 0; i < strsize; i++)
+		{
+			bugchar[i] = *(s.c_str() + i);
+		}
+		bugchar[strsize] = 0;//nul
+
+		INT64* datp = (INT64*)&bugchar[0];
+		PVal* pval;
+		APTR aptr;
+		aptr = code_getva(&pval);
+		code_setva(pval, aptr, HspVarInt64_typeid(), &datp);
+
+		PVal* pval2;
+		APTR aptr2;
+		aptr2 = code_getva(&pval2);
+		code_setva(pval2, aptr2, HSPVAR_FLAG_INT, &strsize);
+
+		PVal* pval3;
+		APTR aptr3;
+		aptr3 = code_getva(&pval3);
+		code_setva(pval3, aptr3, 8, &data);
+
+		commandtype = (INT64)cmt;
+		PVal* pval4;
+		APTR aptr4;
+		aptr4 = code_getva(&pval4);
+		code_setva(pval4, aptr4, 8, &commandtype);
+
+		break;
+	}
+
+
 
 
 
@@ -1592,6 +1811,72 @@ void retmeserr4(cl_int ret)
 	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
 	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 }
+
+
+void retmeserr5(cl_int ret)
+{
+	switch (ret) {							//分岐
+	case CL_PROFILING_INFO_NOT_AVAILABLE:
+		MessageBox(NULL, " コマンドキュー に CL_QUEUE_PROFILING_ENABLE フラグが設定されていないとき。あるいは、event と関連付けられたコマンドの実行状態が CL_COMPLETE でないとき。あるいは、event がユーザイベントオブジェクトのとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_EVENT:
+		MessageBox(NULL, "event が有効なイベントオブジェクトでないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, " param_name がサポートされている値でない、あるいは、param_value_size で指定されたサイズが上記の表で指定されている戻り値型のサイズより小さくかつ param_value が NULL でないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "デバイス上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "ホスト上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
+
+
+
+void retmeserr6(cl_int ret)
+{
+	switch (ret) {							//分岐
+	case CL_INVALID_EVENT:
+		MessageBox(NULL, "event_list が有効なイベントオブジェクトでないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "num_events が 0 あるいは event_list が NULL のとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_CONTEXT:
+		MessageBox(NULL, "event_list 内のイベントが関連付けられているOpenCLコンテキストが同じでないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
+		MessageBox(NULL, "event_list 内のイベントのうちいずれかの実行状態が負の値のとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "デバイス上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "ホスト上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
+
 
 
 

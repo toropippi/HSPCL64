@@ -39,15 +39,20 @@
 #cmd _ExHCLResizeEventList $24
 #cmd HCLGetEventStartTime $25
 #cmd HCLGetEventEndTime $26
-#cmd HCLGetEventStartTime_d $27
-#cmd HCLGetEventEndTime_d $28
+//#cmd HCLGetEventStartTime_d $27
+//#cmd HCLGetEventEndTime_d $28
+#cmd HCLGetEventStatus $29
+#cmd HCLWaitForEvent $2A
+#cmd HCLWaitForEvents $2B
+#cmd HCLWaitForEvent_Sleep $2C
+#cmd HCLWaitForEvents_Sleep $2D
+#cmd HCLSetWaitEventList_16 $2E
+#cmd HCLGetEventAllCommandInfo $2F
 
 
 #cmd _ConvRGBtoBGR 		$93
 #cmd _ConvRGBAtoRGB 		$94
 #cmd _ConvRGBtoRGBA 		$95
-
-
 
 
 
