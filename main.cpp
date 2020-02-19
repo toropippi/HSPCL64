@@ -257,7 +257,9 @@ static void *reffunc( int *type_res, int cmd )
 			
 			// Build the program
 			program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&source_size, NULL);
-			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
+			char* buildoption;
+			buildoption = code_gets();
+			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption, NULL, NULL);
 			if (err0 != CL_SUCCESS) {
 				size_t len;
 				clGetProgramBuildInfo(program, device_id[clsetdev],
@@ -384,7 +386,9 @@ static void *reffunc( int *type_res, int cmd )
 		int saizu = sizeof(source_str);
 
 		program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&saizu, NULL);
-		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], NULL, NULL, NULL);
+		char* buildoption;
+		buildoption = code_gets();
+		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption, NULL, NULL);
 		if (err0 != CL_SUCCESS) {
 			size_t len;
 			char* buffer;

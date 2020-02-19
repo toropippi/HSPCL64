@@ -4,7 +4,7 @@
 	HCLinit
 	HCLSetDev 2
 	//HCLSetCommandQueue 0
-	prg=HCLCreateProgram("kern.cl")
+	prg=HCLCreateProgram("kern.cl","-cl-opt-disable")
 	krn=HCLCreateKernel(prg,"vecAdd")
 	n=256
 	clmemm=HCLCreateBuffer(n*4)
@@ -16,7 +16,7 @@
 		loop
 	HCLWriteBuffer clmemm,inta,n*4,0,0
 	HCLSetKernel krn,0,clmemm
-
+	mes "start"
 	repeat 1024
 		repeat 10000
 		HCLDoKrn1 krn,n,n
