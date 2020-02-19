@@ -37,6 +37,10 @@
 #cmd HCLSetWaitEventList_1 $22
 #cmd HCLSetWaitEventList_a $23
 #cmd _ExHCLResizeEventList $24
+#cmd HCLGetEventStartTime $25
+#cmd HCLGetEventEndTime $26
+#cmd HCLGetEventStartTime_d $27
+#cmd HCLGetEventEndTime_d $28
 
 
 #cmd _ConvRGBtoBGR 		$93

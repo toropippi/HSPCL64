@@ -13,7 +13,6 @@
 #include "hspvar_int64.h"
 #include <CL/cl.h>
 
-
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
 int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
@@ -34,6 +33,8 @@ int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
 int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
+
+size_t *time_resolution;//各デバイスごとの時間解像度。OpenCLデバイスには、デバイスの周波数や電力状態が変わっても正確に時間を計測できることが求められています。CL_DEVICE_PROFILING_TIMER_RESOLUTION で、タイマーの解像度、つまり、タイマーがインクリメントされるごとに何ナノ秒経過するかを取得できます。
 
 void _ConvRGBtoBGR(void);
 void _ConvRGBAtoRGB(void);
@@ -425,6 +426,35 @@ static void *reffunc( int *type_res, int cmd )
 	}
 	
 
+	case 0x25://HCLGetEventStartTime
+	{
+		int eventid = code_geti();
+		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &ref_int64val, NULL);
+	}
+
+	case 0x26://HCLGetEventEndTime
+	{
+		int eventid = code_geti();
+		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &ref_int64val, NULL);
+	}
+
+	case 0x27://HCLGetEventStartTime_d
+	{
+		fDouble = true;
+		int eventid = code_geti();
+		INT64 t;
+		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &t, NULL);
+		ref_doubleval = (double)t;
+	}
+
+	case 0x28://HCLGetEventEndTime_d
+	{
+		fDouble = true;
+		int eventid = code_geti();
+		INT64 t;
+		clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &t, NULL);
+		ref_doubleval = (double)t;
+	}
 
 
 
@@ -635,11 +665,18 @@ static int cmdfunc(int cmd)
 			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
 			{
 				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
-					clCreateCommandQueue(context[k], device_id[k], CL_QUEUE_PROFILING_ENABLE, &errcode_ret);
+					clCreateCommandQueue(context[k], device_id[k], cmd_properties, &errcode_ret);
 				if (errcode_ret != CL_SUCCESS) retmeserr3(errcode_ret);
 			}
 		}
 		
+		//各デバイスの時間解像度を取得
+		time_resolution = new size_t[dev_num];
+		for (int i = 0; i < dev_num; i++) 
+		{
+			clGetDeviceInfo(device_id[i], CL_DEVICE_PROFILING_TIMER_RESOLUTION, sizeof(size_t),&time_resolution[i], NULL);
+		}
+
 		//最後にevent変数生成
 		cppeventlist = new cl_event[CL_EVENT_MAX];
 		event_wait_list = new cl_event[CL_EVENT_MAX];
@@ -706,7 +743,6 @@ static int cmdfunc(int cmd)
 		break;
 	}
 	
-
 
 	case 0x0D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
 	{
@@ -1012,7 +1048,6 @@ static int cmdfunc(int cmd)
 			}
 		}
 
-
 		cl_int ret;
 
 		//outevent関連
@@ -1185,7 +1220,6 @@ static int cmdfunc(int cmd)
 		}
 		break;
 	}
-
 	
 	case 0x1E://HCLSetCommandQueue
 	{
@@ -1221,7 +1255,6 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-
 	case 0x22:	//HCLSetWaitEventList_1 int p1
 	{
 		p1 = code_getdi(0);
@@ -1229,7 +1262,6 @@ static int cmdfunc(int cmd)
 		event_wait_list[0] = cppeventlist[p1];
 		break;
 	}
-
 
 	case 0x23:	//HCLSetWaitEventList_a int num,array a
 	{
@@ -1250,7 +1282,6 @@ static int cmdfunc(int cmd)
 		}
 		break;
 	}
-
 
 	case 0x24:	// _ExHCLResizeEventList
 	{
