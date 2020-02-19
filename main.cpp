@@ -631,7 +631,7 @@ static int cmdfunc(int cmd)
 			for (int i = 0; i < COMMANDQUEUE_PER_DEVICE; i++) 
 			{
 				command_queue[k * COMMANDQUEUE_PER_DEVICE + i] =
-					clCreateCommandQueue(context[k], device_id[k], cmd_properties, &errcode_ret);
+					clCreateCommandQueue(context[k], device_id[k], CL_QUEUE_PROFILING_ENABLE, &errcode_ret);
 				if (errcode_ret != CL_SUCCESS) retmeserr3(errcode_ret);
 			}
 		}
