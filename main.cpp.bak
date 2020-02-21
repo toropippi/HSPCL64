@@ -499,23 +499,7 @@ static void *reffunc( int *type_res, int cmd )
 
 
 
-	case 0x32://Min64
-	{
-		INT64 a = Code_geti32i64();
-		INT64 b = Code_geti32i64();
-		ref_int64val = b;
-		if (a < b)ref_int64val = a;
-		break;
-	}
 
-	case 0x33://Max64
-	{
-		INT64 a = Code_geti32i64();
-		INT64 b = Code_geti32i64();
-		ref_int64val = b;
-		if (a > b)ref_int64val = a;
-		break;
-	}
 
 
 
@@ -1195,8 +1179,7 @@ static int cmdfunc(int cmd)
 		cl_event* outevent2 = NULL;
 		if (outeventptr >= 0)
 		{
-			if (cppeventlist[outeventptr] != NULL)
-				clReleaseEvent(cppeventlist[outeventptr]);
+			clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
 			evinfo[outeventptr].k = prm2;
 			evinfo[outeventptr].globalsize = p4_1;
@@ -1567,8 +1550,15 @@ static int cmdfunc(int cmd)
 			ev_ = event_wait_list;
 		}
 
-		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 4, prm4, prm5, num_event_wait_list, ev_, outevent);
+
+		if (ptryes != 0) {
+			ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_mem)prm1, &pattern, 4, prm4, prm5, num_event_wait_list, ev_, outevent);
+		}
+		else {
+			ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_mem)prm1, &pattern, 4, prm4, prm5, num_event_wait_list, ev_, outevent);
+		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
@@ -1611,8 +1601,14 @@ static int cmdfunc(int cmd)
 			ev_ = event_wait_list;
 		}
 
-		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+		if (ptryes != 0) {
+			ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+		}
+		else {
+			ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
