@@ -1529,7 +1529,7 @@ static int cmdfunc(int cmd)
 
 		break;
 	}
-
+	/*
 	case 0x30://HCLFillBuffer4
 	{
 		//à¯êî1 buffer
@@ -1611,13 +1611,17 @@ static int cmdfunc(int cmd)
 			ev_ = event_wait_list;
 		}
 
+		cl_uint2 clpt2;
+		clpt2.x = pattern % 4294967296;
+		clpt2.y = pattern / 4294967296;
+
 		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+			(cl_mem)prm1, &clpt2, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
 	}
-
+	*/
 
 
 

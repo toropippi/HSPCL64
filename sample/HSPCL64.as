@@ -48,8 +48,6 @@
 //#cmd HCLWaitForEvents_Sleep $2D
 #cmd HCLSetWaitEventList_16 $2E
 #cmd HCLGetEventAllCommandInfo $2F
-#cmd HCLFillBuffer4 $30
-#cmd HCLFillBuffer8 $31
 #cmd Min64 $32
 #cmd Max64 $33
 
