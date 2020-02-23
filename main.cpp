@@ -399,7 +399,7 @@ static void *reffunc( int *type_res, int cmd )
 		source_str = new char[1024 * 1024 * 64];
 		source_str = code_gets();								// •¶Žš—ñ‚ðŽæ“¾
 
-		int saizu = sizeof(source_str);
+		size_t saizu = strlen(source_str);
 
 		program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&saizu, NULL);
 		char* buildoption;
