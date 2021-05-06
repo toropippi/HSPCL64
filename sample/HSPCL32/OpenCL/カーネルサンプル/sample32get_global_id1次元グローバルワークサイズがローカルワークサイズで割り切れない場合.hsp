@@ -1,0 +1,84 @@
+//HCLDoKrn1_subを使えば、グローバルワークサイズがローカルワークサイズで割り切れなくても心配いらない！
+
+//欠点としては割り切れない端数の部分で
+//get_global_id(0)、get_local_id(0)	は整合性がたもたれているが
+//get_group_id(0)が0に戻る
+//get_global_size(0)、get_local_size(0)、get_num_groups(0)が違う値になってしまう
+
+#include "hspcl32.as"
+	HCLini 1
+	global_work_size=1039//あえて割り切れないような素数にしてみる → おそらく割り切り可能なローカルワークサイズが1しかない → 計算速度面で心配・・そこでHCLDoKrn1_subという命令が使える！
+	dim hsp_array0,global_work_size
+	dim hsp_array1,global_work_size
+	dim hsp_array2,global_work_size
+	dim hsp_array3,global_work_size
+	dim hsp_array4,global_work_size
+	dim hsp_array5,global_work_size
+	dim hsp_array6,global_work_size
+	sdim sosu,10000
+
+	sosu={"
+__kernel void calc(__global int *mema,__global int *memb,__global int *memc,__global int *memd,__global int *meme,__global int *memf,__global int *memg) {
+	int icx = get_global_id(0);
+	mema[icx]=get_global_id(0);
+	memb[icx]=get_local_id(0);
+	memc[icx]=get_group_id(0);
+	memd[icx]=get_global_size(0);
+	meme[icx]=get_local_size(0);
+	memf[icx]=get_num_groups(0);
+	memg[icx]=get_work_dim();
+}
+"}
+
+
+
+
+	HCLCreateProgramWithSource sosu,strlen(sosu),prgiddmy
+	HCLCreateKernel prgiddmy,"calc",krn1
+	//VRAM作成
+	HCLCreateBuffer vram0,global_work_size*4
+	HCLCreateBuffer vram1,global_work_size*4
+	HCLCreateBuffer vram2,global_work_size*4
+	HCLCreateBuffer vram3,global_work_size*4
+	HCLCreateBuffer vram4,global_work_size*4
+	HCLCreateBuffer vram5,global_work_size*4
+	HCLCreateBuffer vram6,global_work_size*4
+	//カーネルにVRAMセット
+	HCLSetKernel krn1,0,vram0
+	HCLSetKernel krn1,1,vram1
+	HCLSetKernel krn1,2,vram2
+	HCLSetKernel krn1,3,vram3
+	HCLSetKernel krn1,4,vram4
+	HCLSetKernel krn1,5,vram5
+	HCLSetKernel krn1,6,vram6
+	//カーネル実行
+	HCLWaitTask
+	HCLDoKrn1_sub krn1,global_work_size,64//1次元で、global_work_sizeがlocal_work_sizeで割り切れなくても処理が行える命令
+	HCLWaitTask
+	//計算後の情報をHSPの変数に読み出し
+	HCLReadBuffer vram0,hsp_array0,global_work_size*4
+	HCLReadBuffer vram1,hsp_array1,global_work_size*4
+	HCLReadBuffer vram2,hsp_array2,global_work_size*4
+	HCLReadBuffer vram3,hsp_array3,global_work_size*4
+	HCLReadBuffer vram4,hsp_array4,global_work_size*4
+	HCLReadBuffer vram5,hsp_array5,global_work_size*4
+	HCLReadBuffer vram6,hsp_array6,global_work_size*4
+	HCLWaitTask
+
+
+	sdim mojiretu,1000000
+	mojiretu="get_global_id(0)	"+"get_local_id(0)	"+"get_group_id(0)	"+"get_global_size(0)	"+"get_local_size(0)	"+"get_num_groups(0)	"+"get_work_dim(0)	"
+	mojiretu+="\n"
+	repeat global_work_size
+		mojiretu+=str(hsp_array0.cnt)+"		"
+		mojiretu+=str(hsp_array1.cnt)+"		"
+		mojiretu+=str(hsp_array2.cnt)+"		"
+		mojiretu+=str(hsp_array3.cnt)+"		"
+		mojiretu+=str(hsp_array4.cnt)+"		"
+		mojiretu+=str(hsp_array5.cnt)+"		"
+		mojiretu+=str(hsp_array6.cnt)+"		"
+		mojiretu+="\n"
+	loop
+	
+	screen 0,1280,640
+	mesbox mojiretu,1272,632,4

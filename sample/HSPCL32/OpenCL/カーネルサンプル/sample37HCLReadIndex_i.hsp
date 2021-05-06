@@ -1,0 +1,20 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//HCLReadIndex_i(int p1,int p2)
+//返り値はp1で指定したCL mem obj idの内容。読み出しインデックスはp2で指定
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "hspcl32.as"
+	HCLini 1
+
+	HCLCreateBuffer vram_A,128
+	dim hsp_A,32
+	repeat 32:hsp_A.cnt=100*cnt:loop
+	HCLWriteBuffer vram_A,hsp_A,128//これでHSPで作成したデータをVRAMに転送
+
+
+	repeat 32
+		mes HCLReadIndex_i(vram_A,cnt)
+	loop
+
+	HCLbye
+	stop

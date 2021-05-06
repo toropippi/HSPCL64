@@ -1,0 +1,97 @@
+//「glDrawArrays」応用編
+//モデルの法線、ライト設定、テクスチャUV設定
+
+//先ほどのサンプルでは「glDrawElements」を使った描画ではフラットシェ－エディング(sample18ディフューズ)のように面に法線を割り当てることはできなかった。
+//今回も面に頂点を対応させるわけではないがglDrawArraysの応用編ということで面法線を計算で作ってその面を構成する頂点にそれを適応して描画する。
+//またglTexCoord2dもVBO化してポリゴンにテクスチャを貼り付けて表示する
+
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+
+	//立方体の頂点情報
+	gosub*立方体頂点情報設定
+	gosub*ライト設定
+	gosub*アンビエント等設定
+	gosub*VBO作成
+
+//////こっから描画
+
+    glClearColor 1.0, 1.0, 0.0, 1.0//背景色指定、ｗ成分は1.0
+
+	glEnable GL_TEXTURE_2D;テクスチャ使いますよ
+	HGLCreateTexture1_texload txid,"2mai.jpg";読み込み専用テクスチャにpeinto.bmpをロード
+	glBindTexture GL_TEXTURE_2D,txid;txidを現在使いたいテクスチャとしてバインド
+
+	repeat -1
+		await 16
+		glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+		glPushMatrix
+		gluLookAt -4.0*sin(0.04*cnt),0.02*(mousex-320),0.02*(mousey-320),0.0,0.0,0.0,0.0,1.0,0.0
+		glLightfv GL_LIGHT0,GL_POSITION,varptr(light_pos)
+   		// 図形の描画
+
+		/* 頂点データ，法線データ，テクスチャ座標の配列を有効にする */
+		glEnableClientState GL_VERTEX_ARRAY
+		glEnableClientState GL_NORMAL_ARRAY
+		glEnableClientState GL_TEXTURE_COORD_ARRAY
+
+		/* 頂点データ，法線データ，テクスチャ座標の場所を指定する */
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid_v
+		glVertexPointer 3,GL_DOUBLE,0,0//頂点データの場所を指定する。VBOを指定しててもp4はオフセットとして使える
+		glNormalPointer GL_DOUBLE,0,varsize(hsp_vertex)//VBOを指定しててもp4はオフセットとして使える
+		glTexCoordPointer 2,GL_DOUBLE,0,varsize(hsp_vertex) + varsize(hsp_normal)//VBOを指定しててもp4はオフセットとして使える
+
+		/* 頂点のインデックスを順番通りに使って図形を描く */
+		glDrawArrays GL_QUADS,0,4*6//頂点を4*6こ使います＝QUADSを6こ表示します
+
+		/* 頂点データ，法線データ，テクスチャ座標の配列を無効にする */
+		glDisableClientState GL_VERTEX_ARRAY//後片付け
+		glDisableClientState GL_NORMAL_ARRAY//後片付け
+		glDisableClientState GL_TEXTURE_COORD_ARRAY//後片付け
+		glBindBuffer GL_ARRAY_BUFFER,0//後片付け。バインド解除
+
+		glPopMatrix
+		glFinish
+		SwapBuffers wglGetCurrentDC()
+		getkey key,27:if key:HCLbye:end
+	loop
+
+
+
+
+*立方体頂点情報設定
+	ddim hsp_vertex,3*4*6//3情報4頂点6面
+	hsp_vertex =-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,-1.0,-1.0,1.0,-1.0,-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,-1.0,1.0,-1.0,-1.0,1.0,-1.0,1.0,-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0,-1.0,-1.0,-1.0,-1.0,-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0
+
+	ddim hsp_normal,3*4*6//頂点1つにつき法線ベクトル1つ
+	hsp_normal =0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0,-1.0,0.0,0.0
+
+	ddim hsp_tex,2*4*6//2情報4頂点6面
+	hsp_tex=0.500,0.000,1.000,0.000,1.000,1.000,0.500,1.000,0.500,0.000,1.000,0.000,1.000,1.000,0.500,1.000,0.000,0.000,0.500,0.000,0.500,1.000,0.000,1.000,0.000,0.000,0.500,0.000,0.500,1.000,0.000,1.000,0.500,0.000,1.000,0.000,1.000,1.000,0.500,1.000,0.000,0.000,0.500,0.000,0.500,1.000,0.000,1.000
+	return
+
+*ライト設定
+	glEnable GL_LIGHTING
+	glEnable GL_LIGHT0
+	fdim light_pos,4
+	light_pos=float(-3.01),float(3.01),float(1.0),float(0.9)
+	return
+
+*アンビエント等設定
+	fdim ms_rubyambient,4:ms_rubyambient=  float(0.6),float(0.6),float(0.6),float(0.0)
+	fdim ms_rubydiffuse,4:ms_rubydiffuse=  float(0.9),float(0.9),float(0.9),float(0.0)
+	fdim ms_rubyspecular,4:ms_rubyspecular=float(1.0),float(1.0),float(1.0),float(0.0)
+	fdim ms_shininess,1:ms_shininess=float(100.0)//スペキュラにはシャイネスの設定も必須
+	glMaterialfv GL_FRONT_AND_BACK, GL_AMBIENT, varptr(ms_rubyambient)
+	glMaterialfv GL_FRONT_AND_BACK, GL_DIFFUSE, varptr(ms_rubydiffuse)
+	glMaterialfv GL_FRONT_AND_BACK, GL_SPECULAR, varptr(ms_rubyspecular):glMaterialfv GL_FRONT_AND_BACK, GL_SHININESS, varptr(ms_shininess)
+	return
+
+*VBO作成
+	size_v=varsize(hsp_vertex)+varsize(hsp_normal)+varsize(hsp_tex)
+	HGLCreateBuffer GLmemid_v,CLmemid_v,size_v;VRAMにデータバッファ作成(VBO)
+	sdim dataa,size_v:memcpy dataa,hsp_vertex,varsize(hsp_vertex):memcpy dataa,hsp_normal,varsize(hsp_normal),varsize(hsp_vertex):memcpy dataa,hsp_tex,varsize(hsp_tex),varsize(hsp_vertex)+varsize(hsp_normal)
+	HGLWriteBuffer GLmemid_v,dataa,size_v;hsp_vertex→GLmemid_v(VRAM)にデータ転送
+	sdim dataa,1
+	return

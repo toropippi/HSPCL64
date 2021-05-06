@@ -1,0 +1,42 @@
+//今度は立方体をVBOで表示するサンプル
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+
+	ddim hsp_vertex,3*4*6//3情報(x,y,z)*4つの頂点*6面
+	hsp_vertex.0 =-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0,1.0,-1.0,1.0,1.0//面0
+	hsp_vertex.12 =-1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,-1.0,-1.0,1.0,-1.0//面1
+	hsp_vertex.24 =-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0,-1.0,-1.0,-1.0,-1.0//面2
+	hsp_vertex.36 =-1.0,-1.0,-1.0,1.0,-1.0,-1.0,1.0,-1.0,1.0,-1.0,-1.0,1.0//面3
+	hsp_vertex.48 =1.0,-1.0,1.0,1.0,-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0//面4
+	hsp_vertex.60 =-1.0,-1.0,-1.0,-1.0,-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0//面5
+
+	size=3*4*6*8//8はsizeof(double)
+	HGLCreateBuffer GLmemid,CLmemid,size;VRAMにデータバッファ作成(VBO)
+	HGLWriteBuffer GLmemid,hsp_vertex,size;hsp_vertex→GLmemid(VRAM)にデータ転送
+
+
+//////こっから描画
+
+    glClearColor 1.0, 1.0, 0.0, 1.0//背景色指定、ｗ成分は1.0
+ 
+	repeat -1
+		await 16
+		glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+		glPushMatrix
+		gluLookAt -4.0*sin(0.04*cnt),0.02*(mousex-320),0.02*(mousey-320),0.0,0.0,0.0,0.0,1.0,0.0
+
+   		// 図形の描画
+	    glColor3d 0.0,0.0,1.0;
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid//VBOをバインド
+		glEnableClientState GL_VERTEX_ARRAY//頂点データの配列を有効にする
+		glVertexPointer 3,GL_DOUBLE,0,0//頂点データの場所を指定する、中身はdouble型です、頂点情報は3つ(x,y,z)で一セットです
+		glDrawArrays GL_QUADS,0,4*6//頂点を4*6こ使います＝QUADSを6こ表示します
+		glDisableClientState GL_VERTEX_ARRAY//後片付け。glEnableClientStateと対
+		glBindBuffer GL_ARRAY_BUFFER,0//後片付け。バインド解除
+	
+		glPopMatrix
+		glFinish
+		SwapBuffers wglGetCurrentDC()
+		getkey key,27:if key:HCLbye:end
+	loop

@@ -1,0 +1,4 @@
+__kernel void getglobalid(__global int *mema) {
+	int ic = get_global_id(0);
+	mema[ic]=ic;//1byteでなく4byteの間隔で0・・1・・2・・と代入されていく
+}

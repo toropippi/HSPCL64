@@ -1,0 +1,4 @@
+__kernel void getglobalid(__global uchar *mema) {
+	uint ic = get_global_id(0);
+	mema[get_global_id(0)]=ic%256;
+}

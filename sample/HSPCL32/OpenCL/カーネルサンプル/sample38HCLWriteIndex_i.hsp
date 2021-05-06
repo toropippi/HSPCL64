@@ -1,0 +1,24 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//HCLWriteIndex_i int p1,int p2,int p3
+//p1で指定したCL mem obj idの内容にp3値を書き込む。書き込みインデックスはp2で指定
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "hspcl32.as"
+	HCLini 1
+
+	HCLCreateBuffer vram_A,128
+	repeat 32
+		HCLWriteIndex_i vram_A,cnt,100*cnt//vram_Aに直接書き込み。つまり値の書き込みはHCLWriteBufferを使わないでもできる
+	loop
+
+
+	dim hsp_A,32
+	HCLReadBuffer vram_A,hsp_A,128//確認のため読み込みます
+
+
+	repeat 32
+		mes hsp_A.cnt
+	loop
+
+	HCLbye
+	stop

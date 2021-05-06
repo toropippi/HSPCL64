@@ -27,27 +27,27 @@
 #cmd HCLCreateProgramWithSource	$18
 #cmd HCLDoKrn1_sub	$19
 #cmd HCLGetDevCount $1A
-#cmd HCLGetSetDevice $1B
+#cmd HCLGetSettingDevice $1B
 #cmd HCLSetKrns $1C
-#cmd HCLGetSetCommandQueue $1D
+#cmd HCLGetSetintCommandQueue $1D
 #cmd HCLSetCommandQueue $1E
 #cmd _ExHCLSetCommandQueueMax $1F
 #cmd _ExHCLSetCommandQueueProperties $20
 #cmd HCLFlush $21
-#cmd HCLSetWaitEventList_1 $22
-#cmd HCLSetWaitEventList_a $23
-#cmd _ExHCLResizeEventList $24
+#cmd HCLSetWaitEvent $22
+#cmd HCLSetWaitEvents $23
+#cmd _ExHCLSetEventMax $24
 #cmd HCLGetEventStartTime $25
 #cmd HCLGetEventEndTime $26
-//#cmd HCLGetEventStartTime_d $27
-//#cmd HCLGetEventEndTime_d $28
+#cmd HCLCall $27
 #cmd HCLGetEventStatus $29
 #cmd HCLWaitForEvent $2A
 #cmd HCLWaitForEvents $2B
-//#cmd HCLWaitForEvent_Sleep $2C
-//#cmd HCLWaitForEvents_Sleep $2D
-#cmd HCLSetWaitEventList_16 $2E
 #cmd HCLGetEventAllCommandInfo $2F
+
+#cmd HCLFillBuffer4 $30
+#cmd HCLFillBuffer8 $31
+
 #cmd Min64 $32
 #cmd Max64 $33
 

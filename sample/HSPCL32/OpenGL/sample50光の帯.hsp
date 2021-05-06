@@ -1,0 +1,95 @@
+#include "hspcl32.as"
+	screen 0,640,480
+	HCLini 1
+		
+	gkcev=0
+	repeat HCLDevCount
+		HCLSetDev cnt
+		gkcev+=HCLGetDevGLflg()
+		if gkcev:break
+	loop
+	if (gkcev==0){;デバイスがOpenCLとOpenGLの連携を使えるか、つかえるなら１つかえないなら０
+		dialog "このデバイスでは正常に動作しないと思われます。\nそれでも開始しますか？",3
+		if stat!6:HCLbye:end
+	}
+
+
+	p_kz=1024*128//パーティクルの数
+/////OpenGL関連
+	HGLSetView
+	glDisable GL_DEPTH_TEST//加算合成なので
+	glEnable GL_BLEND//アルファチャンネルON
+	glBlendFunc GL_SRC_ALPHA, GL_ONE//アルファチャンネル設定、加算合成
+	glEnable GL_TEXTURE_2D;これから描画でテクスチャ使いますよ
+	HGLCreateTexture1_texload txid,"peinto.bmp"//読み込み専用テクスチャにpeinto.bmpをロード
+	glBindTexture GL_TEXTURE_2D,txid;txidを現在使いたいテクスチャとしてバインド
+	HGLCreateBuffer GLmemid_vt,CLmemid_vt,p_kz*4*3*4//頂点4つ*(x,y,z)*sizeof(float)
+	HGLCreateBuffer GLmemid_uv,CLmemid_uv,p_kz*4*2*4//頂点4つ*(u,v)*sizeof(float)
+
+	//UVをVBOに送信
+	fdim hsp_uv,p_kz*4*2
+	repeat p_kz
+		hsp_uv.(cnt*8+0)=float(0.0)
+		hsp_uv.(cnt*8+1)=float(0.0)
+		hsp_uv.(cnt*8+2)=float(1.0)
+		hsp_uv.(cnt*8+3)=float(0.0)
+		hsp_uv.(cnt*8+4)=float(1.0)
+		hsp_uv.(cnt*8+5)=float(1.0)
+		hsp_uv.(cnt*8+6)=float(0.0)
+		hsp_uv.(cnt*8+7)=float(1.0)
+	loop
+	HGLWriteBuffer GLmemid_uv,hsp_uv,p_kz*4*2*4
+	sdim hsp_uv,1//この変数は用済み
+///////////////
+
+
+/////OpenCL関連
+	HCLBuildProgram "FireString.cl",prgid
+	HCLCreateKernel prgid,"calc",krncalc;座標計算カーネル設定
+	HCLSetKernel krncalc,0,CLmemid_vt
+///////////////
+
+	repeat -1
+		await 16
+		gosub*OpenCL計算//これも必ず画面クリアーの前に置かないとちらつく
+		glClearColor 0.0,0.0,0.0,1.0;背景色
+		glClear (GL_COLOR_BUFFER_BIT)
+		glPushMatrix
+		gluLookAt 7.0,7.0*(mousex-320),7.0*(mousey-240),0.0,0.0,0.0,0.0,1.0,0.0
+   		// 図形の描画
+
+		/* 頂点データ，テクスチャ座標の配列を有効にする */
+		glEnableClientState GL_VERTEX_ARRAY
+		glEnableClientState GL_TEXTURE_COORD_ARRAY
+
+		/* 頂点データ，テクスチャ座標の場所を指定する */
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid_vt
+		glVertexPointer 3,GL_FLOAT,0,0//頂点データの場所を指定する。
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid_uv
+		glTexCoordPointer 2,GL_FLOAT,0,0//uvデータの場所を指定する。
+
+		/* 頂点のインデックスを順番通りに使って図形を描く */
+		glDrawArrays GL_QUADS,0,4*p_kz//頂点を4*p_kzこ使います＝QUADSをp_kzこ表示します
+
+		/* 頂点データ，法線データ，テクスチャ座標の配列を無効にする */
+		glDisableClientState GL_VERTEX_ARRAY//後片付け
+		glDisableClientState GL_TEXTURE_COORD_ARRAY//後片付け
+		glBindBuffer GL_ARRAY_BUFFER,0//後片付け。バインド解除
+
+		glPopMatrix
+		glFinish
+		SwapBuffers wglGetCurrentDC()
+
+		flm++:if gettime(6)!mgett:mgett=gettime(6):title "fps="+flm+"":flm=0
+		getkey key,27:if key:HCLbye:end
+	loop
+
+
+*OpenCL計算
+	timestep=float(39.77*sin(0.0004*cnt*sin(0.000211*cnt)))
+	HCLSetKernel krncalc,1,timestep
+	HCLEnqueueAcquireGLObjects CLmemid_vt//HGLCreateBufferから作ったメモリオブジェクトをカーネル関数で使う場合は以下の手順が必要。
+	HCLDoKrn1 krncalc,p_kz,128
+	HCLWaitTask
+	HCLEnqueueReleaseGLObjects CLmemid_vt//HCLEnqueueAcquireGLObjectsの対
+	return

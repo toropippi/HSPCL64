@@ -1,0 +1,48 @@
+#include "HSPCL64.as"
+	HCLinit
+	prg=HCLCreateProgram("denormsSample.cl","-cl-denorms-are-zero")//浮動小数点数の非正規化数を0にするオプション
+	krn=HCLCreateKernel(prg,"Subtraction")
+	
+	clmem=HCLCreateBuffer(3*8)
+	ddim hostdata,3
+	hostdata.0=1.0
+	hostdata.1=1.5
+		repeat 1022
+		hostdata.0*=0.5
+		hostdata.1*=0.5
+		loop
+	HCLWriteBuffer clmem,hostdata,3*8,0,0//CPU→GPU
+	
+	mes "非正規化数を考慮して計算した場合"
+	hostdata.2=hostdata.1-hostdata.0//hostdata.2は1^(-1023)となり非正規化数
+	mes "hostdata.2の値 at CPU"
+	mes hostdata.2
+	mes "これを2の1022乗で乗算すると"
+		repeat 1022
+		hostdata.2*=2.0
+		loop
+	mes hostdata.2
+	mes "↑これが0.5になっていれば非正規化数が有効であったことが分かる"
+
+	mes 
+	mes "次にbuild optionを指定して計算した場合"
+	HCLSetKernel krn,0,clmem
+	HCLDoKrn1 krn,1,1//計算
+	HCLReadBuffer clmem,hostdata,3*8,0,0//GPU→CPU
+	mes "hostdata.2の値 at GPU のbulid optionあり"
+	mes hostdata.2
+	mes "これを2の1022乗で乗算すると"
+		repeat 1022
+		hostdata.2*=2.0
+		loop
+	mes hostdata.2
+	mes "↑これが0.0になっていれば非正規化数が無効であったことが分かる"
+	
+	
+
+/*
+計算結果はどうでしたか。	
+私のNVIDIA MX150のGPUやintel UHD Graphics 620のGPUでは非正規化数でもきちんと計算できていました。
+原因はわかりませんが、ビルドオプションを指定してもきちんと非正規化数を計算できることもあるようです。
+それはそれで困ることはないのですが、なんか気持ち悪いので、「ちゃんと非正規化数が計算できない」ことを一度は確認しておきたいものです・・・
+*/

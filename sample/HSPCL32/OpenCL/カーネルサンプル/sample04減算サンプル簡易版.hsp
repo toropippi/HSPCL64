@@ -1,0 +1,25 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+;
+;グラボ上でC=A-Bをやるプログラム。AとBとCはそれぞれ1024要素のint型配列変数
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "hspcl32.as"
+	HCLini 1
+	dim hsp_A,1024//int型配列1024こをhspで生成
+	dim hsp_B,1024//int型配列1024こをhspで生成
+	dim hsp_C,1024//int型配列1024こをhspで生成
+	foreach hsp_A:hsp_A.cnt=rnd(100):loop//Aにランダムを代入
+	foreach hsp_B:hsp_B.cnt=rnd(100):loop//Bにランダムを代入
+	sosu="__kernel void dainyu(__global int *vram0,__global int *vram1,__global int *vram2) {    int ic=get_global_id(0);    vram0[ic]=vram1[ic]-vram2[ic];     }"
+	
+	HCLCall sosu,1024,hsp_C,hsp_A,hsp_B,NULL,NULL,NULL,NULL//ここで計算
+
+
+	repeat 32//32こだけ表示
+		mes ""+hsp_A.cnt+" - "+hsp_B.cnt+" = "+hsp_C.cnt;加算の計算はGPGPU
+	loop
+	HCLbye//後片付け
+	dim hsp_A,1
+	dim hsp_B,1
+	dim hsp_C,1
+	stop

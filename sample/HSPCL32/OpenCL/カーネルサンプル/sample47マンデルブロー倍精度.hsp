@@ -1,0 +1,78 @@
+#include "hspcl32.as"
+	screen 0,512,512
+	HCLini 1
+	if HCLDevCount=0:dialog "対応ビデオカードがありません。終了します",1:end;openCL対応デバイス数
+	HCLSetDev 0;計算に使うデバイス
+	if (HCLGetDevfp64flg()==0){;デバイスがdoubleを使えるか、つかえるなら１つかえないなら０
+		dialog "このデバイスでは正常に動作しないと思われます。\nそれでも開始しますか？",3
+		if stat!6:HCLbye:end
+	}
+
+	maxkz=512*512;マンデルブロー画像の大きさ
+
+	HCLBuildProgram "manddp.cl",prgid
+	HCLCreateKernel prgid,"calc",krncalc;マンデルブロー計算カーネル設定
+	HCLCreateBuffer vram,3*maxkz;HSP側VRAMと同じ 1ドット=3*char
+	HCLSetKernel krncalc,0,vram;グラボ上のメモリ、mref で取得した変数にこれをコピーすれば画面更新できる;この「vram」はGPUメモリ上に確保したメモリ領域のポインタ値で、これは不変なのでここで一回セットすればループごとに設定しなくていい
+
+	mref i,66//描画のために必要
+	ms=gettime(6)
+	flm=0
+	gtx=-1.0;マンデルブロー画面の左上x
+	gty=-1.0;マンデルブロー画面の左上y
+	gtz=2.0;マンデルブロー画面の範囲
+	title "マンデルブロー倍精度。マウス、ホイール操作可"
+
+*main
+	mkey=key
+	getkey key,1
+	mww=mousew
+	if kanseimw:kanseimw-:mww+=99
+	if mww!0{
+	tyux=gtx+gtz*mousex/512
+	tyuy=gty+gtz*(512-mousey)/512
+		if mww>0{;ズーム
+			gtz*=0.9
+		}else{
+			gtz*=1.11111111
+		}
+	gtx=tyux-gtz*mousex/512
+	gty=tyuy-gtz*(512-mousey)/512
+	}
+
+	if dblkck!0:dblkck-
+	if dblkck>19:kanseimw=7:dblkck=0
+	if key:if mkey=0{
+		mgtx=gtx
+		mgty=gty
+		mossx=mousex
+		mossy=mousey
+		dblkck+=19
+		}
+	if mww=0:if key:if mkey{
+		gtx=mgtx+gtz*(mossx-mousex)/512
+		gty=mgty+gtz*(mousey-mossy)/512
+		}
+
+	HCLSetKernel krncalc,1,double(gtx)
+	HCLSetKernel krncalc,2,double(gty)
+	HCLSetKernel krncalc,3,double(gtz/512)
+	HCLSetKernel krncalc,4,256//これは不変なので毎回設定しなくても良い、カーネルの中のforのループ回数のとこで使ってる
+
+;	global_item_size=512,512
+;	local_item_size=8,8
+	HCLDoKrn2 krncalc,512,512,8,8;マンデルブロー計算をGPUに要求
+
+	HCLReadBuffer vram,i,3*maxkz,0,0,1;mref で取得した変数にvramをコピー
+
+	flm+
+	if ms!gettime(6):ms=gettime(6):fps=flm:flm=0
+	pos 0,0:color 255,55,55:mes "fps="+fps+""
+	await 0
+	getkey keye,27:if keye:goto*sthsr
+	redraw 1
+	goto*main
+
+*sthsr
+	HCLbye
+	end

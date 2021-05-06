@@ -1,0 +1,13 @@
+#include "hspcl32.as"
+	HCLini 1
+	if HCLDevCount=0:dialog "対応ビデオカードがありません。終了します",1:end
+	mes "OpenCL対応デバイス数"+HCLDevCount+"\n\n"
+
+	repeat HCLDevCount
+	HCLSetDev cnt
+		mes "デバイス名＝  "+HCLGetDeviceInfo_s(CL_DEVICE_NAME);デバイス名取得
+		mes "デバイスがOpenCL使えるか  "+HCLGetDevCLflg();デバイスがOpenCL使えるか、つかえるなら１つかえないなら０
+		mes "\n"
+	loop
+	HCLbye
+	stop

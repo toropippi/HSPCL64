@@ -1,0 +1,31 @@
+#include "hspcl32.as"
+	HCLini 1
+	HCLSetDev 0
+	sz=10037;素数
+
+	HCLBuildProgram "char0.txt",prgid
+	HCLCreateKernel prgid,"getglobalid",krncalc;char型配列に get_global_id(0) を出力するカーネル
+	HCLCreateBuffer vram,sz;メモリ確保
+	HCLSetKernel krncalc,0,vram;カーネル第一引数にメモリオブジェクトidを設定
+
+	/////////////////////////////////ココがエラー箇所かも？？/////////////////////////////////////////////////////
+	HCLDoKernel krncalc,1,sz,64;第三引数 であるglobal_work_sizeがlocal_work_sizeで割り切れない。local_work_sizeに1を指定するかglobal_work_sizeを64の倍数にする他ない。
+	HCLWaitTask;タスクまち
+
+	sdim i,sz
+	HCLReadBuffer vram,i,256*4
+	repeat 20
+		mes peek(i,cnt);0～19がちゃんとできてるか確認
+	loop
+
+	mes ""
+	HCLReadBuffer vram,i,4,sz-4,0//後ろから4byte取ってくる
+
+	repeat 4
+		mes peek(i,cnt);最後から４個がちゃんとできてるか確認
+	loop
+
+	HCLbye
+
+	mes "意外と正常に終わりました"
+	stop

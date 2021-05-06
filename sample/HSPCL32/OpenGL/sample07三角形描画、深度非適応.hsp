@@ -1,0 +1,27 @@
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+	glDisable GL_DEPTH_TEST//ここで深度非適応、ほかはsample05と同じ
+
+    glClearColor 1.0, 1.0, 1.0, 1.0//背景色指定、ｗ成分は1.0
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);黒い背景初期化
+	//視点の設定
+	gluLookAt 0.0,0.0,1.0,0.0,0.0,0.0, 0.0,1.0,0.0//(x,y,z)=(0,0,1)から(0,0,0)を見つめたカメラ視点
+    // 図形の描画
+	glBegin GL_TRIANGLES;三角形２つ表示
+    glColor3d 0.0,0.0,0.0;黒色
+	glVertex3d -0.15661,-0.62,0.1//
+	glVertex3d 0.25,-0.42,-0.1//
+	glVertex3d 0.5,0.65,0.0//
+	
+    glColor3d 1.0,1.0,0.0;黄色
+	glVertex3d -0.625,0.5,-0.1//
+	glVertex3d -0.725,-0.6,0.1//
+	glVertex3d 0.425,0.1,0.0//
+	
+	glEnd
+	glFinish//描画実行
+
+	SwapBuffers wglGetCurrentDC()//前画面に出す
+	HCLbye
+	stop

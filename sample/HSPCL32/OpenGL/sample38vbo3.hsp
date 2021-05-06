@@ -1,0 +1,63 @@
+//正直前回の立方体の頂点全部を打つのは面倒くさかった
+//そもそも1つの頂点、例えば(1.0,1.0,1.0)は3つの面に共通している
+//おなじ頂点を登録するのは無駄のように思える
+//そこで今回は「glDrawElements」を使って効率よく描画する
+//http://seesaawiki.jp/w/mikk_ni3_92/d/glDrawElements%A4%CB%A4%E8%A4%EB%C9%C1%B2%E8
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+
+/*
+	ddim hsp_vertex,3*4*6//3情報(x,y,z)*4つの頂点*6面
+	hsp_vertex.0 =-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0,1.0,-1.0,1.0,1.0//面0
+	hsp_vertex.12 =-1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,-1.0,-1.0,1.0,-1.0//面1
+	hsp_vertex.24 =-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0,-1.0,-1.0,-1.0,-1.0//面2
+	hsp_vertex.36 =-1.0,-1.0,-1.0,1.0,-1.0,-1.0,1.0,-1.0,1.0,-1.0,-1.0,1.0//面3
+	hsp_vertex.48 =1.0,-1.0,1.0,1.0,-1.0,-1.0,1.0,1.0,-1.0,1.0,1.0,1.0//面4
+	hsp_vertex.60 =-1.0,-1.0,-1.0,-1.0,-1.0,1.0,-1.0,1.0,1.0,-1.0,1.0,-1.0//面5
+*/
+	
+	//立方体の頂点情報
+	ddim hsp_vertex,24
+	hsp_vertex =-1.0, -1.0, 1.0 ,1.0, -1.0, 1.0 ,-1.0, 1.0, 1.0 ,1.0, 1.0, 1.0 ,-1.0, 1.0, -1.0 ,1.0, 1.0, -1.0 ,-1.0, -1.0, -1.0 ,1.0, -1.0, -1.0
+
+	//4つの頂点を1つの面とするので、面に対応する頂点を4つづつ登録,4*6
+	dim face,24
+	face   =0, 1, 3, 2 ,2, 3, 5, 4 ,4, 5, 7, 6 ,6, 7, 1, 0 ,1, 7, 5, 3 ,6, 0, 2, 4
+
+
+
+
+	size=24*8//8はsizeof(double)
+	HGLCreateBuffer GLmemid,CLmemid,size;VRAMにデータバッファ作成(VBO)
+	HGLWriteBuffer GLmemid,hsp_vertex,size;hsp_vertex→GLmemid(VRAM)にデータ転送
+
+
+//////こっから描画
+
+    glClearColor 1.0, 1.0, 0.0, 1.0//背景色指定、ｗ成分は1.0
+ 
+	repeat -1
+		await 16
+		glClear (GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
+		glPushMatrix
+		gluLookAt -4.0*sin(0.04*cnt),0.02*(mousex-320),0.02*(mousey-320),0.0,0.0,0.0,0.0,1.0,0.0
+
+   		// 図形の描画
+	    glColor3d 0.0,0.0,1.0;
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid//VBOをバインド
+		glEnableClientState GL_VERTEX_ARRAY//頂点データの配列を有効にする
+		glVertexPointer 3,GL_DOUBLE,0,0//頂点データの場所を指定する、中身はdouble型です、頂点情報は3つ(x,y,z)で一セットです
+		glDrawElements GL_QUADS, 24, GL_UNSIGNED_INT, varptr(face)//faceには4つで１つの面を構成するように頂点インデックスが格納されている
+		//頂点数は24=6面*4角形
+		//GL_UNSIGNED_INTは face の変数型
+		//ただ、まだfaceのデータ自体はCPU側にあるためCPU→GPUの転送ボトルネックが存在する。
+		//そこでfaceもGPUバッファに入れられれば完全にGPU内で完結させることができる。そのサンプルが次のサンプル
+		glDisableClientState GL_VERTEX_ARRAY//後片付け。glEnableClientStateと対
+		glBindBuffer GL_ARRAY_BUFFER,0//後片付け。バインド解除
+	
+		glPopMatrix
+		glFinish
+		SwapBuffers wglGetCurrentDC()
+		getkey key,27:if key:HCLbye:end
+	loop

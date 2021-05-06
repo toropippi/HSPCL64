@@ -1,0 +1,38 @@
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+	ang=0.0
+
+    repeat -1//無限ループ
+	    glClearColor 0.0, 0.0, 0.0, 1.0
+	    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);深度バッファとrgbピクセルカーラーバッファをクリア
+
+		//視点の設定
+		glPushMatrix//gluLookAtで行列が変えられちゃう前に登録
+		gluLookAt 6.0*cos(ang),0.0,6.0*sin(ang),0.0,0.0,0.0, 0.0,1.0,0.0//視点は円状に回る。注視点は常に0,0,0
+
+	    // 図形の描画
+		glBegin GL_QUADS
+		glcolor3d 0.5,0.5,0.5
+		glVertex3d -1.2, -1.2,0.3
+		glVertex3d 1.2, -1.2,0.3
+		glVertex3d 1.2,  1.2,0.3
+		glVertex3d -1.2,  1.2,0.3
+	//	glEnd
+	//	glBegin GL_QUADS//実はglBegin GL_QUADS～glEndの中に2つのポリゴン情報を入れれば2つのポリゴンを表示してくれる。glBegin GL_QUADSを2回も3回も使わなくてもいい
+		glcolor3d 1.0,1.0,1.0
+		glVertex3d -2.2, -2.2,-0.3
+		glVertex3d 2.2, -2.2,-0.3
+		glVertex3d 2.2,  2.2,-0.3
+		glVertex3d -2.2,  2.2,-0.3
+		glEnd
+	
+		glFinish//描画実行
+		glPopMatrix//glPushMatrixしたときの行列にもどす
+	
+		ang+=0.03
+		await 16
+		SwapBuffers wglGetCurrentDC()//前画面に出す
+		getkey key,27:if key:HCLbye:end
+	loop
+	HCLbye

@@ -2,9 +2,9 @@
 	HCLinit	
 	HCLSetDevice 0
 
-	prg=HCLCreateProgram("mandel_fp_int.cl")
+	prg=HCLCreateProgram("mandel_dp.cl")
 	krn=HCLCreateKernel(prg,"mand")
-	widt=1024*4:heig=1024*4
+	widt=1024:heig=1024
 	N=widt*heig
 	OUT=HCLCreateBuffer(N)
 	dim host_OUT,N/4
@@ -31,7 +31,7 @@
 	HCLReadBuffer OUT,host_OUT,N,0,0
 	
 	mes "time"+0.001*time
-	mes "íPê∏ìx"+(1.0*N*65536.0*2.0*8.0*2.0/time/1024.0/1024.0/1024.0/1024.0*1000.0)+"TFLOPS"
+	mes "î{ê∏ìx"+(1.0*N*65536.0*2.0*8.0*2.0/time/1024.0/1024.0/1024.0/1024.0*1000.0)+"TFLOPS"
 	
 	sum=0
 	repeat N/4

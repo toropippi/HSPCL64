@@ -1,0 +1,22 @@
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+
+
+    glClearColor 1.0, 1.0, 1.0, 1.0//背景色指定、ｗ成分は1.0
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);黒い背景初期化
+	//視点の設定
+	gluLookAt 0.0,0.0,1.0,0.0,0.0,0.0, 0.0,1.0,0.0//(x,y,z)=(0,0,1)から(0,0,0)を見つめたカメラ視点
+    // 図形の描画
+    glColor3d 0.0,0.0,0.0;黒色
+	glBegin GL_QUADS;四角形一つ表示
+	glVertex3d -0.5,-0.5,0.0//左下
+	glVertex3d 0.5,-0.5,0.0//右下
+	glVertex3d 0.5,0.5,0.0//右上
+	glVertex3d -0.5,0.5,0.0//左上
+	glEnd
+	glFinish//描画実行
+
+	SwapBuffers wglGetCurrentDC()//前画面に出す
+	HCLbye
+	stop

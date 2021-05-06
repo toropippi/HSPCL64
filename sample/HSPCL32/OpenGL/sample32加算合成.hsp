@@ -1,0 +1,54 @@
+//Zソートするか、深度を非適応にすればうまく表示される
+#include "hspcl32.as"
+	HCLini
+	HGLSetView
+
+	glDisable GL_DEPTH_TEST//ここで深度非適応が役に立ってくる
+
+
+	ang=0.0
+	ddim vertex,3*4*2//(3つの頂点情報(x,y,z)がある 2つの 4角形ポリゴン)
+	vertex.0 =-2.2, -2.2,0.6//頂点座標をメモリにセット
+	vertex.3 =2.2, -2.2,0.6
+	vertex.6 =2.2,  2.2,0.6
+	vertex.9 =-2.2,  2.2,0.6
+	vertex.12 =-2.2, -2.2,-0.6
+	vertex.15 =2.2, -2.2,-0.6
+	vertex.18 =2.2,  2.2,-0.6
+	vertex.21 =-2.2,  2.2,-0.6
+
+
+	glEnable GL_BLEND//アルファチャンネルON
+	glBlendFunc GL_SRC_ALPHA, GL_ONE//アルファチャンネル設定、加算合成
+
+    repeat -1//無限ループ
+	    glClearColor 0.1, 0.1, 0.2, 1.0
+	    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);深度バッファとrgbピクセルカーラーバッファをクリア
+
+		//視点の設定
+		glPushMatrix//gluLookAtで行列が変えられちゃう前に登録
+		gluLookAt 6.0*cos(ang),0.0,6.0*sin(ang),0.0,0.0,0.0, 0.0,1.0,0.0//視点は円状に回る。注視点は常に0,0,0
+
+	    // 図形の描画
+		glBegin GL_QUADS
+		glcolor3d 0.3,0.3,0.3
+		glVertex3dv varptr(vertex.12)
+		glVertex3dv varptr(vertex.15)
+		glVertex3dv varptr(vertex.18)
+		glVertex3dv varptr(vertex.21)
+		
+		glcolor3d 0.3,0.3,0.3
+		glVertex3dv varptr(vertex.0)//こうして頂点x,y,z3つまとめて指定できる
+		glVertex3dv varptr(vertex.3)
+		glVertex3dv varptr(vertex.6)
+		glVertex3dv varptr(vertex.9)
+		glEnd
+
+		glFinish//描画実行
+		glPopMatrix//glPushMatrixしたときの行列にもどす
+
+		ang+=0.03
+		await 16
+		SwapBuffers wglGetCurrentDC()//前画面に出す
+		getkey key,27:if key:HCLbye:end
+	loop

@@ -1,0 +1,41 @@
+//「glPushMatrix」と「glPopMatrix」を無効にした場合のテストです。
+#include "hspcl32.as"
+	screen 0,640,480
+	HCLini
+	HGLSetView
+
+
+    glClearColor 0.0, 0.0, 0.0, 1.0//背景色指定、ｗ成分は1.0
+
+
+*main//無限ループ
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);黒い背景初期化
+	//視点の設定
+	//glPushMatrix//gluLookAtで行列が変えられちゃう前に登録
+	gluLookAt 2.0*cos(0.01*flm),1.6,2.0*sin(0.01*flm),0.0,0.0,0.0, 0.0,1.0,0.0//視点は円状に回る。注視点は常に0,0,0
+	
+    // 図形の描画
+	glBegin GL_LINES;ライン
+	glColor3d 1.0,0.0,0.0;赤色
+	repeat 32
+		glVertex3d -16.0,0.0,-16.0+1.0*cnt//
+		glVertex3d 16.0,0.0,-16.0+1.0*cnt//
+	loop
+
+	glColor3d 0.0,0.0,1.0;青色
+	repeat 32
+		glVertex3d -16.0+1.0*cnt,0.0,-16.0//
+		glVertex3d -16.0+1.0*cnt,0.0,16.0//
+	loop
+	glEnd
+	
+	glFinish//描画実行
+	//glPopMatrix//glPushMatrixしたときの行列にもどす
+	
+	await 16
+	
+	SwapBuffers wglGetCurrentDC()//前画面に出す
+	getkey key,27:if key:HCLbye:end
+	
+	flm++
+	goto*main

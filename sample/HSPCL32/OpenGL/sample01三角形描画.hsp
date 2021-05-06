@@ -1,0 +1,18 @@
+#include "hspcl32.as"
+	HCLini
+	HGLSetView//おまじない。3D座標行列設定初期化
+
+
+    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);黒い背景初期化
+	//視点の設定
+	gluLookAt 0.0,0.0,1.0,0.0,0.0,0.0, 0.0,1.0,0.0//(x,y,z)=(0,0,1)から(0,0,0)を見つめたカメラ視点、視線ベクトルに垂直な真上ほうこうのベクトルは(0,1,0)
+    // 図形の描画
+	glBegin GL_TRIANGLES;三角形一つ表示
+	glVertex3d -0.5,-0.5,0.0//左下
+	glVertex3d 0.5,-0.5,0.0//右下
+	glVertex3d 0.0,0.5,0.0//上
+	glEnd
+	glFinish//描画実行
+	SwapBuffers wglGetCurrentDC()//前画面に出す
+	HCLbye
+	stop

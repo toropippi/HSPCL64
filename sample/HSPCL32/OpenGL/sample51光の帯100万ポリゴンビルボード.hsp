@@ -1,0 +1,140 @@
+//パーティクルが必ずこちらを向くようにしたサンプル
+//ビルボードみたいな
+/*
+     視線ベクトルとある上向きベクトルの外積を計算。外積と視線ベクトルの外積で本当の上向きベクトルを求める
+     最初に求めた外積ベクトル方向と本当の上向きベクトル方向を、ビルボード座標の４辺の位置に適応
+*/
+
+#include "hspcl32.as"
+	screen 0,640,480
+	HCLini 1
+		
+	gkcev=0
+	repeat HCLDevCount
+		HCLSetDev cnt
+		gkcev+=HCLGetDevGLflg()
+		if gkcev:break
+	loop
+	if (gkcev==0){;デバイスがOpenCLとOpenGLの連携を使えるか、つかえるなら１つかえないなら０
+		dialog "このデバイスでは正常に動作しないと思われます。\nそれでも開始しますか？",3
+		if stat!6:HCLbye:end
+	}
+
+
+	p_kz=1024*128*8//パーティクルの数100万
+	p_sz=1.9//パーティクルの大きさ
+/////OpenGL関連
+	HGLSetView
+	glDisable GL_DEPTH_TEST//加算合成なので
+	glEnable GL_BLEND//アルファチャンネルON
+	glBlendFunc GL_SRC_ALPHA, GL_ONE//アルファチャンネル設定、加算合成
+	glEnable GL_TEXTURE_2D;これから描画でテクスチャ使いますよ
+	HGLCreateTexture1_texload txid,"peinto.bmp"//読み込み専用テクスチャにpeinto.bmpをロード
+	glBindTexture GL_TEXTURE_2D,txid;txidを現在使いたいテクスチャとしてバインド
+	HGLCreateBuffer GLmemid_vt,CLmemid_vt,p_kz*4*3*4//頂点4つ*(x,y,z)*sizeof(float)
+	HGLCreateBuffer GLmemid_uv,CLmemid_uv,p_kz*4*2*4//頂点4つ*(u,v)*sizeof(float)
+
+	//UVをVBOに送信
+	fdim hsp_uv,p_kz*4*2
+	repeat p_kz
+		hsp_uv.(cnt*8+0)=float(0.0)
+		hsp_uv.(cnt*8+1)=float(0.0)
+		hsp_uv.(cnt*8+2)=float(1.0)
+		hsp_uv.(cnt*8+3)=float(0.0)
+		hsp_uv.(cnt*8+4)=float(1.0)
+		hsp_uv.(cnt*8+5)=float(1.0)
+		hsp_uv.(cnt*8+6)=float(0.0)
+		hsp_uv.(cnt*8+7)=float(1.0)
+	loop
+	HGLWriteBuffer GLmemid_uv,hsp_uv,p_kz*4*2*4
+	sdim hsp_uv,1//この変数は用済み
+///////////////
+
+
+/////OpenCL関連
+	HCLBuildProgram "FireString2.cl",prgid
+	HCLCreateKernel prgid,"calc",krncalc;座標計算カーネル設定
+	HCLSetKernel krncalc,0,CLmemid_vt
+///////////////
+
+	repeat -1
+		await 16
+		camx=7.0
+		camy=7.0*(mousex-320)
+		camz=7.0*(mousey-240)
+		gosub*OpenCL計算//これも必ず画面クリアーの前に置かないとちらつく
+
+		glClearColor 0.0,0.0,0.0,1.0;背景色
+		glClear (GL_COLOR_BUFFER_BIT)
+		glPushMatrix
+		gluLookAt camx,camy,camz,0.0,0.0,0.0,0.0,1.0,0.0
+   		// 図形の描画
+
+		/* 頂点データ，テクスチャ座標の配列を有効にする */
+		glEnableClientState GL_VERTEX_ARRAY
+		glEnableClientState GL_TEXTURE_COORD_ARRAY
+
+		/* 頂点データ，テクスチャ座標の場所を指定する */
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid_vt
+		glVertexPointer 3,GL_FLOAT,0,0//頂点データの場所を指定する。
+		glBindBuffer GL_ARRAY_BUFFER,GLmemid_uv
+		glTexCoordPointer 2,GL_FLOAT,0,0//uvデータの場所を指定する。
+
+		/* 頂点のインデックスを順番通りに使って図形を描く */
+		glDrawArrays GL_QUADS,0,4*p_kz//頂点を4*p_kzこ使います＝QUADSをp_kzこ表示します
+
+		/* 頂点データ，法線データ，テクスチャ座標の配列を無効にする */
+		glDisableClientState GL_VERTEX_ARRAY//後片付け
+		glDisableClientState GL_TEXTURE_COORD_ARRAY//後片付け
+		glBindBuffer GL_ARRAY_BUFFER,0//後片付け。バインド解除
+
+		glPopMatrix
+		glFinish
+		SwapBuffers wglGetCurrentDC()
+
+		flm++:if gettime(6)!mgett:mgett=gettime(6):title "100万ポリゴン  fps="+flm+"":flm=0
+		getkey key,27:if key:HCLbye:end
+	loop
+
+
+*OpenCL計算
+	timestep=float(39.77*sin(0.00008*cnt*sin(0.0000411*cnt)))
+	HCLSetKernel krncalc,1,timestep//タイムステップセット
+
+	//HSPで求めた外積ベクトルをset
+	gosub*外積計算
+	HCLSetKernel krncalc,2,float(p_sz*b1)
+	HCLSetKernel krncalc,3,float(p_sz*b2)
+	HCLSetKernel krncalc,4,float(p_sz*b3)
+	HCLSetKernel krncalc,5,float(p_sz*c1)
+	HCLSetKernel krncalc,6,float(p_sz*c2)
+	HCLSetKernel krncalc,7,float(p_sz*c3)
+	HCLEnqueueAcquireGLObjects CLmemid_vt//HGLCreateBufferから作ったメモリオブジェクトをカーネル関数で使う場合は以下の手順が必要。
+	HCLDoKrn1 krncalc,p_kz,128
+	HCLWaitTask
+	HCLEnqueueReleaseGLObjects CLmemid_vt//HCLEnqueueAcquireGLObjectsの対
+	return
+
+
+
+*外積計算
+	w=1.0/sqrt(camx*camx+camy*camy+camz*camz)
+	a1=camx*w
+	a2=camy*w
+	a3=camz*w
+	b1=0.0
+	b2=1.0
+	b3=0.0
+	c1=a2*b3-a3*b2
+	c2=a3*b1-a1*b3
+	c3=a1*b2-a2*b1
+	w=1.0/sqrt(c1*c1+c2*c2+c3*c3)
+	c1*=w
+	c2*=w
+	c3*=w
+	//cが本当に垂直なベクトル
+	//今度はc*a
+	b1=c2*a3-c3*a2
+	b2=c3*a1-c1*a3
+	b3=c1*a2-c2*a1
+	return

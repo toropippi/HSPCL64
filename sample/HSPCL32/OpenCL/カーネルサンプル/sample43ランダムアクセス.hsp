@@ -1,0 +1,37 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//大体の話ですが
+//一般的に連続したメモリ番地にアクセスするときはアクセス速度が早いです。
+//これをバーストモードアクセスとよんだりします。(多分)
+
+//今回カーネルでビット逆順を使って簡単なランダムアクセスを行ない、バーストアクセスと比較してどちらがどのくらい早いかを計測します。
+//このサンプルはランダムアクセスのテストです。
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "hspcl32.as"
+	HCLini 1
+	if HCLDevCount=0:dialog "対応ビデオカードがありません。終了します",1:end
+	HCLSetDev 0;0番目のデバイスを使って計算する
+	dialog ""+HCLGetDeviceInfo_s(CL_DEVICE_NAME)+"に一時的に高負荷がかかります。\nよろしいですか？",3
+	if stat!6:HCLbye:end
+
+	HCLBuildProgram "randmu.cl",prgid;
+	HCLCreateKernel prgid,"test",krnid;
+	HCLCreateBuffer vram,128*1024*1024;128Mのメモリ確保
+	HCLSetKernel krnid,0,vram;
+	wait 10
+	mes "計測開始"
+
+
+	HCLWaitTask
+	timeee=gettime(5)*60*1000+gettime(6)*1000+gettime(7)
+	repeat 4//4回ループ。128MB*4＝512MBのアクセスになります。
+		HCLDoKrn1 krnid,32*1024*1024,0;中身はint型としたVRAMにget_global_id(0)を代入するというもの
+		HCLWaitTask
+	loop
+	timeee=gettime(5)*60*1000+gettime(6)*1000+gettime(7)-timeee
+
+
+	mes "ランダムアクセス"+(0.5*1000/timeee)+"GB/sec"
+
+	HCLbye
+	stop

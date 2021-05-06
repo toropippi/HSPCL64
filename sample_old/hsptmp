@@ -1,0 +1,19 @@
+#include "HSPCL64.as"
+
+	HCLinit
+	HCLSetDev 0
+
+	dim aa,256
+	dim bb,256
+	dim cc,256
+	dim dd,33
+	dd.5=6
+	dd.0=3
+	
+	wait 6
+	HCLCall "__kernel void vecAdd(__global int* a,__global int* b,__global int* c,int ddd){uint gid = get_global_id(0);c[gid] = a[gid] + b[gid]+ddd;}",256,64,aa,bb,cc,7
+	//HCLCall "__kernel void vecAdd(){uint gid = get_global_id(0);}",256,64
+
+		repeat 256
+		mes cc.cnt
+		loop

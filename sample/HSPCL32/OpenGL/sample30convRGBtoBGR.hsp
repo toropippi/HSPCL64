@@ -1,0 +1,15 @@
+#include "hspcl32.as"
+	winx=256:winy=256
+	screen 0,winx,winy
+	HCLini 1
+	mref i,66;HSPのウィンドウ内画像データ(VRAM)をいじりたいので
+
+	HGLCreateTexture1_texload txid,"peinto.bmp";読み込み専用テクスチャにpeinto.bmpをロード
+	sdim dataarray4,winx*winy*4;データを取り出すために必要な配列変数
+	sdim dataarray3,winx*winy*3;データを取り出すために必要な配列変数
+	HGLReadTexture txid,dataarray4,GL_RGBA,GL_UNSIGNED_BYTE;txid→dataarrayにテクスチャデータをコピー
+	convRGBAtoRGB dataarray4,dataarray3;dataarray4にはRGBAの状態で入っているので、HSPで表示するにはまずA要素を取り除く必要がある
+	convRGBtoBGR dataarray3,i
+
+	redraw 1;表示
+	//色も正しい！

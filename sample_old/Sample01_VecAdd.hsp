@@ -1,0 +1,35 @@
+// cnt+cnt=2*cnt を256並列でやるサンプル
+#include "HSPCL64.as"
+	HCLinit
+	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
+	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
+	
+	n=256//配列サイズ
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
+	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
+	
+	HCLSetKernel krn,0,clmem_A//引数を適応
+	HCLSetKernel krn,1,clmem_B//引数を適応
+	HCLSetKernel krn,2,clmem_C//引数を適応
+	
+	mes "計算start"
+	HCLDoKrn1 krn,n,n//計算
+	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+	mes "計算end"
+	
+		repeat n
+		mes host_C.cnt
+		loop
+	stop

@@ -1,0 +1,46 @@
+#include "hspcl32.as"
+	HCLini
+	
+	gkcev=0
+	aaaaaa="aa"
+	repeat HCLDevCount
+		HCLSetDev cnt
+		aaaaaa=HCLGetDeviceInfo_s(CL_DEVICE_NAME)
+		gkcev+=HCLGetDevGLflg()
+		if gkcev:break
+	loop
+	if (gkcev==0){;デバイスがOpenCLとOpenGLの連携を使えるか、つかえるなら１つかえないなら０
+		dialog "このデバイスでは正常に動作しないと思われます。\nそれでも開始しますか？",3
+		if stat!6:HCLbye:end
+	}
+
+	screen 1,640,480
+	size=256
+	dim hsp_array0,size/4
+	dim hsp_array1,size/4
+	foreach hsp_array0:hsp_array0.cnt=rnd(10000):loop//hsp_array0に配列に適当な値を代入
+
+	HGLCreateBuffer GLmemid,CLmemid,size;VRAMにデータバッファ作成
+
+//	HGLWriteBuffer GLmemid,hsp_array0,size;hsp_array0→GLmemid(VRAM)にデータ転送
+//	HGLReadBuffer  GLmemid,hsp_array1,size;GLmemid(VRAM)→hsp_array1にデータ転送
+//CLmemidを使えばHCLWriteBufferで代用できる。
+	HCLEnqueueAcquireGLObjects CLmemid
+	HCLWriteBuffer CLmemid,hsp_array0,size;hsp_array0→CLmemid(VRAM)にデータ転送
+	HCLReadBuffer  CLmemid,hsp_array1,size;CLmemid(VRAM)→hsp_array1にデータ転送
+	HCLEnqueueReleaseGLObjects CLmemid
+
+
+	//hsp_array0と1の中身確認、同じならVRAMを介してちゃんとデータ転送できたことがわかる。
+	font "MS ゴシック",10,0
+	repeat 46
+		mes hsp_array0.cnt
+	loop
+	
+	pos 150,0
+	repeat 46
+		mes hsp_array1.cnt
+	loop
+	
+	pos 0,460
+	mes "同じならVRAMを介してちゃんとデータ転送できたことがわかる。"

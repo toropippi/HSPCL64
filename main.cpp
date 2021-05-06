@@ -1,27 +1,31 @@
-
 //
 //		HSP3.0 plugin sample
 //		onion software/onitama 2004/9
 //
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #include <windows.h>
-#include <string>
 #include <stdio.h>
+#include <string>
 #include <stdlib.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+#include <map>
+#include <CL/cl.h>
 #include "hsp3plugin.h"
 #include "hsp3struct.h"
 #include "hspvar_int64.h"
-#include <CL/cl.h>
-#include <map>
-
+#include "errmsg.h"
+#include "RGB.h"
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
 int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
-int COMMANDQUEUE_PER_DEVICE = 2;//1デバイスあたりのコマンドキュー、設定で変更できる
-int dev_num = 0;//デバイスの数
+int COMMANDQUEUE_PER_DEVICE = 4;//1デバイスあたりのコマンドキュー、設定で変更できる
+int dev_num = 0;//全プラットフォームのデバイスの合計数
 int bufferout[1024 * 4];
-char bugchar[1024 * 1024];
+char* source_str;
 cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
@@ -29,8 +33,9 @@ cl_mem mem_obj;
 cl_program program;
 cl_kernel kernel;
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
-cl_event* event_wait_list;//HCLinitで実体化
-std::map < cl_kernel, std::string >  nums;
+cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
+std::map <cl_kernel, std::string>  nums;
+
 
 struct EventStruct
 {
@@ -46,18 +51,6 @@ int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
 int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
-
-void _ConvRGBtoBGR(void);
-void _ConvRGBAtoRGB(void);
-void _ConvRGBtoRGBA(void);
-void retmeserr(cl_int ret);//clEnqueueNDRangeKernel で失敗した時出すエラーメッセージをまとめた関数
-void retmeserr2(cl_int ret);//clReadで失敗した時出すエラーメッセージをまとめた関数
-void retmeserr3(cl_int ret);//clCreateCommandQueueで失敗した時出すエラーメッセージをまとめた関数
-void retmeserr4(cl_int ret);//clCreateContextで失敗した時出すエラーメッセージをまとめた関数
-void retmeserr5(cl_int ret);
-void retmeserr6(cl_int ret);
-void retmeserr7(cl_int ret);
-void mes(const char* strc, int val);
 
 
 
@@ -100,6 +93,39 @@ INT64 Code_geti32i64() {
 }
 
 
+cl_event* GetWaitEvlist()
+{
+	if (num_event_wait_list == 0)
+	{
+		return NULL;
+	}
+	else
+	{
+		return event_wait_list;
+	}
+}
+
+std::string readFileIntoString(const std::string& path) {
+	std::ifstream input_file(path);
+	if (!input_file.is_open()) {
+		std::cerr << "Could not open the file - '"
+			<< path << "'" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	return std::string((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+}
+
+cl_program WithSource_func(cl_context contxt,std::string s_source, std::string s_option)
+{
+	size_t sz = s_source.length();
+	auto sp = s_source.c_str();
+	cl_program program = clCreateProgramWithSource(contxt, 1, (const char**)&sp, (const size_t*)&sz, NULL);
+	cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], s_option.c_str(), NULL, NULL);
+	if (err0 != CL_SUCCESS) retmeserr7(device_id[clsetdev], program);
+	return program;
+}
+
+////////////自作関数ここまで
 
 
 
@@ -247,40 +273,17 @@ static void *reffunc( int *type_res, int cmd )
 	//str filename,str buildoption=""
 	case 0x09:	// HCLCreateProgram
 	{
-		char *p;
-		char pathname[_MAX_PATH];
-		p = code_gets();								// 文字列を取得
-		strncpy(pathname, p, _MAX_PATH - 1);			// 取得した文字列をコピー
+		char *pathname;
+		pathname = code_gets();								// 文字列を取得
+		std::string s_sourse = readFileIntoString(std::string(pathname));
 
+		char* c_option;
+		c_option = code_getds("");								// 文字列を取得
 		std::string buildoption;
-		buildoption = code_getds("");
+		buildoption = std::string(c_option);
 
-		FILE *fp;
-		char *source_str;
-		size_t source_size;
-		if ((fp = fopen(pathname, "r")) == NULL) {
-			puterror(HSPERR_FILE_IO);
-		}
-		else
-		{
-			source_str = new char[1024 * 1024 * 64];
-			source_size = fread(source_str, 1, 1024 * 1024 * 64, fp);
-			
-			// Build the program
-			program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&source_size, NULL);
-			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption.c_str(), NULL, NULL);
-			if (err0 != CL_SUCCESS) {
-				size_t len;
-				clGetProgramBuildInfo(program, device_id[clsetdev],
-					CL_PROGRAM_BUILD_LOG, sizeof(bugchar), bugchar, &len);
-				MessageBox(NULL, (LPCSTR)bugchar, "Error on OpenCL code", MB_OK);
-				puterror(HSPERR_UNKNOWN_CODE);
-			}
-			fclose(fp);
-
-			ref_int64val = (INT64)program;
-		}
-		
+		// Build the program
+		ref_int64val = (INT64)WithSource_func(context[clsetdev], s_sourse, buildoption);
 		break;
 	}
 
@@ -294,52 +297,12 @@ static void *reffunc( int *type_res, int cmd )
 		p = code_gets();								// 文字列を取得
 		strncpy(pathname, p, _MAX_PATH - 1);			// 取得した文字列をコピー
 		cl_int ret;
-
 		kernel = clCreateKernel((cl_program)prm1, pathname, &ret);
 		ref_int64val = (INT64)kernel;
-
-		switch (ret) {							//分岐
-
-		case CL_INVALID_PROGRAM:
-			MessageBox(NULL, "program が有効なプログラムオブジェクトでない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_INVALID_PROGRAM_EXECUTABLE:
-			MessageBox(NULL, "program に正常にビルドされた実行可能プログラムがない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_INVALID_KERNEL_NAME:
-			MessageBox(NULL, "kernel_name が program 内に見つからない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_INVALID_KERNEL_DEFINITION:
-			MessageBox(NULL, "kernel_name が与える、引数や引数の型といった __kernel 関数の関数定義が、program がビルドされたすべてのデバイスで同じでない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_INVALID_VALUE:
-			MessageBox(NULL, "kernel_name が NULL", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_OUT_OF_RESOURCES:
-			MessageBox(NULL, "デバイス上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-
-		case CL_OUT_OF_HOST_MEMORY:
-			MessageBox(NULL, "ホスト上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		}
-
+		if (ret != CL_SUCCESS) retmeserr8(ret);
 		//kernelと文字列を紐づけ
 		std::string str = std::string(p);
 		nums[kernel] = str;
-
 		break;
 	}
 
@@ -348,72 +311,27 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x0C:	// HCLCreateBuffer
 	{
 		INT64 prm1 = Code_geti32i64();//パラメータ1:int64数値、サイズ
-
-		cl_int errcode_ret;
-		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE,
-			prm1, NULL, &errcode_ret);
-		
-		switch (errcode_ret) {							//分岐
-
-		case CL_INVALID_CONTEXT:
-			MessageBox(NULL, "context が有効なOpenCLコンテキストでない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_VALUE:
-			MessageBox(NULL, "読み書き専用メモリが用意できませんでした", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_KERNEL:
-			MessageBox(NULL, "size が 0 のとき。もしくは size が context 内のデバイスの CL_DEVICE_MAX_MEM_ALLOC_SIZE の値より大きい", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_HOST_PTR:
-			MessageBox(NULL, "host_ptr が NULL で CL_MEM_USE_HOST_PTR もしくは CL_MEM_COPY_HOST_PTR が flags に指定されているとき。もしくは、CL_MEM_COPY_HOST_PTR や CL_MEM_USE_HOST_PTR が設定されていないのに host_ptr が NULL でない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-			MessageBox(NULL, "バッファオブジェクトのメモリを確保するのに失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_RESOURCES:
-			MessageBox(NULL, "デバイス上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_HOST_MEMORY:
-			MessageBox(NULL, "ホスト上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		}
-
+		cl_int ret;
+		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE,prm1, NULL, &ret);
+		if (ret != CL_SUCCESS) retmeserr9(ret);
 		ref_int64val = (INT64)mem_obj;
 		break;
 	}
 	
 
-
 	case 0x18://clCreateProgramWithSource(str "   ")
 	{
-		char *source_str;
-		source_str = new char[1024 * 1024 * 64];
-		source_str = code_gets();								// 文字列を取得
+		char* c_source;
+		c_source = code_gets();								// ソースコード
+		std::string s_sourse = std::string(c_source);
 
-		size_t saizu = strlen(source_str);
+		char* c_option;
+		c_option = code_getds("");								// ビルドオプション文字列を取得
+		std::string buildoption;
+		buildoption = std::string(c_option);
 
-		program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&saizu, NULL);
-		char* buildoption;
-		buildoption = code_gets();
-		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption, NULL, NULL);
-		if (err0 != CL_SUCCESS) {
-			size_t len;
-			char* buffer;
-			buffer = new char[1024 * 1024 * 2];
-			clGetProgramBuildInfo(program, device_id[clsetdev],
-				CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
-			MessageBox(NULL, (LPCSTR)buffer, "Error on OpenCL code", MB_OK);
-			puterror(HSPERR_UNKNOWN_CODE);
-		}
-
-		ref_int64val = (INT64)program;
+		// Build the program
+		ref_int64val = (INT64)WithSource_func(context[clsetdev], s_sourse, buildoption);
 		break;
 	}
 
@@ -424,14 +342,14 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-	case 0x1B://HCLGetSetDevice
+	case 0x1B://HCLGetSettingDevice
 	{
 		fInt = true;
 		ref_int32val = (int)clsetdev;
 		break;
 	}
 	
-	case 0x1D://HCLGetSetCommandQueue
+	case 0x1D://HCLGetSetintCommandQueue
 	{
 		fInt = true;
 		ref_int32val = (int)clsetque;
@@ -458,32 +376,6 @@ static void *reffunc( int *type_res, int cmd )
 		if (ret != CL_SUCCESS) retmeserr5(ret);
 		break;
 	}
-	/*
-	case 0x27://HCLGetEventStartTime_d
-	{
-		
-		fDouble = true;
-		int eventid = code_geti();
-		INT64 t = 0;
-		cl_int ret;
-		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_START, sizeof(INT64), &t, NULL);
-		retmeserr5(ret);
-		ref_doubleval = (double)t * (double)time_resolution[clsetdev];
-		break;
-	}
-
-	case 0x28://HCLGetEventEndTime_d
-	{
-		fDouble = true;
-		int eventid = code_geti();
-		INT64 t = 0;
-		cl_int ret;
-		ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_END, sizeof(INT64), &t, NULL);
-		retmeserr5(ret);
-		ref_doubleval = (double)t * (double)time_resolution[clsetdev];
-		break;
-	}
-	*/
 
 	case 0x29://HCLGetEventStatus
 	{
@@ -660,6 +552,7 @@ static int cmdfunc(int cmd)
 		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;
 		cl_uint ret_num_platforms;
+		source_str = new char[1024 * 1024 * 64];
 
 		cl_device_id* _device_id;
 		_device_id = new cl_device_id[MAX_DEVICE_IDS];
@@ -724,6 +617,8 @@ static int cmdfunc(int cmd)
 	}
 
 	
+
+
 	case 0x0B:	// HCLSetKernel
 	{
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
@@ -787,41 +682,33 @@ static int cmdfunc(int cmd)
 	case 0x0D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
 	{
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
-		size_t p4 = code_getdi(1);
-		size_t ptryes = code_getdi(0);
+		size_t globalsize = code_getdi(1);
+		size_t localsize = code_getdi(0);
 
 		cl_int ret;
 		//outevent関連
 		int outeventptr = code_getdi(-1);
-		cl_event* outevent = NULL;
+		cl_event* outevent = NULL;//今回の関数を記録したいイベント変数のポインタ
 		if (outeventptr >= 0) 
 		{
 			if (cppeventlist[outeventptr] != NULL)
 				clReleaseEvent(cppeventlist[outeventptr]);
 			outevent = &cppeventlist[outeventptr];
 			evinfo[outeventptr].k = prm1;
-			evinfo[outeventptr].globalsize = p4;
-			evinfo[outeventptr].localsize = ptryes;
+			evinfo[outeventptr].globalsize = globalsize;
+			evinfo[outeventptr].localsize = localsize;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
+		cl_event* ev_= GetWaitEvlist();
+
+		if (localsize != 0) {
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				(cl_kernel)prm1, 1, NULL, &globalsize, &localsize, num_event_wait_list, ev_, outevent);
 		}
 		else
 		{
-			ev_ = event_wait_list;
-		}
-
-
-		if (ptryes != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &p4, &ptryes, num_event_wait_list, ev_, outevent);
-		}
-		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &p4, NULL, num_event_wait_list, ev_, outevent);
+				(cl_kernel)prm1, 1, NULL, &globalsize, NULL, num_event_wait_list, ev_, outevent);
 		}
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
@@ -833,24 +720,18 @@ static int cmdfunc(int cmd)
 	{
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
-
 		//引数2。HSP側の配列変数
 		PVal *pval;
 		APTR aptr = code_getva(&pval);
 		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-		
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_geti32i64();//パラメータ3:int64
-		
 		//引数4、コピー先のofset
 		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
-
 		//引数5、コピー元のofset
 		INT64 prm5 = Code_geti32i64();//パラメータ5
-		
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		
-
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
 		cl_event* outevent = NULL;
@@ -864,16 +745,7 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
-
+		cl_event* ev_ = GetWaitEvlist();
 
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
@@ -889,23 +761,17 @@ static int cmdfunc(int cmd)
 	{
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
-
 		//引数2。HSP側の配列変数
 		PVal *pval;
 		APTR aptr = code_getva(&pval);
 		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-		
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_geti32i64();//パラメータ3:int64
-		
 		//引数4、コピー先のofset
 		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
-
 		//引数5、コピー元のofset
 		INT64 prm5 = Code_geti32i64();//パラメータ5
-
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
-		
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -920,16 +786,7 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
-
+		cl_event* ev_=GetWaitEvlist();
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -945,30 +802,10 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x11:	// HCLFinish//デバイスにある全部のタスク待ち
+	case 0x11:	// HCLFinish//現在のデバイスの現在のコマンドキューの中にあるタスクを全部待つ
 	{
 		cl_int ret = clFinish(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
-
-		switch (ret) {							//分岐
-
-		case CL_INVALID_COMMAND_QUEUE:
-			MessageBox(NULL, "第一引数が有効な値ではありません", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_CONTEXT:
-			MessageBox(NULL, "あるいは第一引数と event_wait_list 内のイベントと関連付けられたデバイスが同じでない", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_EVENT:
-			MessageBox(NULL, "event_listのイベントオブジェクトが不正", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_HOST_MEMORY:
-			MessageBox(NULL, "ホスト上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		}
-		break;
+		if (ret != CL_SUCCESS) { retmeserr10(ret); }
 	}
 
 
@@ -1013,55 +850,11 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
-
+		cl_event* ev_ = GetWaitEvlist();
 		cl_int ret = clEnqueueCopyBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
 			(cl_mem)prm3, (cl_mem)prm2, prm6, prm5, prm4,num_event_wait_list, ev_, outevent);
-
 		num_event_wait_list = 0;
-
-		switch (ret) {							//分岐
-		case CL_INVALID_COMMAND_QUEUE:
-			MessageBox(NULL, "command_queue is not a valid command-queue", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_CONTEXT:
-			MessageBox(NULL, "メモリオブジェクトが別のデバイスで作成された可能性があります", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_MEM_OBJECT:
-			MessageBox(NULL, "メモリオブジェクトの実体がありません。メモリオブジェクトが別のデバイスで作成された可能性があります。", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_INVALID_VALUE:
-			MessageBox(NULL, "アドレスアクセス違反です。書き込み領域or読み込み領域がはみ出してます。", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_MEM_COPY_OVERLAP:
-			MessageBox(NULL, "アドレスアクセス違反です。書き込み領域か読み込み領域がはみ出してます。", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-			MessageBox(NULL, "data store のためにallocate memoryするのを失敗しました", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_RESOURCES:
-			MessageBox(NULL, "デバイス(GPU)上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_HOST_MEMORY:
-			MessageBox(NULL, "ホスト(CPU)上でのリソース確保に失敗した", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		}
+		if (ret != CL_SUCCESS)retmeserr2(ret);
 		break;
 	}
 
@@ -1072,11 +865,13 @@ static int cmdfunc(int cmd)
 		size_t p4[3] = { 1,1,1 };
 		size_t ptryes[3] = { 1,1,1 };
 
-		if (p3 == 1) {
+		if (p3 == 1) 
+		{
 			p4[0] = code_getdi(1);
 			ptryes[0] = code_getdi(0);
 		}
-		else {
+		else 
+		{
 			if ((p3 == 2) | (p3 == 3)) {
 				PVal *pval1;
 				APTR aptr1;	//配列変数の取得
@@ -1120,16 +915,9 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].globalsize = p4[0] * p4[1] * p4[2];
 			evinfo[outeventptr].localsize = ptryes[0] * ptryes[1] * ptryes[2];
 		}
+
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
+		cl_event* ev_=GetWaitEvlist();
 
 		if (ptryes[0] != 0) 
 		{
@@ -1201,23 +989,16 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = p5;
 			if (p4_2 != 0) 
 			{
-				clReleaseEvent(cppeventlist[(outeventptr + 1) % CL_EVENT_MAX]);
-				outevent2 = &cppeventlist[(outeventptr + 1) % CL_EVENT_MAX];
-				evinfo[(outeventptr + 1) % CL_EVENT_MAX].k = prm2;
-				evinfo[(outeventptr + 1) % CL_EVENT_MAX].globalsize = p4_2;
-				evinfo[(outeventptr + 1) % CL_EVENT_MAX].localsize = p5;
+				int next_outeventptr = (outeventptr + 1) % CL_EVENT_MAX;
+				clReleaseEvent(cppeventlist[next_outeventptr]);
+				outevent2 = &cppeventlist[next_outeventptr];
+				evinfo[next_outeventptr].k = prm2;
+				evinfo[next_outeventptr].globalsize = p4_2;
+				evinfo[next_outeventptr].localsize = p5;
 			}
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
+		cl_event* ev_=GetWaitEvlist();
 
 		if (p4_1 != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
@@ -1293,48 +1074,55 @@ static int cmdfunc(int cmd)
 	case 0x1E://HCLSetCommandQueue
 	{
 		clsetque = code_getdi(0);
+		if (clsetque >= COMMANDQUEUE_PER_DEVICE) 
+		{
+			MessageBox(NULL, "指定したコマンドキューのidが大きすぎます。\n_ExHCLSetCommandQueueMaxで最大値を変更してください。", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
 		break;
 	}
 
 	case 0x1F:	// _ExHCLSetCommandQueueMax
 	{
-		COMMANDQUEUE_PER_DEVICE = code_getdi(0);
+
+		if (dev_num != 0) 
+		{
+			MessageBox(NULL, "この命令はHCLinitの前に実行してください", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+		COMMANDQUEUE_PER_DEVICE = code_geti();
 		break;
 	}
 
 	case 0x20:	// _ExHCLSetCommandQueueProperties
 	{
-		cmd_properties = code_getdi(0);
+		if (dev_num != 0)
+		{
+			MessageBox(NULL, "この命令はHCLinitの前に実行してください", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+		cmd_properties = code_geti();
 		break;
 	}
 
 	case 0x21:	// HCLFlush//コマンドキューのブロッキングみたいな
 	{
 		cl_int ret = clFlush(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
-		switch (ret) {							//分岐
-		case CL_INVALID_COMMAND_QUEUE:
-			MessageBox(NULL, "CL_INVALID_COMMAND_QUEUE: if command_queue is not a valid command-queue", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		case CL_OUT_OF_HOST_MEMORY:
-			MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.", "エラー", 0);
-			puterror(HSPERR_UNSUPPORTED_FUNCTION);
-			break;
-		}
+		if (ret != CL_SUCCESS) retmeserr11(ret);
 		break;
 	}
 
-	case 0x22:	//HCLSetWaitEventList_1 int p1
+	case 0x22:	//HCLSetWaitEvent int p1
 	{
-		p1 = code_getdi(0);
+		p1 = code_geti();
 		num_event_wait_list = 1;
 		event_wait_list[0] = cppeventlist[p1];
 		break;
 	}
 
-	case 0x23:	//HCLSetWaitEventList_a int num,array a
+	case 0x23:	//HCLSetWaitEvents int num,array a
 	{
-		num_event_wait_list = code_getdi(0);
+		num_event_wait_list = code_geti();
 
 		PVal* pval1;
 		APTR aptr1;	//配列変数の取得
@@ -1352,18 +1140,205 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x24:	// _ExHCLResizeEventList
+	case 0x24:	// _ExHCLSetEventMax
 	{
-		CL_EVENT_MAX = code_getdi(65536);
+		if (dev_num != 0)
+		{
+			MessageBox(NULL, "この命令はHCLinitの前に実行してください", "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+		CL_EVENT_MAX = code_geti();
 		break;
 	}
 
 
 
 
+	// HCLCall
+	// str source,int global_size,int local_size,array a,array b,array c・・・・・
+
+	case 0x27:
+	{
+		cl_int ret;
+		char* c_source;
+		c_source = code_gets();								// 文字列を取得
+		std::string s_sourse = std::string(c_source);
+		program = WithSource_func(context[clsetdev], s_sourse, "");
+		ret = clCreateKernelsInProgram(program, 1, &kernel, NULL);//プログラムの中の最初にでてくるカーネルを取得
+		if (ret != CL_SUCCESS)retmeserr8(ret);
+		//次にglobal_sizeとlocal_size
+		size_t global_size = code_getdi(1);	//並列数
+		size_t local_size = code_getdi(1);
+		//次に引数取得↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+		cl_mem clm[32];
+		void* host_ptr[32];
+		int copysize[32];
+		for (int i = 0; i < 32; i++) { copysize[i] = 0; clm[i] = NULL; host_ptr[i] = NULL; }
+		//一時配列設定おわった
+
+
+		for (int i = 0; i < 32; i++) {
+			//まずcl_mem型かそれ以外かを判定したい
+			bool memorval = false;//falseはvalという意味、falseならcl_memを作らない
+			bool trygetva = true;//getvaがうまくいけばtrue
+
+			void* ppttr;//①
+			int sizeofff;//②
+			//この①②があれば転送できる
+			int chk;
+			int type;
+			PVal* pval;
+			APTR aptr;
+
+
+			try 
+			{
+				APTR aptr = code_getva(&pval);
+			}
+			catch (...) 
+			{
+				trygetva = false;
+			}
+
+
+			if (trygetva == true) 
+			{
+				ppttr = (char*)pval->pt;
+				int asz = max(pval->len[1], 1) * max(pval->len[2], 1) * max(pval->len[3], 1) * max(pval->len[4], 1);
+				sizeofff = (pval->size) / asz;
+
+				//配列がありそうなら
+				if (asz > 1)
+				{
+					if (pval->offset == 0)//添え字がちゃんと0なら
+					{
+						memorval = true;
+						sizeofff = pval->size;
+					}
+					else//添え字に意味がありそうなら
+					{
+						//sizeofff = (pval->size) / asz;
+						ppttr = ((char*)ppttr) + ((int)pval->offset * sizeofff);
+					}
+				}
+			}
+			else
+			{
+				chk = code_getprm();
+				if (chk <= PARAM_END) {
+					break;										// パラメーター省略時の処理
+				}
+				type = mpval->flag;							// パラメーターの型を取得
+				switch (type) {
+					case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
+					{
+						ppttr = (char*)mpval->pt;
+						sizeofff = 1;
+						break;
+					}
+					case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
+					{
+						ppttr = (double*)mpval->pt;
+						sizeofff = 8;
+						break;
+					}
+
+					case 8:								// パラメーターがint64だった時
+					{
+						ppttr = (INT64*)mpval->pt;
+						sizeofff = 8;
+						break;
+					}
+					case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
+					{
+						ppttr = (int*)mpval->pt;
+						sizeofff = 4;
+						break;
+					}
+					default:
+						puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+				}
+			}
+
+
+
+
+			if (memorval == false) //引数が普通のスカラーなら
+			{
+				//p1カーネルid、p2は引数位置、p3にはサイズ、p4は実体
+				clSetKernelArg(kernel, i, sizeofff, ppttr);
+			}
+			else //引数がcl_memなら
+			{
+				clm[i] = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE, pval->size, NULL, &ret);
+				copysize[i] = pval->size;
+				host_ptr[i] = ppttr;
+				if (ret != CL_SUCCESS) retmeserr9(ret);
+				//vramを確保し転送
+				ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], clm[i], CL_TRUE, 0,
+					copysize[i], host_ptr[i], 0, NULL, NULL);
+				if (ret != CL_SUCCESS) { retmeserr2(ret); }
+				//ブロッキングありで転送
+				//p1カーネルid、p2は引数位置、p3にはサイズ、p4は実体
+				clSetKernelArg(kernel, i, 8, &clm[i]);
+			}
+		}
+
+		//やっと引数設定が終わった↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+
+		//次に関数の実行
+		if (local_size != 0) 
+		{
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+		}
+		else 
+		{
+			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+				kernel, 1, NULL, &global_size, NULL, 0, NULL, NULL);
+		}
+		if (ret != CL_SUCCESS) { retmeserr(ret); }
+		
+		//GPU→CPUに変数を戻してくる
+		for (int i = 0; i < 32; i++) 
+		{
+			if (copysize[i] != 0) 
+			{
+				ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], clm[i], CL_TRUE, 0,
+					copysize[i], host_ptr[i], 0, NULL, NULL);
+				if (ret != CL_SUCCESS) { retmeserr2(ret); }
+				//vramの解放
+				ret = clReleaseMemObject(clm[i]);
+				if (ret != CL_SUCCESS) {
+					MessageBox(NULL, "メモリ開放ができませんでした", "エラー", 0);
+					puterror(HSPERR_UNSUPPORTED_FUNCTION);
+				}
+				clm[i] = NULL; host_ptr[i] = NULL;
+			}
+		}
+
+		//これにて全行程終了のはず！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+		break;
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	case 0x2A:	// HCLWaitForEvent
 	{
-		int n = code_getdi(0);
+		int n = code_geti();
 		event_wait_list[0] = cppeventlist[n];
 		cl_int ret = clWaitForEvents(1, event_wait_list);
 		if (ret != CL_SUCCESS) retmeserr6(ret);
@@ -1394,75 +1369,6 @@ static int cmdfunc(int cmd)
 	}
 
 
-	/*
-	case 0x2C:	// HCLWaitForEvent_Sleep
-	{
-		int eventid = code_getdi(0);
-		int waitstep = code_getdi(1000 * 60 * 60);
-		int steptime = code_getdi(10);
-		cl_int ret;
-		int stt = 0;
-		for (int i = 0; i < waitstep; i++)
-		{
-			ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_EXECUTION_STATUS, 4, &stt, NULL);
-			if (ret != CL_SUCCESS) retmeserr5(ret);
-			if (stt <= CL_COMPLETE)break;
-			Sleep(steptime);
-		}
-		break;
-	}
-
-
-
-	case 0x2D:	// HCLWaitForEvents_sleep int num,array a
-	{
-		int n = code_getdi(0);
-		PVal* pval1;
-		APTR aptr1;	//配列変数の取得
-		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
-		HspVarProc* phvp1;
-		void* ptr1;
-		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
-		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-		int waitstep = code_getdi(1000 * 60 * 60);
-		int steptime = code_getdi(10);
-		cl_int ret;
-		int stt = 0;
-		int flag;
-
-		for (int j = 0; j < waitstep; j++)
-		{
-			flag = 0;
-			for (int i = 0; i < n; i++) 
-			{
-				p2 = *((size_t*)ptr1 + i);
-				ret = clGetEventInfo(cppeventlist[p2], CL_EVENT_COMMAND_EXECUTION_STATUS, 4, &stt, NULL);
-				if (ret != CL_SUCCESS) retmeserr5(ret);
-				if (stt <= CL_COMPLETE)flag++;
-			}
-			if (flag == n)break;
-			Sleep(steptime);
-		}
-		break;
-	}
-	*/
-
-	case 0x2E:	//HCLSetWaitEventList_16 int p1
-	{
-		for (num_event_wait_list = 0; num_event_wait_list < 16; num_event_wait_list++)
-		{
-			p1 = code_getdi(-1);
-			if (p1 >= 0) 
-			{
-				event_wait_list[num_event_wait_list] = cppeventlist[p1];
-			}
-			else { break; }
-		}
-		break;
-	}
-
-
 
 	case 0x2F://HCLGetEventAllCommandInfo int eventid,str ptrk,int strsize,int64 data,int64 commandtype
 	{
@@ -1478,23 +1384,23 @@ static int cmdfunc(int cmd)
 
 		switch (cmt)
 		{
-		case CL_COMMAND_NDRANGE_KERNEL:
-		{
-			s = nums[(cl_kernel)evinfo[eventid].k];
-			strsize = s.length();
-			data = evinfo[eventid].globalsize * 4294967296 + evinfo[eventid].localsize;
-			break;
-		}
+			case CL_COMMAND_NDRANGE_KERNEL:
+			{
+				s = nums[(cl_kernel)evinfo[eventid].k];
+				strsize = s.length();
+				data = evinfo[eventid].globalsize * 4294967296 + evinfo[eventid].localsize;
+				break;
+			}
 
-		case CL_COMMAND_WRITE_BUFFER:
-		case CL_COMMAND_COPY_BUFFER:
-		case CL_COMMAND_READ_BUFFER:
-		{
-			data = evinfo[eventid].k;
-			break;
-		}
-		default:
-			break;
+			case CL_COMMAND_WRITE_BUFFER:
+			case CL_COMMAND_COPY_BUFFER:
+			case CL_COMMAND_READ_BUFFER:
+			{
+				data = evinfo[eventid].k;
+				break;
+			}
+			default:
+				break;
 		}
 
 		for (int i = 0; i < strsize; i++)
@@ -1527,7 +1433,9 @@ static int cmdfunc(int cmd)
 
 		break;
 	}
-	/*
+
+	
+	//GPU上で実行
 	case 0x30://HCLFillBuffer4
 	{
 		//引数1 buffer
@@ -1555,15 +1463,7 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
+		cl_event* ev_=GetWaitEvlist();
 
 		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
 			(cl_mem)prm1, &pattern, 4, prm4, prm5, num_event_wait_list, ev_, outevent);
@@ -1599,33 +1499,19 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_;
-		if (num_event_wait_list == 0)
-		{
-			ev_ = NULL;
-		}
-		else
-		{
-			ev_ = event_wait_list;
-		}
+		cl_event* ev_=GetWaitEvlist();
 
-		cl_uint2 clpt2;
-		clpt2.x = pattern % 4294967296;
-		clpt2.y = pattern / 4294967296;
+		//cl_uint2 clpt2;
+		//clpt2.x = pattern % 4294967296;
+		//clpt2.y = pattern / 4294967296;
 
 		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &clpt2, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
 	}
-	*/
-
-
-
-
-
-
+	
 
 
 
@@ -1666,512 +1552,6 @@ static int cmdfunc(int cmd)
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-//----------------------------------------------------------------------------------------ここ以下は自分で作った関数--------------------------------
-
-
-void retmeserr(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_INVALID_PROGRAM_EXECUTABLE:
-		MessageBox(NULL, "デバイス上で実行可能な、正常にビルドされたプログラムが一つもありません", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_COMMAND_QUEUE:
-		MessageBox(NULL, "デバイスidが無効なデバイスになっています", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_KERNEL:
-		MessageBox(NULL, "カーネルidが間違っています", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_CONTEXT:
-		MessageBox(NULL, "カーネルidが違うデバイスidで登録されています、あるいは第一引数と event_wait_list 内のイベントと関連付けられたデバイスが同じでない", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_KERNEL_ARGS:
-		MessageBox(NULL, "カーネル引数が指定されていません", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_GLOBAL_WORK_SIZE:
-		MessageBox(NULL, "global_work_size が NULL です。あるいは、global_work_sizeの配列のどれかが0です。もしくはカーネルを実行するデバイス上でのglobal_work_sizeが上限値を超えている", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_GLOBAL_OFFSET:
-		MessageBox(NULL, "CL_INVALID_GLOBAL_OFFSET - global_work_offset が NULL でない", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_WORK_DIMENSION:
-		MessageBox(NULL, "work_dim が適切な値でない", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_WORK_GROUP_SIZE:
-		MessageBox(NULL, "global_work_sizeがlocal_work_size で整除できない、またはlocal_work_size[0]*local_work_size[1]*local_work_size[2]が、一つのワークグループ内のワークアイテム数の最大値を超えた", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_WORK_ITEM_SIZE:
-		MessageBox(NULL, "local_work_size[0], ... local_work_size[work_dim - 1] で指定したワークアイテム数が対応する CL_DEVICE_MAX_WORK_ITEM_SIZES[0], ... CL_DEVICE_MAX_WORK_ITEM_SIZES[work_dim - 1] の値こえている、または0を指定した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-		MessageBox(NULL, "kernel の引数に指定されたバッファ/イメージオブジェクトに関連付けられたデータ保存のためのメモリ領域の確保に失敗した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_EVENT_WAIT_LIST:
-		MessageBox(NULL, "event_wait_list が NULL で num_events_in_wait_list が 0 より大きいとき。あるいは event_wait_list が NULL でなく num_events_in_wait_list が 0 のとき。あるいは event_wait_list 内のイベントオブジェクトが有効なものでない", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_RESOURCES:
-		MessageBox(NULL, "デバイス上でのリソース確保に失敗した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "ホスト上でのリソース確保に失敗した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-}
-
-
-
-
-void retmeserr2(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_INVALID_COMMAND_QUEUE:
-		MessageBox(NULL, "command_queue is not a valid command-queue", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_CONTEXT:
-		MessageBox(NULL, "メモリオブジェクトが別のデバイスで作成された可能性があります", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_MEM_OBJECT:
-		MessageBox(NULL, "メモリオブジェクトの実体がありません。メモリオブジェクトが別のデバイスで作成された可能性があります。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_VALUE:
-		MessageBox(NULL, "アドレスアクセス違反です。読み込み領域がはみ出してます。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-		MessageBox(NULL, "data store のためにallocate memoryするのを失敗しました", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_RESOURCES:
-		MessageBox(NULL, "デバイス(GPU)上でのリソース確保に失敗した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "ホスト(CPU)上でのリソース確保に失敗した", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-
-}
-
-void retmeserr3(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_INVALID_CONTEXT:
-		MessageBox(NULL, "CL_INVALID_CONTEXT:if context is not a valid context.\\nコンテキストが有効なコンテキストでない場合", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_DEVICE:
-		MessageBox(NULL, "CL_INVALID_DEVICE:if device is not a valid device or is not associated with context\\nデバイスが有効なデバイスではない場合、またはコンテキストに関連付けられていない場合", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_VALUE:
-		MessageBox(NULL, "CL_INVALID_VALUE: if values specified in properties are not valid.\\nプロパティで指定された値が無効な場合。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_QUEUE_PROPERTIES:
-		MessageBox(NULL, "CL_INVALID_QUEUE_PROPERTIES:if values specified in properties are valid but are not supported by the device.プロパティで指定された値は有効であるが、デバイスでサポートされていない場合。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.\\nホスト上のOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-}
-
-void retmeserr4(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_INVALID_PLATFORM:
-		MessageBox(NULL, "CL_INVALID_PLATFORM:if properties is NULL and no platform could be selected or if platform value specified in properties is not a valid platform.", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_VALUE:
-		MessageBox(NULL, "CL_INVALID_VALUE:CL_INVALID_VALUE if context property name in properties is not a supported property name; if devices is NULL; if num_devices is equal to zero; or if pfn_notify is NULL but user_data is not NULL.", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_DEVICE:
-		MessageBox(NULL, "CL_INVALID_DEVICE: if devices contains an invalid device or are not associated with the specified platform.", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_DEVICE_NOT_AVAILABLE:
-		MessageBox(NULL, "CL_DEVICE_NOT_AVAILABLE if a device in devices is currently not available even though the device was returned by clGetDeviceIDs.", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY:if there is a failure to allocate resources required by the OpenCL implementation on the host.", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-}
-
-
-void retmeserr5(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_PROFILING_INFO_NOT_AVAILABLE:
-		MessageBox(NULL, " コマンドキュー に CL_QUEUE_PROFILING_ENABLE フラグが設定されていないとき。あるいは、event と関連付けられたコマンドの実行状態が CL_COMPLETE でないとき。あるいは、event がユーザイベントオブジェクトのとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_EVENT:
-		MessageBox(NULL, "event が有効なイベントオブジェクトでないとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_VALUE:
-		MessageBox(NULL, " param_name がサポートされている値でない、あるいは、param_value_size で指定されたサイズが上記の表で指定されている戻り値型のサイズより小さくかつ param_value が NULL でないとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_RESOURCES:
-		MessageBox(NULL, "デバイス上でのリソース確保に失敗したとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "ホスト上でのリソース確保に失敗したとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-}
-
-
-
-void retmeserr6(cl_int ret)
-{
-	switch (ret) {							//分岐
-	case CL_INVALID_EVENT:
-		MessageBox(NULL, "event_list が有効なイベントオブジェクトでないとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_VALUE:
-		MessageBox(NULL, "num_events が 0 あるいは event_list が NULL のとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_INVALID_CONTEXT:
-		MessageBox(NULL, "event_list 内のイベントが関連付けられているOpenCLコンテキストが同じでないとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_EXEC_STATUS_ERROR_FOR_EVENTS_IN_WAIT_LIST:
-		MessageBox(NULL, "event_list 内のイベントのうちいずれかの実行状態が負の値のとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_RESOURCES:
-		MessageBox(NULL, "デバイス上でのリソース確保に失敗したとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	case CL_OUT_OF_HOST_MEMORY:
-		MessageBox(NULL, "ホスト上でのリソース確保に失敗したとき。", "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-		break;
-	}
-	//上のどれでもなければ
-	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
-	puterror(HSPERR_UNSUPPORTED_FUNCTION);
-}
-
-
-
-
-
-
-
-
-
-
-
-static void _ConvRGBtoBGR(void)
-{
-	PVal *pval1;
-	APTR aptr1;	//配列変数の取得
-	aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp1;
-	void *ptr1;
-	phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-
-	PVal *pval2;
-	APTR aptr2;	//配列変数の取得
-	aptr2 = code_getva(&pval2);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp2;
-	void *ptr2;
-	phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-	p3 = code_getdi(0);
-
-	char *dmptr1 = (char*)ptr1;
-	char *dmptr2 = (char*)ptr2;
-
-	for (int i = 0; i < p3; i += 3) {
-		dmptr2[i + 2] = dmptr1[i];
-		dmptr2[i + 1] = dmptr1[i + 1];
-		dmptr2[i] = dmptr1[i + 2];
-	}
-}
-static void _ConvRGBAtoRGB(void)
-{
-	PVal *pval1;
-	APTR aptr1;	//配列変数の取得
-	aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp1;
-	void *ptr1;
-	phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-	PVal *pval2;
-	APTR aptr2;	//配列変数の取得
-	aptr2 = code_getva(&pval2);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp2;
-	void *ptr2;
-	phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-	p3 = code_getdi(0) / 4;
-
-	char *dmptr1 = (char*)ptr1;
-	char *dmptr2 = (char*)ptr2;
-	int idx1 = 0;
-	int idx2 = 0;
-
-	for (int i = 0; i < p3; i++) {
-		idx1 = i * 3;
-		idx2 = i * 4;
-		dmptr2[idx1] = dmptr1[idx2];
-		dmptr2[idx1 + 1] = dmptr1[idx2 + 1];
-		dmptr2[idx1 + 2] = dmptr1[idx2 + 2];
-	}
-}
-static void _ConvRGBtoRGBA(void)
-{
-	PVal *pval1;
-	APTR aptr1;	//配列変数の取得
-	aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp1;
-	void *ptr1;
-	phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-	PVal *pval2;
-	APTR aptr2;	//配列変数の取得
-	aptr2 = code_getva(&pval2);//	入力変数の型と実体のポインタを取得
-	HspVarProc *phvp2;
-	void *ptr2;
-	phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
-	ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
-
-	p3 = code_getdi(0) / 3;
-
-
-	int toumeiflg = code_getdi(0);
-	char toumei_r = code_getdi(0);
-	char toumei_g = code_getdi(0);
-	char toumei_b = code_getdi(0);
-
-
-	char *dmptr1 = (char*)ptr1;
-	char *dmptr2 = (char*)ptr2;
-	int idx1 = 0;
-	int idx2 = 0;
-	char tmpr = 0;
-	char tmpg = 0;
-	char tmpb = 0;
-
-	if (toumeiflg == 0) {
-		for (int i = 0; i < p3; i++) {
-			idx1 = i * 4;
-			idx2 = i * 3;
-			tmpr = dmptr1[idx2];
-			tmpg = dmptr1[idx2 + 1];
-			tmpb = dmptr1[idx2 + 2];
-			dmptr2[idx1] = tmpr;
-			dmptr2[idx1 + 1] = tmpg;
-			dmptr2[idx1 + 2] = tmpb;
-			dmptr2[idx1 + 3] = 255;
-		}
-	}
-	else {
-		for (int i = 0; i < p3; i++) {
-			idx1 = i * 4;
-			idx2 = i * 3;
-			tmpr = dmptr1[idx2];
-			tmpg = dmptr1[idx2 + 1];
-			tmpb = dmptr1[idx2 + 2];
-			dmptr2[idx1] = tmpr;
-			dmptr2[idx1 + 1] = tmpg;
-			dmptr2[idx1 + 2] = tmpb;
-			dmptr2[idx1 + 3] = 255;
-			if (toumei_r == tmpr) { if (toumei_g == tmpg) { if (toumei_b == tmpb) { dmptr2[idx1 + 3] = 0; } } }
-		}
-	}
-}
-
-
-
-
-
-
-
-
-
-void mes(const char * strc, int val)
-{
-	char c[10];
-	c[0] = val % 1000000000 / 100000000 + 48;
-	c[1] = val % 100000000 / 10000000 + 48;
-	c[2] = val % 10000000 / 1000000 + 48;
-	c[3] = val % 1000000 / 100000 + 48;
-	c[4] = val % 100000 / 10000 + 48;
-	c[5] = val % 10000 / 1000 + 48;
-	c[6] = val % 1000 / 100 + 48;
-	c[7] = val % 100 / 10 + 48;
-	c[8] = val % 10 + 48;
-	c[9] = 0;
-	MessageBox(NULL, c, strc, 0);
-}
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
