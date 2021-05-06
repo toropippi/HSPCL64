@@ -104,8 +104,8 @@ cl_event* GetWaitEvlist()
 std::string readFileIntoString(const std::string& path) {
 	std::ifstream input_file(path);
 	if (!input_file.is_open()) {
-		std::cerr << "Could not open the file - '"
-			<< path << "'" << std::endl;
+		MessageBox(NULL, "ファイルが存在しません", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		exit(EXIT_FAILURE);
 	}
 	return std::string((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
