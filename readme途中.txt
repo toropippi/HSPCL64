@@ -1,9 +1,9 @@
 --------------------------------------------------------------------------
 【  ソフト名   】HSPCL64.dll
-【 バージョン  】1.00
+【 バージョン  】
 【    作者     】toropippi
 【  必要環境１ 】Windows7 以降
-【  必要環境２ 】HSP Ver3.0以降
+【  必要環境２ 】HSP Ver3.5以降
 【  必要環境３ 】OpenCL対応グラフィックボードまたはCPUまたはCellプロセッサー
 			GeForce 400 Series以降
 			RADEON HD 6xxx以降
@@ -49,15 +49,22 @@ efghiqippi@yahoo.co.jp
 ■免責
 このプラグインの使用により発生した如何なる問題について当方は一切の責任を負いません。
 
-■著作権
+■License
+HSPCL64
+Copyright (c) 2021 toropippi
+Released under the Apache License, Version 2.0
+see https://opensource.org/licenses/Apache-2.0
 
-HSPで64bit int型が使える部分は・・・さんから拝借いたしました。
+HSPで64bit int型が使える部分はinoviaさんから拝借いたしました。
+https://github.com/inovia/HSPInt64
+ここから流用した部分に関してはBSD-3-Clause Licenseに準拠しています。
+see https://opensource.org/licenses/BSD-3-Clause
 
 
 ■更新履歴
     ver 0.2
 	2021/5/6
-	
+	HCLCallを実装
 	
     Ver 0.1
 	2020/2/14

@@ -1,7 +1,4 @@
-//
-//		HSP3.0 plugin sample
-//		onion software/onitama 2004/9
-//
+
 #define WIN32_LEAN_AND_MEAN		// Exclude rarely-used stuff from Windows headers
 #include <windows.h>
 #include <stdio.h>
@@ -249,8 +246,6 @@ static void *reffunc( int *type_res, int cmd )
 
 		break;
 	}
-
-
 
 
 
