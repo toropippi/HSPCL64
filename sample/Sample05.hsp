@@ -2,7 +2,7 @@
 
 	_ExHCLSetCommandQueueProperties 2
 	HCLinit
-	HCLSetDev 2
+	HCLSetDev 0
 	
 	bufsize=int64(1024*1024*512)
 	clmem0=HCLCreateBuffer(bufsize)

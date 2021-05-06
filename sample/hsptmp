@@ -1,40 +1,39 @@
 #include "HSPCL64.as"
 
-	_ExHCLSetCommandQueueProperties 2
+	//_ExHCLSetCommandQueueMax 2
 	HCLinit
-	HCLSetDev 2
-	
-	bufsize=int64(1024*1024*512)
-	clmem0=HCLCreateBuffer(bufsize)
-	clmem1=HCLCreateBuffer(bufsize)
-	dim host0,1024*1024*128
-	dim host1,1024*1024*128
-
-	mes 1
+	HCLSetDev 0
 	//HCLSetCommandQueue 0
-	HCLWriteBuffer clmem0,host0,bufsize,0,0,0
-	mes 2
-	HCLReadBuffer  clmem1,host1,bufsize,0,0,0
-	HCLFinish
-	
-	mes 1
-	HCLSetCommandQueue 0
-	HCLWriteBuffer clmem0,host0,bufsize,0,0,0,0
-	mes 2
-	HCLSetCommandQueue 1
-	HCLReadBuffer  clmem1,host1,bufsize,0,0,0,1
+	prg=HCLCreateProgram("kern.cl","-cl-opt-disable")
+	krn=HCLCreateKernel(prg,"vecAdd")
+	n=256
+	clmemm=HCLCreateBuffer(n*4)
 
-	HCLSetCommandQueue 0
-	HCLFinish
-	HCLSetCommandQueue 1
-	HCLFinish
+	dim inta,n
+	dim inta2,n
+		repeat n
+		inta.cnt=cnt+1
+		loop
+	HCLWriteBuffer clmemm,inta,n*4,0,0
+	HCLSetKernel krn,0,clmemm
+	mes "start"
+	repeat 1024
+		repeat 1000
+		HCLDoKrn1 krn,n,n
+		loop
+	await 0
+	loop
 
-	stime=HCLGetEventStartTime(0)
-	etime=HCLGetEventEndTime(0)
-	mes stime
-	mes ""+etime+" \t "+(etime-stime)+""
-	
-	stime=HCLGetEventStartTime(1)
-	etime=HCLGetEventEndTime(1)
-	mes stime
-	mes ""+etime+" \t "+(etime-stime)+""
+	mes "end"
+	wait 100
+	end
+
+/*
+	HCLSetCommandQueue 0
+	HCLReadBuffer clmemm,inta2,n*4,0,0,0
+	mes "1+1="+inta2.0
+	mes "2+2="+inta2.1
+	mes "3+3="+inta2.2
+	mes "4+4="+inta2.3
+	wait 100
+*/

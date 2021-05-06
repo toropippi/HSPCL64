@@ -2,7 +2,7 @@
 
 	//_ExHCLSetCommandQueueMax 2
 	HCLinit
-	HCLSetDev 2
+	HCLSetDev 0
 	//HCLSetCommandQueue 0
 	prg=HCLCreateProgram("kern.cl","-cl-opt-disable")
 	krn=HCLCreateKernel(prg,"vecAdd")
@@ -18,12 +18,14 @@
 	HCLSetKernel krn,0,clmemm
 	mes "start"
 	repeat 1024
-		repeat 10000
+		repeat 1000
 		HCLDoKrn1 krn,n,n
 		loop
-	wait 10
+	await 0
 	loop
-	
+
+	mes "end"
+	wait 100
 	end
 
 /*

@@ -14,6 +14,7 @@
 #include <CL/cl.h>
 #include <map>
 
+
 const int MAX_PLATFORM_IDS = 32;//platform_id‚ÌÅ‘å’l
 const int MAX_DEVICE_IDS = 2048;//ˆê“x‚Éæ“¾‚Å‚«‚édevice‚ÌÅ‘å’l
 int CL_EVENT_MAX = 65536;//cl_event‚ğ‹L‰¯‚µ‚Ä’u‚¯‚éÅ‘å”
@@ -56,8 +57,7 @@ void retmeserr4(cl_int ret);//clCreateContext‚Å¸”s‚µ‚½o‚·ƒGƒ‰[ƒƒbƒZ[ƒW‚ğ‚
 void retmeserr5(cl_int ret);
 void retmeserr6(cl_int ret);
 void retmeserr7(cl_int ret);
-void mes(char* strc, int val);
-
+void mes(const char* strc, int val);
 
 
 
@@ -244,10 +244,7 @@ static void *reffunc( int *type_res, int cmd )
 
 
 
-
-
-
-
+	//str filename,str buildoption=""
 	case 0x09:	// HCLCreateProgram
 	{
 		char *p;
@@ -255,8 +252,8 @@ static void *reffunc( int *type_res, int cmd )
 		p = code_gets();								// •¶š—ñ‚ğæ“¾
 		strncpy(pathname, p, _MAX_PATH - 1);			// æ“¾‚µ‚½•¶š—ñ‚ğƒRƒs[
 
-		char* buildoption;
-		buildoption = code_gets();
+		std::string buildoption;
+		buildoption = code_getds("");
 
 		FILE *fp;
 		char *source_str;
@@ -271,7 +268,7 @@ static void *reffunc( int *type_res, int cmd )
 			
 			// Build the program
 			program = clCreateProgramWithSource(context[clsetdev], 1, (const char **)&source_str, (const size_t *)&source_size, NULL);
-			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption, NULL, NULL);
+			cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption.c_str(), NULL, NULL);
 			if (err0 != CL_SUCCESS) {
 				size_t len;
 				clGetProgramBuildInfo(program, device_id[clsetdev],
@@ -288,6 +285,7 @@ static void *reffunc( int *type_res, int cmd )
 	}
 
 
+	//int64 kernelid,str kansuu_mei
 	case 0x0A:	// HCLCreateKernel
 	{
 		INT64 prm1 = Code_getint64();//ƒpƒ‰ƒ[ƒ^1:int64”’lAƒJ[ƒlƒ‹id
@@ -346,7 +344,7 @@ static void *reffunc( int *type_res, int cmd )
 	}
 
 
-	
+	//int64 bufsize
 	case 0x0C:	// HCLCreateBuffer
 	{
 		INT64 prm1 = Code_geti32i64();//ƒpƒ‰ƒ[ƒ^1:int64”’lAƒTƒCƒY
@@ -2130,7 +2128,7 @@ static void _ConvRGBtoRGBA(void)
 
 
 
-void mes(char* strc, int val)
+void mes(const char * strc, int val)
 {
 	char c[10];
 	c[0] = val % 1000000000 / 100000000 + 48;
