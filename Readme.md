@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------
 【  ソフト名   】HSPCL64.dll
-【 バージョン  】
+【 バージョン  】0.2
 【    作者     】toropippi
 【  必要環境１ 】Windows7 以降
 【  必要環境２ 】HSP Ver3.5以降
@@ -14,7 +14,7 @@
 --------------------------------------------------------------------------
 
 ■使用方法
-１、「HSPCL64.dll」をHSPインストールフォルダ「C:\hsp332」ないしは「C:\Program Files (x86)\hsp332」か「C:\Program Files\hsp332」へコピーして下さい。
+１、「HSPCL64.dll」をHSPインストールフォルダ「C:\hsp35」ないしは「C:\Program Files (x86)\hsp35」か「C:\Program Files\hsp35」へコピーして下さい。
 ２、「hspcl64.as」をHSPインストールフォルダの「common」フォルダの中へ入れて下さい。
 ３、ヘルプデータをコピーしたい場合は、「doclib」フォルダ自体をそのままHSPインストールフォルダの中へ上書きして下さい。
 
@@ -48,10 +48,10 @@ efghiqippi@yahoo.co.jp
 
 ■免責
 このプラグインの使用により発生した如何なる問題について当方は一切の責任を負いません。
+商用問わず配布、転載、改造は無断かつ自由にして構いません（大歓迎）
 
 ■License
-HSPCL64
-Copyright (c) 2021 toropippi
+HSPCL64 Copyright (c) 2021 toropippi
 Released under the Apache License, Version 2.0
 see https://opensource.org/licenses/Apache-2.0
 
@@ -70,5 +70,6 @@ see https://opensource.org/licenses/BSD-3-Clause
 	2020/2/14
 	HSPCL32からHSPCL64へ命令群を移行
 	OpenGL関連は全部削除
+	fdimは削除、それに伴いHSP側でfloat型が使えなくなった
 	clEvent関連を実装
 	CommandQueue関連を実装
