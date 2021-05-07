@@ -41,7 +41,6 @@ struct EventStruct
 
 EventStruct* evinfo;
 
-
 int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = 0;//OpenCLのコマンドキュー生成時に使うプロパティ番号
@@ -367,7 +366,7 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-	case 0x1A://HCLGetDevCount
+	case 0x1A://HCLGetDeviceCount
 	{
 		fInt = true;
 		ref_int32val = (int)dev_num;
@@ -419,7 +418,6 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-
 	case 0x2D://HCLCreateBufferFrom
 	{
 		PVal* pval;
@@ -451,6 +449,44 @@ static void *reffunc( int *type_res, int cmd )
 		if (a > b)ref_int64val = a;
 		break;
 	}
+
+	case 0x34://HCLReadIndex_i32
+	{
+		fInt = true;
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &ref_int32val, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+	case 0x35://HCLReadIndex_i64
+	{
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_int64val, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+	case 0x36://HCLReadIndex_d
+	{
+		fDouble = true;
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_doubleval, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -503,6 +539,21 @@ static void *reffunc( int *type_res, int cmd )
 	*type_res = HspVarInt64_typeid();		// 返値のタイプを指定する
 	return (void *)&ref_int64val;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -599,6 +650,7 @@ static int cmdfunc(int cmd)
 
 
 
+
 	case 0x08://HCLinit
 	{
 		cl_int errcode_ret;
@@ -623,7 +675,6 @@ static int cmdfunc(int cmd)
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 			break;
 		}
-
 
 		device_id = new cl_device_id[dev_num];
 		
@@ -844,7 +895,7 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].localsize = 0;
 		}
 		//wait event list関連
-		cl_event* ev_=GetWaitEvlist();
+		cl_event* ev_ = GetWaitEvlist();
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char *)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -859,6 +910,7 @@ static int cmdfunc(int cmd)
 		clsetdev = code_getdi(0);
 		break;
 	}
+
 
 	case 0x11:	// HCLFinish//現在のデバイスの現在のコマンドキューの中にあるタスクを全部待つ
 	{
@@ -1019,12 +1071,6 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x17://デバイスセット
-	{
-		clsetdev = code_getdi(0);
-		break;
-	}
-
 
 	case 0x19://HCLDoKrn1_sub
 	{
@@ -1145,7 +1191,6 @@ static int cmdfunc(int cmd)
 
 	case 0x1F:	// _ExHCLSetCommandQueueMax
 	{
-
 		if (dev_num != 0) 
 		{
 			MessageBox(NULL, "この命令はHCLinitの前に実行してください", "エラー", 0);
@@ -1217,7 +1262,6 @@ static int cmdfunc(int cmd)
 
 	// HCLCall
 	// str source,int global_size,int local_size,array a,array b,array c・・・・・
-
 	case 0x27:
 	{
 		cl_int ret;
@@ -1443,6 +1487,7 @@ static int cmdfunc(int cmd)
 
 
 
+
 	case 0x2F://HCLGetEventAllCommandInfo int eventid,str ptrk,int strsize,int64 data,int64 commandtype
 	{
 		int eventid = code_geti();//eventid
@@ -1589,6 +1634,97 @@ static int cmdfunc(int cmd)
 
 
 
+	case 0x37://HCLWriteIndex_i32
+	{
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		int data = code_geti();//内容
+		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &data, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+	case 0x38://HCLWriteIndex_i64
+	{
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		INT64 data = Code_geti32i64();//内容
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+
+	case 0x39://HCLWriteIndex_d
+	{
+		INT64 memid = Code_geti32i64();
+		INT64 b = Code_geti32i64();//idx
+		double data = code_getd();//内容
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
+		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+		break;
+	}
+
+
+
+	case 0x3A://double to float
+	{
+		PVal* pval1;
+		APTR aptr1;	//配列変数の取得
+		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp1;
+		void* ptr1;
+		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		PVal* pval2;
+		APTR aptr2;	//配列変数の取得
+		aptr2 = code_getva(&pval2);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp2;
+		void* ptr2;
+		phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		size_t sz = pval2->size / 4;
+		for (int i = 0; i < sz; i++)
+			*(((float*)ptr2) + i) = (float)(*(((double*)ptr1) + i));
+		break;
+	}
+
+
+	case 0x3B://float to double
+	{
+		PVal* pval1;
+		APTR aptr1;	//配列変数の取得
+		aptr1 = code_getva(&pval1);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp1;
+		void* ptr1;
+		phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		PVal* pval2;
+		APTR aptr2;	//配列変数の取得
+		aptr2 = code_getva(&pval2);//	入力変数の型と実体のポインタを取得
+		HspVarProc* phvp2;
+		void* ptr2;
+		phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
+		ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
+
+		size_t sz = pval2->size / 4;
+		for (int i = 0; i < sz; i++)
+			*(((double*)ptr2) + i) = (double)(*(((float*)ptr1) + i));
+		break;
+	}
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1625,6 +1761,23 @@ static int cmdfunc(int cmd)
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -8,53 +8,70 @@
 #cmd callfunc64i $05
 #cmd callfunc64d $06
 #cmd callfunc64f $07
+
+
 #cmd HCLinit $08
+
+#cmd dim_i64 $16
+
+#cmd HCLSetDevice $10
+#cmd HCLGetDeviceCount $1A
+#cmd HCLGetDeviceInfo $12
+#cmd HCLGetSettingDevice $1B
+
 #cmd HCLCreateProgram $09
+#cmd HCLCreateProgramWithSource	$18
+#cmd HCLReleaseProgram $2C
+
 #cmd HCLCreateKernel $0A
 #cmd HCLSetKernel $0B
+#cmd HCLSetKrns $1C
+#cmd HCLReleaseKernel $28
+
 #cmd HCLCreateBuffer $0C
-#cmd HCLDoKrn1 $0D
+#cmd HCLCreateBufferFrom $2D
 #cmd HCLWriteBuffer $0E
 #cmd HCLReadBuffer $0F
-#cmd HCLSetDevice $10
-#cmd HCLFinish $11
-#cmd HCLGetDeviceInfo $12
 #cmd HCLCopyBuffer $13
-#cmd HCLDoKernel $14
+#cmd HCLFillBuffer4 $30
+#cmd HCLFillBuffer8 $31
 #cmd HCLReleaseMemObject $15
-#cmd dim_i64 $16
-#cmd HCLSetDev $17
-#cmd HCLCreateProgramWithSource	$18
+
+#cmd HCLReadIndex_i32 $34
+#cmd HCLReadIndex_i64 $35
+#cmd HCLReadIndex_dp $36
+#cmd HCLWriteIndex_i32 $37
+#cmd HCLWriteIndex_i64 $38
+#cmd HCLWriteIndex_dp $39
+
+#cmd HCLCall $27
+#cmd HCLDoKrn1 $0D
+#cmd HCLDoKernel $14
 #cmd HCLDoKrn1_sub	$19
-#cmd HCLGetDevCount $1A
-#cmd HCLGetSettingDevice $1B
-#cmd HCLSetKrns $1C
-#cmd HCLGetSetintCommandQueue $1D
-#cmd HCLSetCommandQueue $1E
+#cmd HCLFinish $11
+#cmd HCLFlush $21
+
 #cmd _ExHCLSetCommandQueueMax $1F
 #cmd _ExHCLSetCommandQueueProperties $20
-#cmd HCLFlush $21
+#cmd HCLSetCommandQueue $1E
+#cmd HCLGetSettingCommandQueue $1D
+
+#cmd _ExHCLSetEventMax $24
 #cmd HCLSetWaitEvent $22
 #cmd HCLSetWaitEvents $23
-#cmd _ExHCLSetEventMax $24
 #cmd HCLGetEventStartTime $25
 #cmd HCLGetEventEndTime $26
-#cmd HCLCall $27
-#cmd HCLReleaseKernel $28
 #cmd HCLGetEventStatus $29
 #cmd HCLWaitForEvent $2A
 #cmd HCLWaitForEvents $2B
-#cmd HCLReleaseProgram $2C
-#cmd HCLCreateBufferFrom $2D
 #cmd HCLGetEventAllCommandInfo $2F
 
-#cmd HCLFillBuffer4 $30
-#cmd HCLFillBuffer8 $31
 
 #cmd Min64 $32
 #cmd Max64 $33
 
-
+#cmd DoubleToFloat $3A
+#cmd FloatToDouble $3B
 
 #cmd _ConvRGBtoBGR 		$93
 #cmd _ConvRGBAtoRGB 		$94
