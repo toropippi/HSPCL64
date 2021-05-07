@@ -10,7 +10,7 @@ void retmeserr8(cl_int ret);//clCreateKernelで失敗した時出すエラーメッセージをま
 void retmeserr9(cl_int ret);//clCreateBufferで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr10(cl_int ret);//clFinishで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr11(cl_int ret);//clFlushで失敗した時出すエラーメッセージをまとめた関数
-
+void retmeserr12(cl_int ret);//clGetMemObjectInfoで失敗した時出すエラーメッセージをまとめた関数
 
 void retmeserr(cl_int ret)
 {
@@ -407,4 +407,31 @@ void retmeserr11(cl_int ret)
 	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
 	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 
+}
+
+
+void retmeserr12(cl_int ret)
+{
+	switch (ret)
+	{							//分岐
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "param_name がサポートされている値でない、あるいは、param_value_size で指定されたサイズが上記の表で指定されている戻り値型のサイズより小さくかつ param_value が NULL でないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_MEM_OBJECT:
+		MessageBox(NULL, "memobj が有効なメモリオブジェクトでないとき", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "デバイス上でのリソース確保に失敗したとき", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "ホスト上でのリソース確保に失敗したとき", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 }

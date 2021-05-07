@@ -40,9 +40,12 @@
 #cmd HCLGetEventStartTime $25
 #cmd HCLGetEventEndTime $26
 #cmd HCLCall $27
+#cmd HCLReleaseKernel $28
 #cmd HCLGetEventStatus $29
 #cmd HCLWaitForEvent $2A
 #cmd HCLWaitForEvents $2B
+#cmd HCLReleaseProgram $2C
+#cmd HCLCreateBufferFrom $2D
 #cmd HCLGetEventAllCommandInfo $2F
 
 #cmd HCLFillBuffer4 $30

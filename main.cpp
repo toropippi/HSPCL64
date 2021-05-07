@@ -21,7 +21,6 @@ int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 4;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//全プラットフォームのデバイスの合計数
 int bufferout[1024 * 4];
-char* source_str;
 cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
@@ -89,6 +88,35 @@ INT64 Code_geti32i64() {
 }
 
 
+//int32,int64両方の入力を場合分けで読み込むやつ
+INT64 Code_getdi32di64(INT64 defi) {
+	int chk = code_getprm();							// パラメーターを取得(型は問わない)
+	if (chk <= PARAM_END)return defi;
+	int type = mpval->flag;							// パラメーターの型を取得
+	void* ppttr;
+
+	int sizeofff;
+	switch (type) {
+	case 8:								// パラメーターがint64だった時
+	{
+		ppttr = (INT64*)mpval->pt;
+		sizeofff = 8;
+		break;
+	}
+	case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
+	{
+		ppttr = (int*)mpval->pt;
+		sizeofff = 4;
+		break;
+	}
+	default:
+		puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+		break;
+	}
+	return *(INT64*)ppttr;
+}
+
+
 cl_event* GetWaitEvlist()
 {
 	if (num_event_wait_list == 0)
@@ -99,6 +127,16 @@ cl_event* GetWaitEvlist()
 	{
 		return event_wait_list;
 	}
+}
+
+size_t GetMemSize(cl_mem m) 
+{
+	size_t st;
+	cl_int ret = clGetMemObjectInfo(
+		m, CL_MEM_SIZE, sizeof(size_t), &st, NULL
+	);
+	if (ret != CL_SUCCESS) retmeserr12(ret);
+	return st;
 }
 
 std::string readFileIntoString(const std::string& path) {
@@ -382,6 +420,19 @@ static void *reffunc( int *type_res, int cmd )
 	}
 
 
+	case 0x2D://HCLCreateBufferFrom
+	{
+		PVal* pval;
+		APTR aptr = code_getva(&pval);
+		size_t sz = pval->size;
+		cl_int ret;
+		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE, sz, (pval->pt), &ret);
+		if (ret != CL_SUCCESS) retmeserr9(ret);
+		ref_int64val = (INT64)mem_obj;
+		break;
+	}
+
+
 
 	case 0x32://Min64
 	{
@@ -483,6 +534,14 @@ static void *reffunc( int *type_res, int cmd )
 
 
 
+
+
+
+
+
+
+
+
 static int cmdfunc(int cmd)
 {
 	code_next();
@@ -546,7 +605,6 @@ static int cmdfunc(int cmd)
 		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;
 		cl_uint ret_num_platforms;
-		source_str = new char[1024 * 1024 * 64];
 
 		cl_device_id* _device_id;
 		_device_id = new cl_device_id[MAX_DEVICE_IDS];
@@ -719,12 +777,15 @@ static int cmdfunc(int cmd)
 		APTR aptr = code_getva(&pval);
 		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_geti32i64();//パラメータ3:int64
+		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_geti32i64();//パラメータ5
+		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
+
+		//引数省略ならサイズは自動
+		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm1);
 		
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -756,16 +817,19 @@ static int cmdfunc(int cmd)
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
-		PVal *pval;
+		PVal* pval;
 		APTR aptr = code_getva(&pval);
 		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_geti32i64();//パラメータ3:int64
+		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_geti32i64();//パラメータ5
+		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
+
+		//引数省略ならサイズは自動
+		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -800,6 +864,7 @@ static int cmdfunc(int cmd)
 	{
 		cl_int ret = clFinish(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
 		if (ret != CL_SUCCESS) { retmeserr10(ret); }
+		break;
 	}
 
 
@@ -827,9 +892,11 @@ static int cmdfunc(int cmd)
 	{
 		INT64 prm2 = Code_getint64();//コピー先メモリオブジェクトid
 		INT64 prm3 = Code_getint64();//コピー元メモリオブジェクトid
-		INT64 prm4 = Code_geti32i64();// コピーサイズ
-		INT64 prm5 = Code_geti32i64();// コピー先オフセット
-		INT64 prm6 = Code_geti32i64();// コピー元オフセット
+		INT64 prm4 = Code_getdi32di64(-1);// コピーサイズ
+		INT64 prm5 = Code_getdi32di64(0);// コピー先オフセット
+		INT64 prm6 = Code_getdi32di64(0);// コピー元オフセット
+		//引数省略ならサイズは自動
+		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm2);
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1311,20 +1378,21 @@ static int cmdfunc(int cmd)
 			}
 		}
 
+		//後片付け
+		clReleaseKernel(kernel);
+		clReleaseProgram(program);
+
 		//これにて全行程終了のはず！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
 		break;
 	}
 
-
-
-
-
-
-
-
-
-
-
+	case 0x28://HCLReleaseKernel
+	{
+		//引数1 kernel
+		INT64 prm1 = Code_getint64();//パラメータ1:int64数値
+		clReleaseKernel((cl_kernel)prm1);
+		break;
+	}
 
 
 
@@ -1361,6 +1429,17 @@ static int cmdfunc(int cmd)
 		if (ret != CL_SUCCESS) retmeserr6(ret);
 		break;
 	}
+
+	case 0x2C://HCLReleaseProgram
+	{
+		//引数1 kernel
+		INT64 prm1 = Code_getint64();//パラメータ1:int64数値
+		clReleaseProgram((cl_program)prm1);
+		break;
+	}
+
+
+
 
 
 
