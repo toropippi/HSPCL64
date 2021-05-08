@@ -1,7 +1,8 @@
-//やってることはSample01_VecAdd.hspと同じ
+//やってることはSample05_VecAdd.hspと同じ
 //並列数が同じでも、local_sizeを変えると計算時間が変わってくることがわかります。
 //適切なlocal_sizeを指定できるようにしましょう。
 //基本的には64,128,256を指定すれば間違いないですが、前提としてglobal_size(並列数)がそれで割り切れないといけません。
+//なおlocal_sizeの最大はHCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,0)で取得できますが、一般的に1024が上限です。
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")
@@ -31,6 +32,7 @@
 		repeat 12
 		HCLDoKrn1 krn,n,local_size.cnt,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
 		HCLFinish
+		wait 1
 		loop
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 

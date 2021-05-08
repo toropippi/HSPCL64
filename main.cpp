@@ -1371,10 +1371,10 @@ static int cmdfunc(int cmd)
 				phvp1 = exinfo->HspFunc_getproc(pval1->flag);	//型を処理するHspVarProc構造体へのポインタ
 				ptr1 = phvp1->GetPtr(pval1);					//データ（pval1）の実態がある先頭ポインタを取得。
 
-				p4[0] = *(size_t*)ptr1;
-				p4[1] = *((size_t*)ptr1 + 1);
+				p4[0] = *(int*)ptr1;
+				p4[1] = *((int*)ptr1 + 1);
 				if (p3 == 3)
-					p4[2] = *((size_t*)ptr1 + 2);
+					p4[2] = *((int*)ptr1 + 2);
 
 				PVal* pval2;
 				APTR aptr2;	//配列変数の取得
@@ -1384,10 +1384,10 @@ static int cmdfunc(int cmd)
 				phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
 				ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
 
-				ptryes[0] = *(size_t*)ptr2;
-				ptryes[1] = *((size_t*)ptr2 + 1);
+				ptryes[0] = *(int*)ptr2;
+				ptryes[1] = *((int*)ptr2 + 1);
 				if (p3 == 3)
-					ptryes[2] = *((size_t*)ptr2 + 2);
+					ptryes[2] = *((int*)ptr2 + 2);
 			}
 		}
 

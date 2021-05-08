@@ -1,0 +1,52 @@
+// 並列数の次はlocal_sizeを指定してみましょう。
+
+// ワークアイテム / work item
+// OpenCL では複数の処理をそれぞれのデバイス(プロセッサ)に並列して割り当てることで
+// 処理を最適化し高速化することを試みます。その分割の単位がワークアイテムです。
+// CUDA用語でいうとThreadにあたります。
+
+// ワークグループ / work group
+// 複数のワークアイテムを、いくつかのグループにしたものがワークグループです。
+// CUDA用語でいうとBlockにあたります。
+
+// LocalID・GrobalID
+// ワークアイテムにはそれぞれを識別するための ID が与えられます。
+// ID はそれが含まれるワークグループ内で識別するための "LocalID" と、処理全体で識別するための "globalID" とがあります。
+
+// local_work_size / work group size
+// ワークグループ内に含まれるワークアイテムの数は local_work_size(変数) もしくは work group size(表記上) で表されます。
+// 以降local_work_sizeはlocal_sizeと省略します。
+
+// global_work_size
+// すべてのワークグループに存在するワークアイテムの数は global_work_size とされます。
+// 以降global_work_sizeはglobal_sizeと省略します。
+
+//http://neareal.net/index.php?Programming%2FOpenCL%2FDimentionWorkGroupWorkItem
+
+#include "HSPCL64.as"
+	HCLinit
+	//このサンプルではglobal_size=35,local_size=7としてやっています。
+	n=35
+	dim a,n//Grobal IDを格納
+	dim b,n//Local IDを格納
+	dim c,n//Group IDを格納
+
+	HCLCall {"
+__kernel void test(__global int* a,__global int* b,__global int* c)
+{
+	int gid=get_global_id(0);
+	a[gid]=gid;
+	b[gid]=get_local_id(0);
+	c[gid]=get_group_id(0);
+}
+	"},n,7,a,b,c//全部で35thread、1group=7thread
+	
+		repeat n
+		mes "a="+a.cnt+" b="+b.cnt+" c="+c.cnt+""
+		if ginfo_cy>450:pos ginfo_cx+278,0
+		loop
+	mes 
+	mes "aはglobal_id"
+	mes "bはlocal_id"
+	mes "cはgroup_id"
+	stop

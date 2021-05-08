@@ -1,0 +1,23 @@
+// 並列数を指定してみましょう。
+// HCLCallのglobal_sizeを256にすることで256並列で実行できていることがわかります。
+#include "HSPCL64.as"
+	HCLinit
+
+	n=256
+	dim a,n
+	
+	HCLCall {"
+__kernel void test(__global int* a)
+{
+	int gid=get_global_id(0);
+	a[gid]=gid;
+}
+	"},n,n,a//256並列
+	
+		repeat n
+		mes a.cnt
+		loop
+	stop
+
+//256並列を指定しているので256thread立ち上がります。
+//get_global_id(0)で、自分のthread番号を取得しています。

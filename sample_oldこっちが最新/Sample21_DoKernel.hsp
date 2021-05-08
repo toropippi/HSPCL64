@@ -1,5 +1,6 @@
-// cnt+cnt=2*cnt を256並列でやるサンプル
-// これがOpenCLの計算の基本となるサンプル。これに付け足して作っていくことをおすすめします。
+//並列数を2次元で指定した場合の概念図
+//こんな感じに複雑になるし、local_sizeとパフォーマンスの調整もより面倒になるので
+//基本1次元で並列数を指定したほうが良いと思っています。
 #include "HSPCL64.as"
 	HCLinit
 	source={"
@@ -37,7 +38,7 @@ __kernel void test(__global int* a,__global int* b,__global int* c,__global int*
 	clmem_D=HCLCreateBufferFrom(host_D)
 	HCLSetKrns krn,clmem_A,clmem_B,clmem_C,clmem_D
 
-	HCLDoKernel krn,2,global_size,local_size//4*6=24並列で実行
+	HCLDoKernel krn,2,global_size,local_size//6*9=54並列で実行
 
 	HCLReadBuffer clmem_A,host_A,n*4
 	HCLReadBuffer clmem_B,host_B,n*4

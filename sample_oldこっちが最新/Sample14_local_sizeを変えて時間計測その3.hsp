@@ -1,0 +1,200 @@
+//こちらは演算律速になる問題を解かせたときのlocal_sizeごとの計算時間のグラフになります。
+//結果は、どのGPU CPUで実行したかで結果が大きく異なると思います。
+//一応私の環境RTX3080での計算結果をSample14_result.pngでおいておきます。
+#include "HSPCL64.as"
+	HCLinit
+	prg=HCLCreateProgram("SinDiv.cl")
+	krn=HCLCreateKernel(prg,"SinDiv")
+	
+	n=1024*1024
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
+	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
+	
+	HCLSetKernel krn,0,clmem_A
+	HCLSetKernel krn,1,clmem_B
+	HCLSetKernel krn,2,clmem_C
+	HCLSetKernel krn,3,497//1thread内のループ数
+
+	start_lsz=29//local_size=1から始めるとすごい時間がかかるので	
+	title "計算中..."
+	wait 1
+		repeat 128-start_lsz,start_lsz
+		local_size=cnt+1
+		HCLDoKrn1 krn,n/local_size*local_size,local_size,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
+		HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+		HCLFinish
+		loop
+	
+	title "計算終了"
+
+	//計算時間をグラフで表示
+	dim c_time,128
+		repeat 128-start_lsz,start_lsz
+		start_time=HCLGetEventLogs(cnt,6)
+		end_time=HCLGetEventLogs(cnt,7)
+		c_time.cnt=int(end_time-start_time)
+		loop
+
+	gosub*graph
+	stop
+
+*graph
+	//計算時間をグラフで表示
+	//まずは軸
+	line 30,30,30,450
+	line 30,30,27,35
+	line 30,30,33,35
+	pos 3,240
+	font msgothic,12
+	mes "時間"
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	mes "local_size"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes 16*cnt
+		loop
+
+	t_scale=c_time.64//擬似的な中央値
+	t_scale=t_scale/280+1
+	pos start_lsz*580/128+30,450-c_time.start_lsz/t_scale
+		repeat 128-start_lsz,start_lsz
+		line cnt*580/128+30,450-c_time.cnt/t_scale
+		loop
+	return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//冒頭コメント続き.....
+//local_sizeが32の倍数のとき計算時間が少なく、33や65など、32*n+1でどかんと計算時間が跳ね上がっています。
+//これは私なりの考察ですが、NVIDIAのGPUではWarpという実行単位を持っており
+//1Warp=32threadで、この32threadがひとまとまりで計算されます(*1)。
+//ということはlocal_size=32のとき、1つのwarpが32threadを使い切れるようなイメージになります。
+//もしlocal_size=33なら2warp=64threadが立ち上がるが、そのうち31thread分がなにもしないでただ空回りするということになります。
+//もしlocal_size=65なら3warp=96threadが立ち上がるが、そのうち31thread分がなにもしないでただ空回りするということになります。
+//この無駄な空回りがパフォーマンスを落としている、ということだと思います。
+//
+//ただそれだと、local_size=32のときと33のときで2倍近く計算時間が変わっても良いものですが、実際は1.5倍くらいでとどまっています。
+//これがなぜなのかは未だわかりませんが、理解の方向性は間違ってないように思います。
+//
+//ちなみにRDNAより前のAMDのGPUだとWarp→Wavefrontとなり1Wavefrontあたり64threadになります。RDNAアーキテクチャだと1Wavefrontあたり32threadのはずです。
+
+
+//コメント補足
+//私も専門家と比べたら全然詳しくないので恐縮ですが、一応分かる範囲で・・・
+
+//(*1)「この32threadがひとまとまりで計算されます」
+//1Warp=32threadのひとまとまりで計算されるといいますが、必ずしも32threadが同時に計算されるわけではないです。
+//例えばTU102などのTuringアーキテクチャのGPUでは16cuda coreが32threadを2cycleで実行するということになっています。
+//TU102は1SM(*2)あたり64cuda coreあるので16+16+16+16のそれぞれのブロックの16*cuda coreが1Warp 2cycleで処理できるようになっています。
+//なので1SMあたり4Warp同時に実行でき、逆にいうとそれだけのWarpが埋まらないと(*3)それだけパフォーマンスが落ちることになります。
+//Kepler : 16cuda coreが32threadを2cycleで実行
+//Maxwell: 32cuda coreが32threadを1cycleで実行
+//Pascal : 32cuda coreが32threadを1cycleで実行
+//Volta  : 16cuda coreが32threadを2cycleで実行
+//Turing : 16cuda coreが32threadを2cycleで実行
+//Ampere : 16cuda coreが32threadを2cycleで実行
+//とアーキテクチャごとに変わっていますし、int32を計算するかfloatを計算するかでもアーキテクチャごとにスループットが変わります。
+//AMDのGPUでいうと
+//GCN : 16PEが64threadを4cycleで実行
+//RDNA: 32PEが32threadを1cycleで実行
+//となっています。
+
+//(*2)SM streaming multiprocessor
+//SMとはNVIDIA用語です。streaming multiprocessorといいます。
+//1SMあたり64cuda coreあったり128cuda coreあったり192cuda coreあったり、これもまたアーキテクチャによって変わります。
+//https://ja.wikipedia.org/wiki/NVIDIA_GeForce
+//http://yusuke-ujitoko.hatenablog.com/entry/2016/01/27/210415
+//OpenCLを扱う際には、1SM内のthreadでshared memory=L1 chachのデータを共有できる、ということを知っておけば良いです。
+
+//(*3)Warpが埋まらないと
+//これは1SMあたり4Warp埋めればいいというものではありません。
+//実際は1SMあたり32とか48とか64Warpくらい埋めないと命令レイテンシが隠蔽できないです。
+//例えばfloat型のd=a*b+cというFMAの計算は、計算結果がレジスタに格納されるまで4cycle (*4)かかります。
+//TU102を例に1SM 4Warpだけだと、1cycle目と2cycle目で0～3のWarpの32thread*4の処理が終わり
+//3cycle目でdの変数を使って次の計算をしようとしても(*5)、まださっきのFMAの計算が終わってない、ということになります。
+//ここで2cycle待たされます。
+//でも8Warpあれば、4～7のWarpの処理が待機時間を埋めてくれるので、パフォーマンスは落ちません。
+//もちろんFMAだけやるわけにはいかないので、命令レイテンシがもっと長い命令もあるため
+//そうなると8Warpでも足りない可能性があり、可能な限り待機Warp数が多いほど良いという考えになります。
+//それが「Occupancy(占有率)が高いほどいい」と言う根拠になります。
+//1SMあたり抱えられるWarp数はハードウェア的に決まっているので、その上限いっぱい(Occupancy100%)を目指せば
+//いちいち命令レイテンシを気にしなくてすみます。
+//RTX2080Tiは68SMもっており、1SMあたり64Warp抱えられるので68*64=3072
+//3072Warp=98304Threadなのでglobal_size=98304としてやっと埋まる、ということになります。
+//逆にいうとGPUで並列計算を行うにあたり、100や200程度の並列数では全然足りなくて、
+//10万並列とかでやっとまともなパフォーマンスを引き出せることを理解しコーディングしなければいけません。
+
+//(*4)FMAの計算は4cycle
+//命令レイテンシとスループットもまた違います。
+//FMAの計算のスループット自体は1cycleと考えて良いです。
+//命令レイテンシを完璧に埋めてはじめて「1cycleで1FMA計算できた」ことに等しくなります。
+
+//(*5)
+//どういう状況かと言うと
+// d=a*b+c
+// e=d*c+1
+// ........
+//みたいなコードだとして、これはdの計算結果を次の行で使用していますね。
+//dの計算結果がでるのに4cycleかかるので次の行を計算するまで待たされる。
+//その間cuda coreが遊ぶのを別のwarpのthreadの計算で埋める
+//という話をしていました。
+//なおGPUでは、CPUに搭載されている分岐予測・投機実行 アウトオブオーダー が簡素化されており、基本書いた順に上から実行されます。
+//逆に言うとソフトウェアパイプライニングを効かせる余地があるということなので(*6)、まぁ頑張ってコーディングして下さい・・・
+
+//(*6)
+//コンパイラが優秀ならその限りではないです。

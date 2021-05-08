@@ -1,0 +1,42 @@
+// global_sizeがlocal_sizeで割れないのでエラーになりました。
+// しかしlocal_sizeを100にしたりするのは気持ち悪い(Sample14を見たあなたなら分かるはず)
+// そこでHCLDoKrn1_subという命令を使います。
+// これは割り切れなくても端数を別に切り出して計算してくれる命令です。
+#include "HSPCL64.as"
+	HCLinit
+	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
+	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
+	
+	n=10000//配列サイズ
+	clmem_A=HCLCreateBuffer(n*4)//指定はbyte数で
+	clmem_B=HCLCreateBuffer(n*4)//4はint型のサイズ
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt//HSPで初期値を代入
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
+	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
+	
+	HCLSetKernel krn,0,clmem_A//OpenCLコードの"vecAdd"に引数を適応
+	HCLSetKernel krn,1,clmem_B//OpenCLコードの"vecAdd"に引数を適応
+	HCLSetKernel krn,2,clmem_C//OpenCLコードの"vecAdd"に引数を適応
+	
+	mes "計算start"
+	HCLDoKrn1_sub krn,n,256//ここでエラー発生しない！！！！！！！！！！！！！！！！！！！！！！
+	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+	mes "計算end"
+	
+		repeat 27
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	pos 300,0
+		repeat 27,n-27//ちゃんと最後まで計算で埋まっていることが確認できます。
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	stop

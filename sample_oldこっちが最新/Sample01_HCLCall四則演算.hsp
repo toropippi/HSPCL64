@@ -1,0 +1,35 @@
+// OpencLで四則演算を行うサンプル
+// かつHCLCallの使い方も少し解説するサンプル
+#include "HSPCL64.as"
+	HCLinit
+
+	siki="+","-","*","/","%","<<","&","|","^"
+	dim a,9
+	dim b,9
+	dim c,9
+		repeat 9
+		a.cnt=rnd(9)+10
+		b.cnt=rnd(4)+2
+		loop
+	
+	HCLCall {"
+__kernel void test(__global int* a,__global int* b,__global int* c)
+{
+	c[0]=a[0]+b[0];
+	c[1]=a[1]-b[1];
+	c[2]=a[2]*b[2];
+	c[3]=a[3]/b[3];
+	c[4]=a[4]%b[4];
+	c[5]=a[5]<<b[5];
+	c[6]=a[6]&b[6];
+	c[7]=a[7]|b[7];
+	c[8]=a[8]^b[8];
+}
+	"},1,1,a,b,c//第1引数は文字列、第2引数は並列数=global_size、第3引数はlocal_size。今回は1並列
+	//第4引数以降はHSPの配列変数や、-4,0.55,"Hsp3"など各型のスカラーも指定できる。第35引数まで指定できる。
+
+	mes ""+HCLGetDeviceInfo_s(CL_DEVICE_NAME)+"で計算"
+		repeat 9
+		mes ""+a.cnt+" "+siki.cnt+" "+b.cnt+" = "+c.cnt+""
+		loop
+	stop

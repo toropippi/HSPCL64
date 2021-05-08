@@ -1,4 +1,4 @@
-//やってることはSample01_VecAdd.hspと同じ
+//やってることはSample05_VecAdd.hspと同じ
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで

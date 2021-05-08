@@ -1,10 +1,14 @@
-//やってることはSample01_VecAdd.hspと同じ
+//やってることはSample05_VecAdd.hspと同じ
+//HCLCreateKernelで取得したkrn変数から、元の関数名を取得できます。
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
 	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
 	
 	n=256//配列サイズ
+	clmem_A=HCLCreateBuffer(n*4)//指定はbyte数で
+	clmem_B=HCLCreateBuffer(n*4)//4はint型のサイズ
+	clmem_C=HCLCreateBuffer(n*4)
 	
 	dim host_A,n
 	dim host_B,n
@@ -13,10 +17,6 @@
 		host_A.cnt=cnt//HSPで初期値を代入
 		host_B.cnt=cnt
 		loop
-	//CPU側で確保した変数を、サイズをそのままGPUにも確保し転送
-	clmem_A=HCLCreateBufferFrom(host_A)
-	clmem_B=HCLCreateBufferFrom(host_B)
-	clmem_C=HCLCreateBufferFrom(host_C)
 	
 	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
 	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
@@ -25,12 +25,15 @@
 	HCLSetKernel krn,1,clmem_B//OpenCLコードの"vecAdd"に引数を適応
 	HCLSetKernel krn,2,clmem_C//OpenCLコードの"vecAdd"に引数を適応
 	
-	mes "計算start"
+	//mes "計算start"
 	HCLDoKrn1 krn,n,n//GPUで計算。HCLDoKrn1は1次元の数で並列数を指定する命令
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
-	mes "計算end"
+	//mes "計算end"
 	
-		repeat n
+		repeat 256
 		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
+
+	pos 200,0
+	mes HCLGetKernelName(krn)
 	stop

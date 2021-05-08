@@ -1,3 +1,5 @@
+//そもそもOpenCLデバイスがあるかどうかをこのサンプルで確認できます。
+//列挙されたのは全部使えます。HCLSetDevice xで指定することで任意のデバイスで計算できるようになります。
 #include "HSPCL64.as"
 
 	HCLinit
@@ -20,7 +22,7 @@
 		mes "周波数(MHz)								"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_CLOCK_FREQUENCY,0);
 		mes "演算デバイスのアドレス空間のサイズbit					"+HCLGetDeviceInfo_i(CL_DEVICE_ADDRESS_BITS,0);
 		mes "確保可能最大メモリbyte							"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_MEM_ALLOC_SIZE,0);
-		mes "グループごとのワークアイテム数のそれぞれの次元についての最大値		"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_WORK_ITEM_SIZES,0)+","+HCLGetDeviceInfo_i(CL_DEVICE_MAX_WORK_ITEM_SIZES,1)+","+HCLGetDeviceInfo_i(CL_DEVICE_MAX_WORK_ITEM_SIZES,2);
+		mes "グループごとのワークアイテム数のそれぞれの次元についての最大値		"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,0)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,1)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,2);
 		mes "グローバルメモリのキャッシュのタイプ 1(read only) 2(read&write)		"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_TYPE,0);
 		mes "グローバルメモリのキャッシュラインのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE)
 		mes "グローバルメモリのキャッシュのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_SIZE)
@@ -40,7 +42,7 @@
 		mes "ベクトル内に格納できるスカラ要素の数(HALF)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF)
 		mes "デバイスがサポートする拡張機能	"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
 		sdim k,65536
-		k=HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
+		k="デバイスがサポートする拡張機能\n"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
 		pos 0,630
 		mesbox k,1200,200,5
 	loop

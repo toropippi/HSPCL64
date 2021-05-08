@@ -1,19 +1,12 @@
-//やってることはSample01_VecAdd.hspと同じ
+// global_sizeがlocal_sizeで割れないのでエラーになりました。
+// local_sizeの概念もよくわからい・・・ということであれば0を指定してあげればよきに計らってくれます。
+// ただglobal_sizeが素数とかだとlocal_sizeが1にされて非常に非効率な計算をされてしまうこともあるので、最終手段として使いましょう。
 #include "HSPCL64.as"
 	HCLinit
-	
-	source={"
-__kernel void vecAdd(__global int* a,__global int* b,__global int* c)
-{
-    uint gid = get_global_id(0);
-    c[gid] = a[gid] + b[gid];
-}
-	"}
-	
-	prg=HCLCreateProgramWithSource(source)//OpenCLのコードが書かれたstrを直接入れることもできる
+	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
 	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
 	
-	n=256//配列サイズ
+	n=10000//配列サイズ
 	clmem_A=HCLCreateBuffer(n*4)//指定はbyte数で
 	clmem_B=HCLCreateBuffer(n*4)//4はint型のサイズ
 	clmem_C=HCLCreateBuffer(n*4)
@@ -34,11 +27,15 @@ __kernel void vecAdd(__global int* a,__global int* b,__global int* c)
 	HCLSetKernel krn,2,clmem_C//OpenCLコードの"vecAdd"に引数を適応
 	
 	mes "計算start"
-	HCLDoKrn1 krn,n,n//GPUで計算。HCLDoKrn1は1次元の数で並列数を指定する命令
+	HCLDoKrn1 krn,n,0//local_sizeに0を指定すると自動で決定される。
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 	mes "計算end"
 	
-		repeat n
+		repeat 27
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	pos 300,0
+		repeat 27,n-27//ちゃんと最後まで計算で埋まっていることが確認できます。
 		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
 	stop

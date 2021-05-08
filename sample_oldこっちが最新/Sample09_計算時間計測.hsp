@@ -1,12 +1,14 @@
-//やってることはSample01_VecAdd.hspと同じ
-//並列数をもっともっと多くしてみましょう。
-//global_sizeが並列数です(ソースコードのn)。local_sizeは、global_sizeがlocal_sizeで割り切れる必要があります。
+//やってることはSample05_VecAdd.hspと同じ
+//時間計測はHSPのgettimeを使ってもいいがOpenCLのAPIを使うことでより正確に測ることができる
+//そのためにはカーネル実行の命令(ここではHCLDoKrn1)でeventを登録するようにする
+//そのevent idから時間情報をとってくることができる
+//時間の単位は不明だが時間解像度は高そう・・・
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")
 	krn=HCLCreateKernel(prg,"vecAdd")
 	
-	n=1024*1024
+	n=256
 	clmem_A=HCLCreateBuffer(n*4)
 	clmem_B=HCLCreateBuffer(n*4)
 	clmem_C=HCLCreateBuffer(n*4)
@@ -26,7 +28,7 @@
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,clmem_C
 	
-	HCLDoKrn1 krn,n,256,0//1024*1024がglobal_size。これは256で割り切れる。
+	HCLDoKrn1 krn,n,64,0//GPUで計算。ここの第4引数の0は、この命令をevent_id 0に登録するという意味
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 	
 	//eventから時間情報を取得。返り値は64bit int
