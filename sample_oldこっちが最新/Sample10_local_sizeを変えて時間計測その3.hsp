@@ -24,18 +24,23 @@
 	HCLSetKernel krn,0,clmem_A
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,clmem_C
-	HCLSetKernel krn,3,1234
+	HCLSetKernel krn,3,1234//1thread内のループ数
 
+	
+	title "計算中..."
+	wait 1
 		repeat 128-31,31
 		local_size=cnt+1
 		HCLDoKrn1 krn,n/local_size*local_size,local_size,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
-		wait 1
 		HCLFinish
 		loop
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+	title "計算終了"
+
+
+
 
 	//計算時間をグラフで表示
-
 	dim c_time,128
 	c_time_max=0
 		repeat 128-31,31
@@ -45,14 +50,31 @@
 		if c_time_max<c_time.cnt:c_time_max=c_time.cnt
 		loop
 
+	//まずは軸
+	line 30,30,30,450
+	line 30,30,27,35
+	line 30,30,33,35
+	pos 3,240
+	font msgothic,12
+	mes "時間"
+
+	line 30,450,610,450
+	line 610,450,605,447
+	line 610,450,605,453
+	pos 270,460
+	mes "local_size"
+		repeat 9
+		pos 30+cnt*580/8,450
+		mes 16*cnt
+		loop
 
 	c_time_max/=400
 		repeat 128-31,31
 		if cnt==0{
-			pos 0,480-c_time.cnt/c_time_max
+			pos 30,450-c_time.cnt/c_time_max
 		}else{
-			xx=cnt*639/128
-			yy=480-c_time.cnt/c_time_max
+			xx=cnt*580/128+30
+			yy=450-c_time.cnt/c_time_max
 			line xx,yy
 			pset xx-1,yy
 			pset xx,yy-1
@@ -66,5 +88,3 @@
 		
 
 	stop
-	//64 219
-	//65 315

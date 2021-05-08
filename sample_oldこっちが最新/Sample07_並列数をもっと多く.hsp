@@ -28,15 +28,15 @@
 	
 	HCLDoKrn1 krn,n,256,0//1024*1024がglobal_size。これは256で割り切れる。
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
-
+	
 	//eventから時間情報を取得。返り値は64bit int
 	start_time=HCLGetEventLogs(0,6)//6はCL_PROFILING_COMMAND_STARTのtime
 	end_time=HCLGetEventLogs(0,7)//7はCL_PROFILING_COMMAND_ENDのtime
 	mes "計算start "+start_time
 	mes "計算end   "+end_time
-
+	
 		repeat 256
 		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
-
+	
 	stop
