@@ -48,6 +48,7 @@ int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
 
 
 
+
 //自作関数
 //int64だけを読み込むやつ
 INT64 Code_getint64() {
@@ -982,7 +983,7 @@ static int cmdfunc(int cmd)
 		}
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, CL_FALSE, prm4,
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 

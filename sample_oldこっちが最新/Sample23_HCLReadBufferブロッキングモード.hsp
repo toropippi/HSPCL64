@@ -1,6 +1,7 @@
 #include "HSPCL64.as"
 
 	HCLinit
+	HCLSetDevice 0
 	sz=1024*1024*128//128MbA‚±‚Ì‘å‚«‚³‚È‚ç“]‘—‚É­‚µŠÔ‚ª‚©‚©‚é‚Í‚¸
 	mem=HCLCreateBuffer(sz)
 	dim i,sz/4
