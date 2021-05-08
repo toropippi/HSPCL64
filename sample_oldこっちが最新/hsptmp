@@ -11,7 +11,7 @@
 	HCLFinish
 
 	mes "a"
-	HCLReadBuffer mem,i,sz,0,0,1,0//第6引数に0を指定することでブロッキングモードオフで実行
+	HCLReadBuffer mem,i,sz,0,0,0,0//第6引数に0を指定することでブロッキングモードオフで実行
 	mes "a"
 
 	mes i.134000000//ここで0が表示されればまだ転送が終わっていない
