@@ -1,3 +1,9 @@
+// このSAMPLEはHCLCallの使い方を何パターンかにわけて理解するためのものです。
+// HCLCall自体は、WriteBufferやReadBufferやCreateProgramなどの命令を内部で自動でやってくれる命令です。
+// 普通HSPで確保した変数をそのままOpnnCLのコードでいじれないですが、これを使うことで擬似的に直接いじれているように見えます。
+// ただパフォーマンスを出すにはちゃんとWriteBufferやReadBufferやCreateProgramを駆使してコードを書くことをおすすめします。
+// HCLCallはあくまで「お試し」でOpenCLコードを動かすときに手軽にできるようにするためのものです。
+
 #include "HSPCL64.as"
 	HCLinit
 	gosub*test01
@@ -26,7 +32,7 @@
 //②
 // global_size=65536並列でlocal_size=256でc[i]=a[i]+b[i]
 // global_sizeが並列化したい数
-// local_sizeは、local_sizeの整数倍がglobal_sizeになるような値で、かつ1～1024の値を指定すること
+// local_sizeは、local_sizeの整数倍がglobal_sizeになるような値で、かつ1～1024の値を指定すること。わからなければ0を指定すると自動で決定される
 *test02
 	screen 1,240,480:title "test02"
 	dim aa,65536:repeat 65536:aa.cnt=cnt:loop
@@ -112,7 +118,7 @@
 	dim bb,256:repeat 256:bb.cnt=cnt:loop
 	dim cc,256
 	dim xx,100
-	xx.0=34//こんな感じに配列変数の添字が0のときだけは例外で、xxという配列変数として認識されてしまう。
+	xx.0=34//こんな感じに配列変数の添字が0のときだけは例外で、xxという配列変数として認識されてしまう。→kernel内の「int dd」と整合性が合わない
 	
 	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
 	{
@@ -136,7 +142,7 @@
 	dim xx,1
 	xx.0=34//こんな感じに配列変数の添字が0だけども配列の要素数がそもそも1のものは配列変数ではなくintとして認識する
 	
-	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
+	HCLCall {"__kernel void testo(__global int* aa,__global int* bb,__global int* cc,int dd)
 	{
 		int gid=get_global_id(0);
 		cc[gid] = aa[gid] + bb[gid] + dd;

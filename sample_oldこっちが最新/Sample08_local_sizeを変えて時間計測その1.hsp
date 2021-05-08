@@ -1,7 +1,7 @@
-//並列数が同じでも、local_sizeを変えると計算時間が変わってくることがわかりました。
-//global_size(並列数)はlocal_sizeで割り切れないといけません。
-//local_sizeで指定した数は1SM(1コア)内での並列数になるので、1SM=64 cuda coreだとすると、ここに奇数や素数など中途半端な値を指定すると
-//待ちぼうけを食らうcuda coreが発生してしまいます。
+//やってることはSample01_VecAdd.hspと同じ
+//並列数が同じでも、local_sizeを変えると計算時間が変わってくることがわかります。
+//適切なlocal_sizeを指定できるようにしましょう。
+//基本的には64,128,256を指定すれば間違いないですが、前提としてglobal_size(並列数)がそれで割り切れないといけません。
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")
@@ -27,27 +27,19 @@
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,clmem_C
 
-	
-		repeat 256
-		local_size=cnt+1
-		HCLDoKrn1 krn,n/local_size*local_size,local_size,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
+	local_size=1,2,4,8,16,32,64,128,256,512,1024,0//0だけは、「自動で決定される」というおまじないの数字
+		repeat 12
+		HCLDoKrn1 krn,n,local_size.cnt,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
 		HCLFinish
 		loop
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 
-	//計算時間をグラフで表示
-	
-		repeat 256
+	//計算時間表示
+		repeat 12
 		start_time=HCLGetEventLogs(cnt,6)
 		end_time=HCLGetEventLogs(cnt,7)
 		c_time=end_time-start_time
-		if cnt==0{
-			pos 0,460-c_time/196
-		}else{
-			line cnt*640/256,460-c_time/196
-		}
-		
-		//mes "local_size = "+(cnt+1)+" のときの計算時間        "+c_time
+		mes "local_size = "+local_size.cnt+" のときの計算時間        "+c_time
 		loop
 
 	stop

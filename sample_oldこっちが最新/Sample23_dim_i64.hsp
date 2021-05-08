@@ -34,11 +34,9 @@
 
 	mes "and      "+and_
 	mes "or       "+or_
-	
-	mes "「test」の配列変数のサイズ(byte) = "+varsize(test)
-
 	test.1<<=5
 	mes "bitシフト "+test.1
-	
-	mes "剰余 "+test.1\test.0
+	mes "剰余 "+test.1\test.0	
+	mes 
+	mes "「test」の配列変数のサイズ(byte) = "+varsize(test)
 	stop

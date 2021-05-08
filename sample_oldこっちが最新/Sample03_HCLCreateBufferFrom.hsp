@@ -1,14 +1,10 @@
-// cnt+cnt=2*cnt を256並列でやるサンプル
-// これがOpenCLの計算の基本となるサンプル。これに付け足して作っていくことをおすすめします。
+//やってることはSample01_VecAdd.hspと同じ
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
 	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
 	
 	n=256//配列サイズ
-	clmem_A=HCLCreateBuffer(n*4)//指定はbyte数で
-	clmem_B=HCLCreateBuffer(n*4)//4はint型のサイズ
-	clmem_C=HCLCreateBuffer(n*4)
 	
 	dim host_A,n
 	dim host_B,n
@@ -17,6 +13,10 @@
 		host_A.cnt=cnt//HSPで初期値を代入
 		host_B.cnt=cnt
 		loop
+	//CPU側で確保した変数を、サイズをそのままGPUにも確保し転送
+	clmem_A=HCLCreateBufferFrom(host_A)
+	clmem_B=HCLCreateBufferFrom(host_B)
+	clmem_C=HCLCreateBufferFrom(host_C)
 	
 	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
 	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU

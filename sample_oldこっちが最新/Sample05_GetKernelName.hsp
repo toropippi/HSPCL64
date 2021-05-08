@@ -1,5 +1,5 @@
-// cnt+cnt=2*cnt を256並列でやるサンプル
-// これがOpenCLの計算の基本となるサンプル。これに付け足して作っていくことをおすすめします。
+//やってることはSample01_VecAdd.hspと同じ
+//HCLCreateKernelで取得したkrn変数から、元の関数名を取得できます。
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
@@ -25,12 +25,15 @@
 	HCLSetKernel krn,1,clmem_B//OpenCLコードの"vecAdd"に引数を適応
 	HCLSetKernel krn,2,clmem_C//OpenCLコードの"vecAdd"に引数を適応
 	
-	mes "計算start"
+	//mes "計算start"
 	HCLDoKrn1 krn,n,n//GPUで計算。HCLDoKrn1は1次元の数で並列数を指定する命令
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
-	mes "計算end"
+	//mes "計算end"
 	
-		repeat n
+		repeat 256
 		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
+
+	pos 200,0
+	mes HCLGetKernelName(krn)
 	stop
