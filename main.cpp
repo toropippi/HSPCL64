@@ -923,7 +923,7 @@ static int cmdfunc(int cmd)
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 
 		//引数省略ならサイズは自動
-		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm1);
+		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -966,7 +966,7 @@ static int cmdfunc(int cmd)
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 
 		//引数省略ならサイズは自動
-		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm1);
+		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -982,7 +982,7 @@ static int cmdfunc(int cmd)
 		}
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, CL_FALSE, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 

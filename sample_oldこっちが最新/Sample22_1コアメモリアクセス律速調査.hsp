@@ -15,7 +15,7 @@
 	HCLDoKrn1 krn,1024*1024*256,256,0
 	HCLFinish
 	
-	//eventから時間情報を取得。返り値は64bit int。おそらく単位はナノセカンド
+	//eventから時間情報を取得。返り値は64bit int。単位はナノセカンド
 	c_time=HCLGetEventLogs(0,7)-HCLGetEventLogs(0,6)
-	mes "計算時間 = "+c_time+" (ns?)"
+	mes "計算時間 = "+c_time+" (ns)"
 	mes "実行メモリバンド幅 = "+(int64("1000000000")/c_time)+" GB/s"
