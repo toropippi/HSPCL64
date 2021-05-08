@@ -1,11 +1,9 @@
-//並列数が同じでも、local_sizeを変えると計算時間が変わってくることがわかりました。
-//global_size(並列数)はlocal_sizeで割り切れないといけません。
-//local_sizeで指定した数は1SM(1コア)内での並列数になるので、1SM=64 cuda coreだとすると、ここに奇数や素数など中途半端な値を指定すると
-//待ちぼうけを食らうcuda coreが発生してしまいます。
+//さきほどのサンプルでは、計算時間はほぼlocal_sizeの反比例でした。
+//次は演算律速で計算時間がどうなるかやってみましょう。
 #include "HSPCL64.as"
 	HCLinit
-	prg=HCLCreateProgram("VecAdd.cl")
-	krn=HCLCreateKernel(prg,"vecAdd")
+	prg=HCLCreateProgram("SinDiv.cl")
+	krn=HCLCreateKernel(prg,"SinDiv")
 	
 	n=1024*1024
 	clmem_A=HCLCreateBuffer(n*4)
@@ -26,28 +24,47 @@
 	HCLSetKernel krn,0,clmem_A
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,clmem_C
+	HCLSetKernel krn,3,1234
 
-	
-		repeat 256
+		repeat 128-31,31
 		local_size=cnt+1
 		HCLDoKrn1 krn,n/local_size*local_size,local_size,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
+		wait 1
 		HCLFinish
 		loop
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 
 	//計算時間をグラフで表示
-	
-		repeat 256
+
+	dim c_time,128
+	c_time_max=0
+		repeat 128-31,31
 		start_time=HCLGetEventLogs(cnt,6)
 		end_time=HCLGetEventLogs(cnt,7)
-		c_time=end_time-start_time
-		if cnt==0{
-			pos 0,460-c_time/196
-		}else{
-			line cnt*640/256,460-c_time/196
-		}
-		
-		//mes "local_size = "+(cnt+1)+" のときの計算時間        "+c_time
+		c_time.cnt=int(end_time-start_time)
+		if c_time_max<c_time.cnt:c_time_max=c_time.cnt
 		loop
 
+
+	c_time_max/=400
+		repeat 128-31,31
+		if cnt==0{
+			pos 0,480-c_time.cnt/c_time_max
+		}else{
+			xx=cnt*639/128
+			yy=480-c_time.cnt/c_time_max
+			line xx,yy
+			pset xx-1,yy
+			pset xx,yy-1
+			pset xx-1,yy-1
+			pset xx+1,yy
+			pset xx,yy+1
+			pset xx+1,yy+1
+			pos xx,yy
+		}
+		loop
+		
+
 	stop
+	//64 219
+	//65 315
