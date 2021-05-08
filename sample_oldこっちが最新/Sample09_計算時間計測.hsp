@@ -2,7 +2,7 @@
 //時間計測はHSPのgettimeを使ってもいいがOpenCLのAPIを使うことでより正確に測ることができる
 //そのためにはカーネル実行の命令(ここではHCLDoKrn1)でeventを登録するようにする
 //そのevent idから時間情報をとってくることができる
-//時間の単位は不明だが時間解像度は高そう・・・
+//時間の単位はnsナノセカンド
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")

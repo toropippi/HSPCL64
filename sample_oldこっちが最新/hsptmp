@@ -1,68 +1,22 @@
-// cnt+cnt=2*cnt を256並列でやるサンプル
-// これがOpenCLの計算の基本となるサンプル。これに付け足して作っていくことをおすすめします。
 #include "HSPCL64.as"
+	
 	HCLinit
-	source={"
-__kernel void test(__global int* a,__global int* b,__global int* c,__global int* d)
-{
-	int gid0=get_global_id(0);
-	int gid1=get_global_id(1);
-	int lid0=get_local_id(0);
-	int lid1=get_local_id(1);
-	int idx=gid1*get_global_size(0)+gid0;
-	a[idx]=gid0;
-	b[idx]=gid1;
-	c[idx]=lid0;
-	d[idx]=lid1;
-}
-	"}
+	//HCLSetDevice 0
+	prg=HCLCreateProgram("membandwidth.cl")
+	krn=HCLCreateKernel(prg,"membdwdth")
+	clmemm=HCLCreateBuffer(int64(1024)*1024*1024)//1GB vram取得
 	
-	prg=HCLCreateProgramWithSource(source)
-	krn=HCLCreateKernel(prg,"test")
+	HCLSetKernel krn,0,clmemm
+
+	//初回カーネル起動
+	HCLDoKrn1 krn,1024*1024*256,256
+	HCLFinish
+	//本番測定
+	HCLDoKrn1 krn,1024*1024*256,256,0
+	HCLFinish
 	
-	//計算NDrangeを2次元として
-	dim global_size,2
-	dim local_size,2
-	global_size=6,9
-	local_size=2,3
-	
-	n=global_size.0*global_size.1//配列サイズ
-	dim host_A,n
-	dim host_B,n
-	dim host_C,n
-	dim host_D,n
-	clmem_A=HCLCreateBufferFrom(host_A)
-	clmem_B=HCLCreateBufferFrom(host_B)
-	clmem_C=HCLCreateBufferFrom(host_C)
-	clmem_D=HCLCreateBufferFrom(host_D)
-	HCLSetKrns krn,clmem_A,clmem_B,clmem_C,clmem_D
 
-	HCLDoKernel krn,2,global_size,local_size//4*6=24並列で実行
-
-	HCLReadBuffer clmem_A,host_A,n*4
-	HCLReadBuffer clmem_B,host_B,n*4
-	HCLReadBuffer clmem_C,host_C,n*4
-	HCLReadBuffer clmem_D,host_D,n*4
-
-
-	color 100,255,100
-	groupx=global_size.0/local_size.0
-	groupy=global_size.1/local_size.1
-		repeat groupx
-		cntx=cnt
-			repeat groupy
-			boxf cntx*local_size.0*60+3,cnt*local_size.1*50+3,(cntx+1)*local_size.0*60-3,(cnt+1)*local_size.1*50-3
-			loop
-		loop
-
-	color 0,0,0
-		repeat global_size.0
-		cntx=cnt
-			repeat global_size.1
-			idx=cntx+cnt*global_size.0
-			pos cntx*60+6,cnt*50+6
-			mes "("+host_A.idx+","+host_B.idx+")\n("+host_C.idx+","+host_D.idx+")"
-			loop
-		loop
-
-	stop
+	//eventから時間情報を取得。返り値は64bit int。おそらく単位はナノセカンド
+	c_time=HCLGetEventLogs(0,7)-HCLGetEventLogs(0,6)
+	mes "計算時間 = "+c_time+" (ns?)"
+	mes "実行メモリバンド幅 = "+(int64("1000000000")/c_time)+" GB/s"

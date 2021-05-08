@@ -1,26 +1,21 @@
 #include "HSPCL64.as"
-
+	
 	HCLinit
-	HCLSetDev 1
+	//HCLSetDevice 0
 	prg=HCLCreateProgram("membandwidth.cl")
 	krn=HCLCreateKernel(prg,"membdwdth")
-	clmemm=HCLCreateBuffer(250000000*4)
+	clmemm=HCLCreateBuffer(int64(1024)*1024*1024)//1GB vram取得
 	
-	//HCLWriteBuffer clmemm,inta,200000000*4,0,0
 	HCLSetKernel krn,0,clmemm
 
-	
-	HCLDoKrn1 krn,128,16
+	//初回カーネル起動
+	HCLDoKrn1 krn,1024*1024*256,256
+	HCLFinish
+	//本番測定
+	HCLDoKrn1 krn,1024*1024*256,256,0
 	HCLFinish
 	
-	stm=gettime(7)+gettime(6)*1000
-	HCLDoKrn1 krn,128,16
-	HCLFinish
-	mes gettime(7)+gettime(6)*1000-stm
-	dim inta,4
-	HCLReadBuffer clmemm,inta,16,0,0
-	mes "1+1="+inta.0
-	mes "2+2="+inta.1
-	mes "3+3="+inta.2
-	mes "4+4="+inta.3
-	
+	//eventから時間情報を取得。返り値は64bit int。おそらく単位はナノセカンド
+	c_time=HCLGetEventLogs(0,7)-HCLGetEventLogs(0,6)
+	mes "計算時間 = "+c_time+" (ns?)"
+	mes "実行メモリバンド幅 = "+(int64("1000000000")/c_time)+" GB/s"
