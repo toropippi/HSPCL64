@@ -1,7 +1,8 @@
+//GPU→CPUとCPU→GPUのデータ転送命令にはブロッキングモードが存在します。
+//これをうまく駆使することで計算とデータ転送をオーバーラップさせることができます。
 #include "HSPCL64.as"
 
 	HCLinit
-	HCLSetDevice 0
 	sz=1024*1024*128//128Mb、この大きさなら転送に少し時間がかかるはず
 	mem=HCLCreateBuffer(sz)
 	dim i,sz/4
@@ -10,11 +11,8 @@
 	
 	HCLWriteBuffer mem,i,sz//gpuに転送ここではブロッキングモードon
 	dim i,sz/4//また0に初期化
-	HCLFinish
 
-	mes "a"
-	HCLReadBuffer mem,i,sz,0,0,0,0//第6引数に0を指定することでブロッキングモードオフで実行
-	mes "a"
+	HCLReadBuffer mem,i,sz,0,0,0//第6引数に0を指定することでブロッキングモードオフで実行
 
 	mes i.30000000//ここで0が表示されればまだ転送が終わっていない
 	mes i.30000001
@@ -24,8 +22,8 @@
 	mes i.30000005
 	mes "ここで0が表示されればまだデータ転送が終わっていない(ブロッキングモードoff成功)"
 
-	HCLFinish//ここで転送終わるまで待つことになる
-
+	HCLFinish//ここで同期
+	
 	pos 0,160
 	mes i.30000000//ここで0が表示されればまだ転送が終わっていない
 	mes i.30000001

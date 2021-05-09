@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <thread>
 
 #include <map>
 #include <CL/cl.h>
@@ -14,6 +15,7 @@
 #include "hspvar_int64.h"
 #include "errmsg.h"
 #include "RGB.h"
+
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
@@ -43,7 +45,7 @@ int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = CL_QUEUE_PROFILING_ENABLE;//OpenCLのコマンドキュー生成時に使うプロパティ番号
 int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
-
+int thread_start = 1;//0はthreadに投げたがまだEnqueueされてない、1はEnqueueされてる
 
 
 
@@ -157,7 +159,41 @@ cl_program WithSource_func(cl_context contxt,std::string s_source, std::string s
 	return program;
 }
 
+
+void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
+	const void* vptr, int num_event_wait_list__, cl_event* ev_, cl_event* outevent)
+{
+	//wait event list関連
+	cl_int ret = clEnqueueWriteBuffer(cmd, mem, CL_FALSE, ofst,
+		size, vptr, num_event_wait_list__, ev_, outevent);
+	thread_start = 1;
+	if (ret != CL_SUCCESS) { retmeserr2(ret); }
+}
+
+void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
+	void* vptr,int num_event_wait_list__, cl_event* ev_, cl_event* outevent)
+{
+	//wait event list関連
+	cl_int ret = clEnqueueReadBuffer(cmd, mem, CL_FALSE, ofst,
+		size, vptr, num_event_wait_list__, ev_, outevent);
+	thread_start = 1;
+	if (ret != CL_SUCCESS) { retmeserr2(ret); }
+}
 ////////////自作関数ここまで
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -476,6 +512,13 @@ static void *reffunc( int *type_res, int cmd )
 		INT64 b = Code_geti32i64();
 		ref_int64val = b;
 		if (a > b)ref_int64val = a;
+		break;
+	}
+
+	case 0x88:	//HCLGet_LastNonBlocking_Status
+	{
+		fInt = true;
+		ref_int32val = thread_start;
 		break;
 	}
 
@@ -988,6 +1031,121 @@ static int cmdfunc(int cmd)
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 
 		num_event_wait_list = 0;
+		break;
+	}
+
+
+	//コンパイル時に-pthread が必要
+	case 0x86:	// HCLWriteBuffer_NonBlocking
+	{
+		//引数1
+		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		//引数2。HSP側の配列変数
+		PVal* pval;
+		APTR aptr = code_getva(&pval);
+		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		//引数3、コピーサイズ
+		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		//引数4、コピー先のofset
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		//引数5、コピー元のofset
+		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		cl_bool p7 = code_getdi(1);		//ブロッキングモード
+
+		//引数省略ならサイズは自動
+		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			if (cppeventlist[outeventptr] != NULL)
+				clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm3;
+			evinfo[outeventptr].devno = clsetdev;
+			evinfo[outeventptr].queno = clsetque;
+		}
+
+		cl_event* ev_;
+		if (num_event_wait_list == 0) 
+		{
+			ev_ = NULL;
+		}
+		else 
+		{
+			ev_ = new cl_event[num_event_wait_list];
+			for (int i = 0; i < num_event_wait_list; i++) 
+			{
+				ev_[i] = event_wait_list[i];
+			}
+		}
+		
+		cl_command_queue cmd = command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque];
+		void* vptr = (char*)((pval->pt) + prm5);
+		mem_obj = (cl_mem)prm1;
+		//ここで別スレッドになげる
+		thread_start = 0;
+		std::thread th(Thread_WriteBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
+		th.detach();
+		num_event_wait_list = 0;
+		break;
+	}
+
+	case 0x87:	// HCLReadBuffer_NonBlocking
+	{
+		//引数1
+		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		//引数2。HSP側の配列変数
+		PVal* pval;
+		APTR aptr = code_getva(&pval);
+		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		//引数3、コピーサイズ
+		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		//引数4、コピー先のofset
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		//引数5、コピー元のofset
+		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		cl_bool p7 = code_getdi(1);		//ブロッキングモード
+
+		//引数省略ならサイズは自動
+		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+
+		//outevent関連
+		int outeventptr = code_getdi(-1);//outeventするか
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			if (cppeventlist[outeventptr] != NULL)
+				clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm3;
+			evinfo[outeventptr].devno = clsetdev;
+			evinfo[outeventptr].queno = clsetque;
+		}
+
+		cl_event* ev_;
+		if (num_event_wait_list == 0)
+		{
+			ev_ = NULL;
+		}
+		else
+		{
+			ev_ = new cl_event[num_event_wait_list];
+			for (int i = 0; i < num_event_wait_list; i++)
+			{
+				ev_[i] = event_wait_list[i];
+			}
+		}
+
+		cl_command_queue cmd = command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque];
+		void* vptr = (char*)((pval->pt) + prm5);
+		mem_obj = (cl_mem)prm1;
+		//ここで別スレッドになげる
+		thread_start = 0;
+		std::thread th(Thread_ReadBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
+		th.detach();
 		break;
 	}
 
@@ -1584,8 +1742,7 @@ static int cmdfunc(int cmd)
 	case 0x7C:	// HCLWaitForEvent
 	{
 		int n = code_geti();
-		event_wait_list[0] = cppeventlist[n];
-		cl_int ret = clWaitForEvents(1, event_wait_list);
+		cl_int ret = clWaitForEvents(1, &cppeventlist[n]);
 		if (ret != CL_SUCCESS) retmeserr6(ret);
 		break;
 	}
