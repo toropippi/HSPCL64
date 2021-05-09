@@ -11,6 +11,14 @@ void retmeserr9(cl_int ret);//clCreateBufferで失敗した時出すエラーメッセージをま
 void retmeserr10(cl_int ret);//clFinishで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr11(cl_int ret);//clFlushで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr12(cl_int ret);//clGetMemObjectInfoで失敗した時出すエラーメッセージをまとめた関数
+void retmeserr13(cl_int ret);//clCreateUserEventで失敗した時出すエラーメッセージをまとめた関数
+void retmeserr14(cl_int ret);//clSetUserEventStatusで失敗した時出すエラーメッセージをまとめた関数
+
+
+
+
+
+
 
 void retmeserr(cl_int ret)
 {
@@ -435,3 +443,65 @@ void retmeserr12(cl_int ret)
 	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
 	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 }
+
+
+void retmeserr13(cl_int ret)
+{
+	switch (ret)
+	{							//分岐
+	case CL_INVALID_CONTEXT:
+		MessageBox(NULL, "if context is not a valid context.\nコンテキストが有効なコンテキストでない場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "if there is a failure to allocate resources required by the OpenCL implementation on the device.\nデバイスでのOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "if there is a failure to allocate resources required by the OpenCL implementation on the host\nホストでのOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
+
+
+
+void retmeserr14(cl_int ret)
+{
+	switch (ret)
+	{							//分岐
+	case CL_INVALID_EVENT:
+		MessageBox(NULL, "if event is not a valid user event.\nイベントが有効なユーザーイベントでない場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "if the execution_status is not CL_COMPLETE or a negative integer value.\nexecute_statusがCL_COMPLETEまたは負の整数値でない場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_OPERATION:
+		MessageBox(NULL, "if the execution_status for event has already been changed by a previous call to clSetUserEventStatus.\nイベントのexecution_statusが、clSetUserEventStatusへの以前の呼び出しによってすでに変更されている場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "if there is a failure to allocate resources required by the OpenCL implementation on the device.\nデバイスでのOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "if there is a failure to allocate resources required by the OpenCL implementation on the host.\nホストでのOpenCL実装に必要なリソースの割り当てに失敗した場合。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
+
+
+
+ 
+ 
+ 
+ 

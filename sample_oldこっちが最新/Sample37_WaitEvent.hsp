@@ -1,8 +1,6 @@
-//Sample24_HCLReadBufferブロッキングモード.hspとほぼ同じ
-//GPU→CPUとCPU→GPUのデータ転送命令にはブロッキングモードが存在します。
-//これをうまく駆使することで計算とデータ転送をオーバーラップさせることができます。
+//non blocking＝非同期命令に対してeventの完了待ちを指示することができます。
+//これは簡易的なサンプルですが実際HCLWaitForEventの真価を発揮するのはCommandをいじり始めてからでしょう
 #include "HSPCL64.as"
-
 	HCLinit
 	sz=1024*1024*128//128Mb、この大きさなら転送に少し時間がかかるはず
 	mem=HCLCreateBuffer(sz)
@@ -13,7 +11,8 @@
 	HCLWriteBuffer mem,i,sz//gpuに転送ここではブロッキングモードon
 	dim i,sz/4//また0に初期化
 
-	HCLReadBuffer mem,i,sz,0,0,0//第6引数に0を指定することでブロッキングモードオフで実行
+	HCLReadBuffer mem,i,sz,0,0,0,0//第6引数に0を指定することでブロッキングモードオフで実行
+	//第7引数はevent id の0
 
 	mes i.30000000//ここで0が表示されればまだ転送が終わっていない
 	mes i.30000001
@@ -23,7 +22,7 @@
 	mes i.30000005
 	mes "ここで0が表示されればまだデータ転送が終わっていない(ブロッキングモードoff成功)"
 
-	HCLFinish//ここで同期
+	HCLWaitForEvent 0//ここでCPU-GPU同期
 	
 	pos 0,160
 	mes i.30000000//ここで0が表示されればまだ転送が終わっていない
@@ -32,5 +31,5 @@
 	mes i.30000003
 	mes i.30000004
 	mes i.30000005
-	mes "ここで0以外が表示されればデータ転送終わっている(HCLFinish成功)"
+	mes "ここで0以外が表示されればデータ転送終わっている(HCLWaitForEvent成功)"
 	stop

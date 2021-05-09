@@ -1,0 +1,175 @@
+//やっていることはSample35_奇数偶数分けその2共有メモリサンプルのタイムスタンプ可視化その2.hspにすごい似ています。
+//同じkernelを何度も無駄実行するサンプルですが、前は実行が逐次でした。
+//今度はHCLSetCommandQueueで実行するCommandQueue番号を変えることでオーバーラップ実行させることが可能になります。
+//デフォルトで1deviceあたり切り替えられるCommandQueueは4つまであります。
+#include "HSPCL64.as"
+	randomize
+	HCLinit
+	//HCLSetDevice 1
+	
+	mes "65536個のスレッドを実行します。\n各々のスレッドで64個の数値を偶数奇数カウントしていきます。\nこのときカーネル内で256個のスレッドが同期して情報を共有します\n"
+	dim rando,65536*64
+		repeat 65536*64;419万個のランダム数生成
+		rando.cnt=rnd(32767)*rnd(32000)+rnd(32767)
+		loop
+	mes "65536*64個のランダム数生成"
+
+	mes "ソースコンパイル"
+	prgid=HCLCreateProgram("奇数偶数分けその2共有メモリサンプル.cl")
+	krnid=HCLCreateKernel(prgid,"wake")
+	wait 1
+
+	mes "VRAMメモリ確保"
+	vram=HCLCreateBuffer(65536*64*4)//65536*64のint型配列を作成
+	HCLWriteBuffer vram,rando,65536*64*4,,,,0//event id 0
+	kisu=HCLCreateBuffer(256*4);奇数の数を保存するchar型配列変数を作成
+	gusu=HCLCreateBuffer(256*4);偶数の数を保存するchar型配列変数を作成
+	HCLSetKernel krnid,0,vram;
+	HCLSetKernel krnid,1,0,4*256;奇数用ローカルメモリ作成。１ワークグループにつき1024byte作成
+	HCLSetKernel krnid,2,0,4*256;偶数用ローカルメモリ作成。１ワークグループにつき1024byte作成
+	HCLSetKernel krnid,3,kisu;
+	HCLSetKernel krnid,4,gusu;
+
+	//GPU側で計算開始！
+	mes "カーネル実行中"
+	//無駄に多く実行。可視化してみるのが目的なので
+	HCLDoKrn1 krnid,65536*64/64,256,1//event id 1
+	HCLDoKrn1 krnid,65536*64/64,256,2//event id 2
+	HCLDoKrn1 krnid,65536*64/64,256,3//event id 3
+	HCLDoKrn1 krnid,65536*64/64,256,4//event id 4
+	HCLDoKrn1 krnid,65536*64/64,256,5//event id 5
+	HCLDoKrn1 krnid,65536*64/64,256,6//event id 6
+	HCLSetCommandQueue 1
+	HCLDoKrn1 krnid,65536*64/64,256,7//event id 7
+	HCLDoKrn1 krnid,65536*64/64,256,8//event id 8
+	HCLDoKrn1 krnid,65536*64/64,256,9//event id 9
+	HCLDoKrn1 krnid,65536*64/64,256,10//event id 10
+	HCLDoKrn1 krnid,65536*64/64,256,11//event id 11
+	HCLSetCommandQueue 2
+	HCLDoKrn1 krnid,65536*64/64,256,12//event id 12
+	HCLDoKrn1 krnid,65536*64/64,256,13//event id 13
+	HCLDoKrn1 krnid,65536*64/64,256,14//event id 14
+	HCLDoKrn1 krnid,65536*64/64,256,15//event id 15
+	HCLDoKrn1 krnid,65536*64/64,256,16//event id 16
+	HCLSetCommandQueue 3
+	HCLDoKrn1 krnid,65536*64/64,256,17//event id 17
+	HCLDoKrn1 krnid,65536*64/64,256,18//event id 18
+	HCLDoKrn1 krnid,65536*64/64,256,19//event id 19
+	HCLDoKrn1 krnid,65536*64/64,256,20//event id 20
+
+	HCLSetCommandQueue 3
+	HCLFinish//HCLFinishはコマンドキューごとに実行する必要がある
+	HCLSetCommandQueue 2
+	HCLFinish
+	HCLSetCommandQueue 1
+	HCLFinish
+	HCLSetCommandQueue 0
+	HCLFinish
+	mes "カーネル実行終了"
+	
+	//CPU側で集計
+	dim k,256
+	HCLReadBuffer kisu,k,256*4,,,,21//event id 21
+	奇数の数=0
+		repeat 256
+		奇数の数+=k.cnt
+		loop
+	HCLReadBuffer gusu,k,256*4,,,,22//event id 22
+	偶数の数=0
+		repeat 256
+		偶数の数+=k.cnt
+		loop
+
+	//表示
+	mes "\nGPUでカウントした結果"
+	mes "奇数の数		"+奇数の数
+	mes "偶数の数		"+偶数の数
+	mes "奇数の数＋数の数＝	"+(偶数の数+奇数の数)+"    =4194304なら正確にできた"
+
+
+	//CPU側で計算開始
+	repeat 65536*64;419万個ループ
+		if rando.cnt\2:intkisuko++:else:intgusuko++
+	loop
+
+	//表示
+	mes "\nCPUでカウントした結果"
+	mes "奇数の数		"+intkisuko
+	mes "偶数の数		"+intgusuko
+	mes "奇数の数＋偶数の数＝	"+(intkisuko+intgusuko)+"    =4194304なら正確にできた"
+
+	//タイムスタンプ可視化
+	screen 1,640,480,0
+	event_num=23
+	gosub*view1
+	gosub*view2
+	stop
+
+
+
+
+*view1
+	//まずはすべての計算時間を取得
+	dim_i64 kinfo,event_num
+	sdim kinfos,128,event_num
+	dim_i64 start_time,event_num
+	dim_i64 end_time,event_num
+	dim cmdq_no,event_num
+		repeat event_num
+		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
+		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
+		cmdq_no.cnt=HCLGetEventLogs(cnt,3)//3は何番のcommand queで実行されたか取得
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
+		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
+		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
+		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
+		loop
+		
+	offset=start_time.0
+	
+		repeat event_num
+		start_time.cnt-=offset
+		end_time.cnt-=offset
+		loop
+
+	scalex=end_time.(event_num-1)
+
+	//計算時間をグラフで表示
+	//軸
+	line 30,30,30,450
+	line 30,30,27,35
+	line 30,30,33,35
+	pos 0,240
+	font msgothic,12
+	mes "Queue\n番号"
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	mes "時間(μs)"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes scalex*cnt/8000
+		loop
+		
+	return
+
+
+*view2
+	//実行単位で表示していく
+		repeat event_num
+			hsvcolor rnd(192),200,200
+			//まず実行時間を表示
+			lx=start_time.cnt*580/scalex+30
+			rx=end_time.cnt*580/scalex+30
+			yy=270-int(cmdq_no.cnt)*50
+			boxf int(lx),yy,int(rx),yy+30
+			
+			//文字表示
+			color 0,0,0
+			pos int(lx),yy-10
+			mes kinfos.cnt
+		loop
+	return

@@ -32,6 +32,7 @@ cl_kernel kernel;
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
 
+
 struct EventStruct
 {
 	INT64 k;//kernel idまたはコピーサイズやら
@@ -45,7 +46,7 @@ int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
 int clsetque = 0;//OpenCLで現在メインとなっているque
 int cmd_properties = CL_QUEUE_PROFILING_ENABLE;//OpenCLのコマンドキュー生成時に使うプロパティ番号
 int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
-int thread_start = 1;//0はthreadに投げたがまだEnqueueされてない、1はEnqueueされてる
+int thread_start = 0;//0はEnqueueまちがない、1以降はthreadに投げたがまだEnqueueされてない数
 
 
 
@@ -166,7 +167,7 @@ void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size
 	//wait event list関連
 	cl_int ret = clEnqueueWriteBuffer(cmd, mem, CL_FALSE, ofst,
 		size, vptr, num_event_wait_list__, ev_, outevent);
-	thread_start = 1;
+	thread_start--;
 	if (ret != CL_SUCCESS) { retmeserr2(ret); }
 }
 
@@ -176,7 +177,7 @@ void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
 	//wait event list関連
 	cl_int ret = clEnqueueReadBuffer(cmd, mem, CL_FALSE, ofst,
 		size, vptr, num_event_wait_list__, ev_, outevent);
-	thread_start = 1;
+	thread_start--;
 	if (ret != CL_SUCCESS) { retmeserr2(ret); }
 }
 ////////////自作関数ここまで
@@ -470,6 +471,7 @@ static void *reffunc( int *type_res, int cmd )
 		//5:CL_PROFILING_COMMAND_SUBMITの時間
 		//6:CL_PROFILING_COMMAND_STARTの時間
 		//7:CL_PROFILING_COMMAND_ENDの時間
+		ref_int64val = 0;
 		cl_int ret = CL_SUCCESS;
 		if (secprm == 0) ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_TYPE, 8, &ref_int64val, NULL);
 		if (secprm == 1) ref_int64val = evinfo[eventid].k;
@@ -482,7 +484,6 @@ static void *reffunc( int *type_res, int cmd )
 				ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, NULL);
 			}
 		}
-
 		if (ret != CL_SUCCESS) retmeserr5(ret);
 		break;
 	}
@@ -521,7 +522,7 @@ static void *reffunc( int *type_res, int cmd )
 		ref_int32val = thread_start;
 		break;
 	}
-
+	
 	////////////////////////////////////////////////////////////ここまで
 
 	default:
@@ -964,8 +965,9 @@ static int cmdfunc(int cmd)
 		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 		//引数5、コピー元のofset
 		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
-		cl_bool p7 = code_getdi(1);		//ブロッキングモード
-
+		int p7 = code_getdi(1);		//ブロッキングモード
+		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
+		
 		//引数省略ならサイズは自動
 		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
 
@@ -981,13 +983,38 @@ static int cmdfunc(int cmd)
 			evinfo[outeventptr].devno = clsetdev;
 			evinfo[outeventptr].queno = clsetque;
 		}
+
+		//Intel CPUでは正しくブロッキングできないので、event作成してきちんとwaitしてもらう
+		cl_event tmpev;
+
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
 
-		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
-			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
-
+		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, TorF, prm4,
+			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, &tmpev);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
+
+		//Intel CPUでは正しくブロッキングできないので、event作成してきちんとwaitしてもらう
+		if (TorF == CL_TRUE) 
+		{
+			cl_int ret = clWaitForEvents(1, &tmpev);
+			if (ret != CL_SUCCESS) retmeserr6(ret);
+			if (outeventptr >= 0)
+			{
+				cppeventlist[outeventptr] = tmpev;
+			}
+			else 
+			{
+				clReleaseEvent(tmpev);
+			}
+		}
+		else 
+		{
+			if (outeventptr >= 0)
+			{
+				cppeventlist[outeventptr] = tmpev;
+			}
+		}
 
 		num_event_wait_list = 0;
 		break;
@@ -1007,7 +1034,8 @@ static int cmdfunc(int cmd)
 		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 		//引数5、コピー元のofset
 		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
-		cl_bool p7 = code_getdi(1);		//ブロッキングモード
+		int p7 = code_getdi(1);		//ブロッキングモード
+		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 
 		//引数省略ならサイズは自動
 		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
@@ -1026,7 +1054,7 @@ static int cmdfunc(int cmd)
 		}
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, p7, prm4,
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, TorF, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 
@@ -1086,7 +1114,7 @@ static int cmdfunc(int cmd)
 		void* vptr = (char*)((pval->pt) + prm5);
 		mem_obj = (cl_mem)prm1;
 		//ここで別スレッドになげる
-		thread_start = 0;
+		thread_start++;
 		std::thread th(Thread_WriteBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
 		th.detach();
 		num_event_wait_list = 0;
@@ -1143,7 +1171,7 @@ static int cmdfunc(int cmd)
 		void* vptr = (char*)((pval->pt) + prm5);
 		mem_obj = (cl_mem)prm1;
 		//ここで別スレッドになげる
-		thread_start = 0;
+		thread_start++;
 		std::thread th(Thread_ReadBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
 		th.detach();
 		break;
@@ -1766,6 +1794,29 @@ static int cmdfunc(int cmd)
 
 		cl_int ret = clWaitForEvents(n, event_wait_list);
 		if (ret != CL_SUCCESS) retmeserr6(ret);
+		break;
+	}
+
+	case 0x89:	// HCLCreateUserEvent
+	{
+		cl_int ret;
+		int event_id = code_geti();
+		if (cppeventlist[event_id] != NULL)
+				clReleaseEvent(cppeventlist[event_id]);
+		cppeventlist[event_id] = clCreateUserEvent(context[clsetdev], &ret);
+		if (ret != CL_SUCCESS)retmeserr13(ret);
+		break;
+	}
+
+	case 0x8A:	// HCLSetUserEventStatus
+	{
+		cl_int ret;
+		int event_id = code_geti();
+		cl_int event_stts = code_getdi(CL_SUBMITTED);
+
+		ret = clSetUserEventStatus(cppeventlist[event_id], event_stts);
+		if (ret != CL_SUCCESS)retmeserr14(ret);
+
 		break;
 	}
 

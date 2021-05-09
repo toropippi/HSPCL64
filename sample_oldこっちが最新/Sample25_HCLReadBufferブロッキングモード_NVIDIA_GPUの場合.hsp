@@ -3,8 +3,8 @@
 //プラグインのc++側で別スレッドを立ち上げ、そのスレッドでHCLReadBufferを実行します。
 //そうすることで見た目上は、ノンブロッキングで進んでいるように見えます。
 #include "HSPCL64.as"
-
 	HCLinit
+
 	sz=1024*1024*128//128Mb、この大きさなら転送に少し時間がかかるはず
 	mem=HCLCreateBuffer(sz)
 	dim i,sz/4
@@ -24,9 +24,8 @@
 	mes i.30000004
 	mes i.30000005
 	mes "ここで0が表示されればまだデータ転送が終わっていない(ブロッキングモードoff成功)"
-
 		repeat -1
-			if (HCLGet_LastNonBlocking_Status()==1){//*1
+			if (HCLGet_LastNonBlocking_Status()==0){//*1
 				HCLWaitForEvent 0
 				break
 			}

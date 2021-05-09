@@ -1,0 +1,129 @@
+//さらにeventから
+//CL_PROFILING_COMMAND_QUEUED:コマンドがキューに入った時間
+//CL_PROFILING_COMMAND_SUBMIT:コマンドがサブミットされた時間
+//も取得できます。(そこまで必要なのかというのはさておき)
+
+//基本的に時間取得系は
+//CL_PROFILING_COMMAND_QUEUED
+//CL_PROFILING_COMMAND_SUBMIT
+//CL_PROFILING_COMMAND_START
+//CL_PROFILING_COMMAND_END
+//の4種類です。
+//それぞれHCLGetEventLogsの第2引数の4,5,6,7に対応します。
+
+//このサンプルではCL_PROFILING_COMMAND_QUEUEDとCL_PROFILING_COMMAND_SUBMITのタイミングを線で
+//CL_PROFILING_COMMAND_START～CL_PROFILING_COMMAND_ENDを塗りつぶしでグラフにプロットします。
+#include "HSPCL64.as"
+	randomize
+	HCLinit
+	prg=HCLCreateProgram("VecAdd.cl")
+	krn=HCLCreateKernel(prg,"vecAdd")
+	
+	n=65536
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,,,,0//event_id 0
+	HCLWriteBuffer clmem_B,host_B,n*4,,,,1//event_id 1
+	
+	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
+	
+	HCLDoKrn1 krn,n,64,2//event_id 2
+	HCLReadBuffer clmem_C,host_C,n*4,,,,3//event_id 3
+	
+	//eventから時間情報を取得。返り値は64bit int
+	event_num=4
+	gosub*view1
+	gosub*view2
+	stop
+	
+
+*view1
+	//まずはすべての計算時間を取得
+	dim_i64 kinfo,event_num
+	sdim kinfos,128,event_num
+	dim_i64 qued_time,event_num
+	dim_i64 subd_time,event_num
+	dim_i64 start_time,event_num
+	dim_i64 end_time,event_num
+		repeat event_num
+		qued_time.cnt=HCLGetEventLogs(cnt,4)//4はCL_PROFILING_COMMAND_QUEUEDのtime
+		subd_time.cnt=HCLGetEventLogs(cnt,5)//5はCL_PROFILING_COMMAND_SUBMITのtime
+		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
+		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
+		
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//はeventがなんのコマンドだったか取得
+		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
+		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
+		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
+		/*
+			krnid_=HCLGetEventLogs(cnt,1)//1はkernel idを返す
+			kinfos.cnt=HCLGetKernelName(krnid_)
+		*/
+		loop
+		
+	offset=qued_time.0
+	
+		repeat event_num
+		start_time.cnt-=offset
+		end_time.cnt-=offset
+		qued_time.cnt-=offset
+		subd_time.cnt-=offset
+		loop
+
+	scalex=end_time.(event_num-1)
+	
+
+	//計算時間をグラフで表示
+	//軸
+	line 30,30,30,450
+	pos 3,240
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	font msgothic,12
+	mes "時間(μs)"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes scalex*cnt/8000
+		loop
+		
+	return
+
+
+*view2
+	//実行単位で表示していく
+		repeat event_num
+			hsvcolor rnd(192),200,200
+			//まず実行時間を表示
+			lx=start_time.cnt*580/scalex+30
+			rx=end_time.cnt*580/scalex+30
+			boxf int(lx),100+cnt*50,int(rx),130+cnt*50
+			
+			//文字表示
+			color 0,0,0
+			pos int(lx),90+cnt*50
+			mes kinfos.cnt
+			
+			//キューに入れられた時間やsubmitされた時間表示
+			color 100,200,0
+			lx=qued_time.cnt*580/scalex+30
+			line int(lx),100+cnt*50,int(lx),130+cnt*50
+			color 100,100,0
+			lx=subd_time.cnt*580/scalex+30
+			line int(lx),100+cnt*50,int(lx),130+cnt*50
+			
+		loop
+	return

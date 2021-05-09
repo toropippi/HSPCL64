@@ -67,6 +67,8 @@
 #cmd HCLGetEventStatus $7B
 #cmd HCLWaitForEvent $7C
 #cmd HCLWaitForEvents $7D
+#cmd HCLCreateUserEvent $89
+#cmd HCLSetUserEventStatus $8A
 
 #cmd Min64 $7F
 #cmd Max64 $80
