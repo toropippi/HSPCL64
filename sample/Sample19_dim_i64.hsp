@@ -3,7 +3,7 @@
 //—á‚¦‚ÎHCLCreateBuffer‚Åì¬‚µ‚½clmem‚Ì•Ï”‚Í64bitŒ^‚É‚È‚Á‚Ä‚¢‚Ü‚·B
 #include "HSPCL64.as"
 
-	HCLinit
+	//HCLinit
 	//]—ˆ‚Ì32bit®”Œ^
 	mes "int"
 	dim test,2
