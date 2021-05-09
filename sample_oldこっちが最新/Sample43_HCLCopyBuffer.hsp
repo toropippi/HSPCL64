@@ -1,0 +1,21 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024*1024*32
+	dim host_A,n
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	
+	pattern=12345
+	offset=0
+	size=n*4//sizeはbyteで指定すること
+	HCLFillBuffer4 clmem_A,pattern,offset,size
+	//これでAにデータがはいった
+
+	//これでBにコピー
+	HCLCopyBuffer clmem_B,clmem_A,n*4,0,0
+
+	//結果表示
+		repeat 17
+		mes HCLReadIndex_i32(clmem_B,cnt)
+		loop

@@ -516,7 +516,7 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-	case 0x88:	//HCLGet_LastNonBlocking_Status
+	case 0x88:	//HCLGet_NonBlocking_Status
 	{
 		fInt = true;
 		ref_int32val = thread_start;
@@ -1862,7 +1862,7 @@ static int cmdfunc(int cmd)
 		phvp2 = exinfo->HspFunc_getproc(pval2->flag);	//型を処理するHspVarProc構造体へのポインタ
 		ptr2 = phvp2->GetPtr(pval2);					//データ（pval1）の実態がある先頭ポインタを取得。
 
-		size_t sz = pval2->size / 4;
+		size_t sz = pval2->size / 8;
 		for (int i = 0; i < sz; i++)
 			*(((double*)ptr2) + i) = (double)(*(((float*)ptr1) + i));
 		break;

@@ -35,7 +35,7 @@
 #cmd HCLWriteBuffer_NonBlocking $86
 #cmd HCLReadBuffer $61
 #cmd HCLReadBuffer_NonBlocking $87
-#cmd HCLGet_LastNonBlocking_Status $88
+#cmd HCLGet_NonBlocking_Status $88
 #cmd HCLCopyBuffer $62
 #cmd HCLFillBuffer4 $63
 #cmd HCLFillBuffer8 $64
