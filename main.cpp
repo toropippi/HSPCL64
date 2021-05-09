@@ -8,7 +8,6 @@
 #include <sstream>
 #include <thread>
 
-#include <map>
 #include <CL/cl.h>
 #include "hsp3plugin.h"
 #include "hsp3struct.h"
