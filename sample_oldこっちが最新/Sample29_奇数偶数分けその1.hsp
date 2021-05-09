@@ -1,0 +1,76 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+;カーネル内でifやfor(ループ)を使うサンプル
+;65536*64個のランダムな数をGPUに仕分けさせる
+
+;1スレッドあたり64個の数を抜き出して、偶数、奇数の数を割り出す
+;このスレッドを65536個回し、1スレッドがそれぞれ65536要素のuchar型配列変数に奇数、偶数の数を保存
+;あとはCPUでそれを65536回加算して奇数偶数の数を割り出す。
+/////////////////////////////////////////////////////////////////////////////////////////////////
+#include "HSPCL64.as"
+	randomize
+	HCLinit
+
+	mes "65536個のスレッドを実行します。\n各々のスレッドで64個の数値を偶数奇数カウントしていきます。\n\n"
+	dim rando,65536*64
+	intkisuko=0
+	intgusuko=0
+	mes "65536*64個のランダム数生成中"
+		repeat 65536*64;419万個のランダム数生成
+		rando.cnt=rnd(32767)*rnd(3200)+rnd(32767)
+		loop
+	wait 1
+
+	mes "ソースコンパイル"
+	prgid=HCLCreateProgram("奇数偶数分けその1.cl")
+	krnid=HCLCreateKernel(prgid,"wake")
+	wait 1
+	
+	mes "VRAMに65536*64個のint型メモリ確保"
+	vram=HCLCreateBufferFrom(rando)//65536*64のint型配列を作成
+	kisu=HCLCreateBuffer(65536);奇数の数を保存するchar型配列変数を作成
+	gusu=HCLCreateBuffer(65536);偶数の数を保存するchar型配列変数を作成
+	HCLSetKrns krnid,vram,kisu,gusu
+	wait 1
+
+	//GPU側で計算開始！
+	mes "カーネル実行中"
+	HCLDoKrn1 krnid,65536*64/64,64;1スレッドあたり64個のint変数を仕分け,ローカルワークサイズは適当な数字でOK
+	HCLFinish
+	mes "カーネル実行終了"
+	
+
+	//GPUからデーター取りだし集計
+	sdim host_kisu,65536
+	HCLReadBuffer kisu,host_kisu,65536;vram → host_kisu  に65536byteコピー
+	奇数の数=0
+	repeat 65536
+		奇数の数+=peek(host_kisu,cnt)
+	loop
+
+	sdim host_gusu,65536
+	HCLReadBuffer gusu,host_gusu,65536;vram → k  に65536byteコピー
+	偶数の数=0
+	repeat 65536
+		偶数の数+=peek(host_gusu,cnt)
+	loop
+
+
+	//表示
+	mes "\nGPUでカウントした結果"
+	mes "奇数の数		"+奇数の数
+	mes "偶数の数		"+偶数の数
+	mes "奇数の数＋偶数の数＝	"+(偶数の数+奇数の数)+"    =4194304なら正確にできた"
+
+
+	//CPU側で計算開始
+	repeat 65536*64;419万個ループ
+		if rando.cnt\2:intkisuko++:else:intgusuko++
+	loop
+
+	//表示
+	mes "\nCPUでカウントした結果"
+	mes "奇数の数		"+intkisuko
+	mes "偶数の数		"+intgusuko
+	mes "奇数の数＋偶数の数＝	"+(intkisuko+intgusuko)+"    =4194304なら正確にできた"
+
+	stop
