@@ -1,4 +1,4 @@
-__kernel void SinDiv(__global int* a,__global int* b,__global int* c,int loopnum)
+__kernel void SinDiv(__global int* a,__global int* b,int loopnum)
 {
 	uint gid = get_global_id(0);
 	float x=0.00003f*a[gid];
@@ -8,5 +8,5 @@ __kernel void SinDiv(__global int* a,__global int* b,__global int* c,int loopnum
 	{
 		y=(y+0.8f)/(1.0f+sin(y+x));
 	}
-	c[gid] = (int)(1000000.0f*y);
+	b[gid] = (int)(1000000.0f*y);
 }

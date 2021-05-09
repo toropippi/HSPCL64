@@ -5,7 +5,7 @@
 #include "HSPCL64.as"
 	randomize
 	HCLinit
-	HCLSetDevice 1
+	//HCLSetDevice 1
 	
 	mes "65536個のスレッドを実行します。\n各々のスレッドで64個の数値を偶数奇数カウントしていきます。\nこのときカーネル内で256個のスレッドが同期して情報を共有します\n"
 	dim rando,65536*64
@@ -33,6 +33,7 @@
 	//GPU側で計算開始！
 	mes "カーネル実行中"
 	//無駄に多く実行。可視化してみるのが目的なので
+	HCLSetCommandQueue 0
 	HCLDoKrn1 krnid,65536*64/64,256,1//event id 1
 	HCLDoKrn1 krnid,65536*64/64,256,2//event id 2
 	HCLDoKrn1 krnid,65536*64/64,256,3//event id 3

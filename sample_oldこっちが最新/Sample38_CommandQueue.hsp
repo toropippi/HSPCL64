@@ -33,6 +33,7 @@
 	//GPU側で計算開始！
 	mes "カーネル実行中"
 	//無駄に多く実行。可視化してみるのが目的なので
+	HCLSetCommandQueue 0
 	HCLDoKrn1 krnid,65536*64/64,256,1//event id 1
 	HCLDoKrn1 krnid,65536*64/64,256,2//event id 2
 	HCLDoKrn1 krnid,65536*64/64,256,3//event id 3

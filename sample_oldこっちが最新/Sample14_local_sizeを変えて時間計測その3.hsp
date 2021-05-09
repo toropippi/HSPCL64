@@ -9,23 +9,18 @@
 	n=1024*1024
 	clmem_A=HCLCreateBuffer(n*4)
 	clmem_B=HCLCreateBuffer(n*4)
-	clmem_C=HCLCreateBuffer(n*4)
 	
 	dim host_A,n
 	dim host_B,n
-	dim host_C,n
 		repeat n
 		host_A.cnt=cnt
-		host_B.cnt=cnt
 		loop
 	
 	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
-	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
 	
 	HCLSetKernel krn,0,clmem_A
 	HCLSetKernel krn,1,clmem_B
-	HCLSetKernel krn,2,clmem_C
-	HCLSetKernel krn,3,497//1thread内のループ数
+	HCLSetKernel krn,2,497//1thread内のループ数
 
 	start_lsz=29//local_size=1から始めるとすごい時間がかかるので	
 	title "計算中..."
@@ -33,7 +28,7 @@
 		repeat 128-start_lsz,start_lsz
 		local_size=cnt+1
 		HCLDoKrn1 krn,n/local_size*local_size,local_size,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
-		HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+		HCLReadBuffer clmem_B,host_B,n*4,0,0//GPU→CPU
 		HCLFinish
 		loop
 	
