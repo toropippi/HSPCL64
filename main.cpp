@@ -476,13 +476,16 @@ static void *reffunc( int *type_res, int cmd )
 		if (secprm == 1) ref_int64val = evinfo[eventid].k;
 		if (secprm == 2) ref_int64val = evinfo[eventid].devno;
 		if (secprm == 3) ref_int64val = evinfo[eventid].queno;
+
+		size_t tmp = -1;
 		for (int i = 0; i < 4; i++) 
 		{
 			if (secprm == i + 4)
 			{
-				ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, NULL);
+				ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, &tmp);
 			}
 		}
+		mes("a", tmp);
 		if (ret != CL_SUCCESS) retmeserr5(ret);
 		break;
 	}
