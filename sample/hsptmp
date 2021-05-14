@@ -1,50 +1,158 @@
-//そもそもOpenCLデバイスがあるかどうかをこのサンプルで確認できます。
-//列挙されたのは全部使えます。HCLSetDevice xで指定することで任意のデバイスで計算できるようになります。
-#include "HSPCL64.as"
+//Sample30_奇数偶数分けその2共有メモリサンプル.hspのメモリ転送とカーネル実行を可視化
+//今度はkernel実行を無駄に多くして、つまり同じ計算をなんどもさせて、可視化したときの状況を見る。
 
+#include "HSPCL64.as"
+	randomize
 	HCLinit
-	if HCLGetDeviceCount()==0:dialog "対応ビデオカードがありません。終了します",1:end
+	HCLSetDevice 1
 	
-	repeat HCLGetDeviceCount()
-		screen cnt,1280,840
-		HCLSetDevice cnt
-		mes "デバイスid								"+cnt
-		mes "プラットフォーム名							"+HCLGetDeviceInfo_s(CL_PLATFORM_NAME);プラットフォームid取得
-		mes "プラットフォームベンダー名						"+HCLGetDeviceInfo_s(CL_PLATFORM_VERSION);プラットフォームベンダー
-		mes "デバイス名								"+HCLGetDeviceInfo_s(CL_DEVICE_NAME);デバイス名取得
-		mes "デバイスベンダー名							"+HCLGetDeviceInfo_s(CL_DEVICE_VENDOR);ベンダー名取得
-		mes "タイプ 2(CPU) 4(GPU)							"+HCLGetDeviceInfo_i(CL_DEVICE_TYPE,0);2ならCPU,4ならGPU
-		mes "OpenCLソフトウェアドライバのバージョン					"+HCLGetDeviceInfo_s(CL_DRIVER_VERSION)
-		mes "デバイスがサポートするOpenCLプロファイルの名称				"+HCLGetDeviceInfo_s(CL_DEVICE_PROFILE)
-		mes "デバイスがサポートするOpenCLのバージョン				"+HCLGetDeviceInfo_s(CL_DEVICE_VERSION)
-		mes "デバイスに対応するコンパイラがサポートする OpenCL C 言語 のバージョン	"+HCLGetDeviceInfo_s(CL_DEVICE_OPENCL_C_VERSION)
-		mes "並列演算コアの数							"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_COMPUTE_UNITS,0);
-		mes "周波数(MHz)								"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_CLOCK_FREQUENCY,0);
-		mes "演算デバイスのアドレス空間のサイズbit					"+HCLGetDeviceInfo_i(CL_DEVICE_ADDRESS_BITS,0);
-		mes "確保可能最大メモリbyte							"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_MEM_ALLOC_SIZE,0);
-		mes "グループごとのワークアイテム数のそれぞれの次元についての最大値		"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,0)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,1)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,2);
-		mes "グローバルメモリのキャッシュのタイプ 1(read only) 2(read&write)		"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_TYPE,0);
-		mes "グローバルメモリのキャッシュラインのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE)
-		mes "グローバルメモリのキャッシュのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_SIZE)
-		mes "グローバルメモリのサイズbyte						"+HCLGetDeviceInfo_i64(CL_DEVICE_GLOBAL_MEM_SIZE,0)
-		mes "グローバルメモリの確保可能最大サイズbyte				"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_MEM_ALLOC_SIZE,0)
-		mes "専用のローカルメモリが用意されている 1有り 2無し			"+HCLGetDeviceInfo_i(CL_DEVICE_LOCAL_MEM_TYPE,0);
-		mes "ローカルメモリ領域のサイズbyte						"+HCLGetDeviceInfo_i(CL_DEVICE_LOCAL_MEM_SIZE,0);
-		mes "コマンドキュー特性 1(アウトオブオーダー有効) 2(プロファイリング有効)	"+HCLGetDeviceInfo_i(CL_DEVICE_QUEUE_PROPERTIES,0);
-		mes "メモリエラー訂正機能が実装されている					"+HCLGetDeviceInfo_i(CL_DEVICE_ERROR_CORRECTION_SUPPORT)
-		mes "ホストとデバイスが統一されたメモリサブシステムをもつ			"+HCLGetDeviceInfo_i(CL_DEVICE_HOST_UNIFIED_MEMORY)
-		mes "ベクトル内に格納できるスカラ要素の数(CHAR)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR)
-		mes "ベクトル内に格納できるスカラ要素の数(SHORT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT)
-		mes "ベクトル内に格納できるスカラ要素の数(INT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_INT)
-		mes "ベクトル内に格納できるスカラ要素の数(LONG)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG)
-		mes "ベクトル内に格納できるスカラ要素の数(FLOAT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT)
-		mes "ベクトル内に格納できるスカラ要素の数(DOUBLE)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE)
-		mes "ベクトル内に格納できるスカラ要素の数(HALF)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF)
-		mes "デバイスがサポートする拡張機能	"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
-		sdim k,65536
-		k="デバイスがサポートする拡張機能\n"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
-		pos 0,630
-		mesbox k,1200,200,5
+	mes "65536個のスレッドを実行します。\n各々のスレッドで64個の数値を偶数奇数カウントしていきます。\nこのときカーネル内で256個のスレッドが同期して情報を共有します\n"
+	dim rando,65536*64
+		repeat 65536*64;419万個のランダム数生成
+		rando.cnt=rnd(32767)*rnd(32000)+rnd(32767)
+		loop
+	mes "65536*64個のランダム数生成"
+
+	mes "ソースコンパイル"
+	prgid=HCLCreateProgram("奇数偶数分けその2共有メモリサンプル.cl")
+	krnid=HCLCreateKernel(prgid,"wake")
+	wait 1
+
+	mes "VRAMメモリ確保"
+	vram=HCLCreateBuffer(65536*64*4)//65536*64のint型配列を作成
+	HCLWriteBuffer vram,rando,65536*64*4,,,,0//event id 0
+	kisu=HCLCreateBuffer(256*4);奇数の数を保存するchar型配列変数を作成
+	gusu=HCLCreateBuffer(256*4);偶数の数を保存するchar型配列変数を作成
+	HCLSetKernel krnid,0,vram;
+	HCLSetKernel krnid,1,0,4*256;奇数用ローカルメモリ作成。１ワークグループにつき1024byte作成
+	HCLSetKernel krnid,2,0,4*256;偶数用ローカルメモリ作成。１ワークグループにつき1024byte作成
+	HCLSetKernel krnid,3,kisu;
+	HCLSetKernel krnid,4,gusu;
+
+	//GPU側で計算開始！
+	mes "カーネル実行中"
+	//無駄に多く実行。可視化してみるのが目的なので
+	HCLDoKrn1 krnid,65536*64/64,256,1//event id 1
+	HCLDoKrn1 krnid,65536*64/64,256,2//event id 2
+	HCLDoKrn1 krnid,65536*64/64,256,3//event id 3
+	HCLDoKrn1 krnid,65536*64/64,256,4//event id 4
+	HCLDoKrn1 krnid,65536*64/64,256,5//event id 5
+	HCLDoKrn1 krnid,65536*64/64,256,6//event id 6
+	HCLDoKrn1 krnid,65536*64/64,256,7//event id 7
+	HCLDoKrn1 krnid,65536*64/64,256,8//event id 8
+	HCLDoKrn1 krnid,65536*64/64,256,9//event id 9
+	HCLDoKrn1 krnid,65536*64/64,256,10//event id 10
+	HCLDoKrn1 krnid,65536*64/64,256,11//event id 11
+	HCLDoKrn1 krnid,65536*64/64,256,12//event id 12
+	HCLDoKrn1 krnid,65536*64/64,256,13//event id 13
+	HCLDoKrn1 krnid,65536*64/64,256,14//event id 14
+	HCLDoKrn1 krnid,65536*64/64,256,15//event id 15
+	HCLDoKrn1 krnid,65536*64/64,256,16//event id 16
+	HCLDoKrn1 krnid,65536*64/64,256,17//event id 17
+	HCLDoKrn1 krnid,65536*64/64,256,18//event id 18
+	HCLDoKrn1 krnid,65536*64/64,256,19//event id 19
+	HCLDoKrn1 krnid,65536*64/64,256,20//event id 20
+	HCLFinish
+	mes "カーネル実行終了"
+	
+	//CPU側で集計
+	dim k,256
+	HCLReadBuffer kisu,k,256*4,,,,21//event id 21
+	奇数の数=0
+		repeat 256
+		奇数の数+=k.cnt
+		loop
+	HCLReadBuffer gusu,k,256*4,,,,22//event id 22
+	偶数の数=0
+		repeat 256
+		偶数の数+=k.cnt
+		loop
+
+	//表示
+	mes "\nGPUでカウントした結果"
+	mes "奇数の数		"+奇数の数
+	mes "偶数の数		"+偶数の数
+	mes "奇数の数＋数の数＝	"+(偶数の数+奇数の数)+"    =4194304なら正確にできた"
+
+
+	//CPU側で計算開始
+	repeat 65536*64;419万個ループ
+		if rando.cnt\2:intkisuko++:else:intgusuko++
 	loop
 
+	//表示
+	mes "\nCPUでカウントした結果"
+	mes "奇数の数		"+intkisuko
+	mes "偶数の数		"+intgusuko
+	mes "奇数の数＋偶数の数＝	"+(intkisuko+intgusuko)+"    =4194304なら正確にできた"
+
+	//タイムスタンプ可視化
+	screen 1,640,480,0
+	event_num=23
+	gosub*view1
+	gosub*view2
 	stop
+
+
+
+
+*view1
+	//まずはすべての計算時間を取得
+	dim_i64 kinfo,event_num
+	sdim kinfos,128,event_num
+	dim_i64 start_time,event_num
+	dim_i64 end_time,event_num
+		repeat event_num
+		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
+		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
+		
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//はeventがなんのコマンドだったか取得
+		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
+		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
+		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
+		loop
+		
+	offset=start_time.0
+	
+		repeat event_num
+		start_time.cnt-=offset
+		end_time.cnt-=offset
+		loop
+
+	scalex=end_time.(event_num-1)
+
+	//計算時間をグラフで表示
+	//軸
+	line 30,30,30,450
+	pos 3,240
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	font msgothic,12
+	mes "時間(μs)"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes scalex*cnt/8000
+		loop
+		
+	return
+
+
+*view2
+	//実行単位で表示していく
+		repeat event_num
+			hsvcolor rnd(192),200,200
+			//まず実行時間を表示
+			lx=start_time.cnt*580/scalex+30
+			rx=end_time.cnt*580/scalex+30
+			boxf int(lx),200,int(rx),230
+			
+			//文字表示
+			color 0,0,0
+			pos int(lx),189
+			mes kinfos.cnt
+		loop
+	return

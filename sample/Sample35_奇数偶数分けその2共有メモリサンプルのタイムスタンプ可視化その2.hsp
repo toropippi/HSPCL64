@@ -4,7 +4,7 @@
 #include "HSPCL64.as"
 	randomize
 	HCLinit
-	//HCLSetDevice 1
+	HCLSetDevice 1
 	
 	mes "65536個のスレッドを実行します。\n各々のスレッドで64個の数値を偶数奇数カウントしていきます。\nこのときカーネル内で256個のスレッドが同期して情報を共有します\n"
 	dim rando,65536*64
