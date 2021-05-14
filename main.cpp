@@ -485,7 +485,7 @@ static void *reffunc( int *type_res, int cmd )
 				ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, &tmp);
 			}
 		}
-		mes("a", tmp);
+		if (tmp==-1)mes("a", tmp);
 		if (ret != CL_SUCCESS) retmeserr5(ret);
 		break;
 	}
