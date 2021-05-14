@@ -482,7 +482,11 @@ static void *reffunc( int *type_res, int cmd )
 		{
 			if (secprm == i + 4)
 			{
-				ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, &tmp);
+				for (int jj = 0; jj < 64; jj++) 
+				{
+					ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + i, sizeof(INT64), &ref_int64val, &tmp);
+					if (tmp != -1)break;
+				}
 			}
 		}
 		if (tmp==-1)mes("a", tmp);
