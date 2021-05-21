@@ -522,7 +522,26 @@ static void *reffunc( int *type_res, int cmd )
 		ref_int32val = thread_start;
 		break;
 	}
-	
+
+	case 0x81:	//double to float
+	{
+		fInt = true;
+		double d = code_getd();
+		float ret = (float)d;
+		ref_int32val = (int)(*(int*)&ret);
+		break;
+	}
+
+	case 0x82:	//float to double
+	{
+		fDouble = true;
+		int fi = code_geti();
+		float f = (float)(*(float*)&fi);
+		double d = (double)f;
+		ref_doubleval = d;
+		break;
+	}
+
 	////////////////////////////////////////////////////////////‚±‚±‚Ü‚Å
 
 	default:
@@ -1819,7 +1838,7 @@ static int cmdfunc(int cmd)
 
 		break;
 	}
-
+	/*
 	case 0x81:  //double to float
 	{
 		PVal* pval1;
@@ -1867,7 +1886,7 @@ static int cmdfunc(int cmd)
 			*(((double*)ptr2) + i) = (double)(*(((float*)ptr1) + i));
 		break;
 	}
-
+	*/
 	case 0x83:								// newcmd31 //convRGBtoBGR
 		_ConvRGBtoBGR();
 		break;
