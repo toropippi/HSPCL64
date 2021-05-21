@@ -11,7 +11,7 @@
 	DoubleToFloat host_A,host_B
 
 	//試しに出力。float型を無理やりint型にしているので意味不明な数字になっている
-	mes "doule型初期値	float数値をint型で表示"
+	mes "doule型初期値	floatをintにキャストして表示"
 		repeat 20
 		mes ""+host_A.cnt+"	"+host_B.cnt+""
 		loop

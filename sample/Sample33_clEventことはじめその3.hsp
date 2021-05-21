@@ -1,5 +1,5 @@
 //WriteやReadをnon blockingにすると
-//各処理が、実行完了しないまま次に進んでいることが目で見て分かります。
+//各行の処理が、実行完了しないまま次に進んでいることが目で見て分かります。
 #include "HSPCL64.as"
 	randomize
 	HCLinit

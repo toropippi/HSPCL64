@@ -46,6 +46,7 @@ __kernel void test(__global int* a,__global int* b,__global int* c,__global int*
 	HCLReadBuffer clmem_D,host_D,n*4
 
 
+	//boxf‚ğÅ‰‚É
 	color 100,255,100
 	groupx=global_size.0/local_size.0
 	groupy=global_size.1/local_size.1
@@ -56,6 +57,7 @@ __kernel void test(__global int* a,__global int* b,__global int* c,__global int*
 			loop
 		loop
 
+	//”š‚ğ•`‰æ
 	color 0,0,0
 		repeat global_size.0
 		cntx=cnt
@@ -65,5 +67,14 @@ __kernel void test(__global int* a,__global int* b,__global int* c,__global int*
 			mes "("+host_A.idx+","+host_B.idx+")\n("+host_C.idx+","+host_D.idx+")"
 			loop
 		loop
-
+		
+	//•¶š‚Å‰ğà
+	line 350,110,440,50
+	pos 445,37
+	mes "global_id(x,y)"
+	
+	line 350,133,440,82
+	pos 445,70
+	mes "local_id(x,y)"
+	
 	stop

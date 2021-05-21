@@ -28,8 +28,8 @@
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,clmem_C
 
-	local_size=1,2,4,8,16,32,64,128,256,512,1024,0//0だけは、「自動で決定される」というおまじないの数字
-		repeat 12
+	local_size=1,2,4,8,16,32,64,128,256,0//0だけは、「自動で決定される」というおまじないの数字
+		repeat length(local_size)
 		HCLDoKrn1 krn,n,local_size.cnt,cnt//同じ計算を、local_sizeだけ変えてなんどもやる
 		HCLFinish
 		wait 1
@@ -37,7 +37,7 @@
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 
 	//計算時間表示
-		repeat 12
+		repeat length(local_size)
 		start_time=HCLGetEventLogs(cnt,6)
 		end_time=HCLGetEventLogs(cnt,7)
 		c_time=end_time-start_time

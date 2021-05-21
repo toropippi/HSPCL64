@@ -1,83 +1,118 @@
-//HSPのgzoom命令に相当することOpenCLで実行する
-//注意としてはmref の66で画面情報を取得する場合、画面横幅が4の倍数でないといけない
+//WriteやReadをnon blockingにすると
+//各行の処理が、実行完了しないまま次に進んでいることが目で見て分かります。
 #include "HSPCL64.as"
+	randomize
 	HCLinit
-	gsel 0,-1
-
-
-
-	screen 4,192,33
-	mref ij66,66
-		repeat 40
-		pos rnd(192),rnd(20)
-		mes rnd(9999)
+	//HCLSetDevice 0
+	prg=HCLCreateProgram("VecAdd.cl")
+	krn=HCLCreateKernel(prg,"vecAdd")
+	
+	n=65536
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt
+		host_B.cnt=cnt
 		loop
-	screen 3,128,22
-	mref ii66,66
-	gosub*clset
-	gosub*krngzoom
-	redraw 1
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,,,0,0//event_id 0
+	HCLWriteBuffer clmem_B,host_B,n*4,,,0,1//event_id 1
+	
+	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
+	
+	HCLDoKrn1 krn,n,64,2//event_id 2
+	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
+	
+	//eventから時間情報を取得。返り値は64bit int
+	HCLFinish
+	event_num=4
+	gosub*view1
+	gosub*view2
 	stop
+	
 
-*clset
-	clsource={"__kernel void gzoom(__global unsigned char* g0,__global unsigned char* g1
-	,int wx0,int wy0,int wx1,int wy1)
-	{
-		int gid=get_global_id(0);
-		int x=gid%wx1;
-		int y=gid/wx1;
+*view1
+	//まずはすべての計算時間を取得
+	dim_i64 kinfo,event_num
+	sdim kinfos,128,event_num
+	dim_i64 qued_time,event_num
+	dim_i64 subd_time,event_num
+	dim_i64 start_time,event_num
+	dim_i64 end_time,event_num
+		repeat event_num
+		qued_time.cnt=HCLGetEventLogs(cnt,4)//4はCL_PROFILING_COMMAND_QUEUEDのtime
+		subd_time.cnt=HCLGetEventLogs(cnt,5)//5はCL_PROFILING_COMMAND_SUBMITのtime
+		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
+		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
 		
-		int srclx=x*wx0;
-		int srcrx=(x+1)*wx0;
-		int srcly=y*wy0;
-		int srcry=(y+1)*wy0;
-
-		ulong r_sm=0;
-		ulong g_sm=0;
-		ulong b_sm=0;
-
-		int read_x=(srclx/wx1+1)*wx1;
-		int read_y=(srcly/wy1+1)*wy1;
-		int l=srclx;
-		int u=srcly;
-
-		for(int d=read_y;;)
-		{
-			if (d>=srcry)d=srcry;
-			int ysz=d-u;
-			for(int r=read_x,l=srclx;;)
-			{
-				if (r>=srcrx)r=srcrx;
-				int xsz=r-l;
-				b_sm+=ysz*xsz*(int)g0[(l/wx1+(u/wy1)*wx0)*3+0];
-				g_sm+=ysz*xsz*(int)g0[(l/wx1+(u/wy1)*wx0)*3+1];
-				r_sm+=ysz*xsz*(int)g0[(l/wx1+(u/wy1)*wx0)*3+2];
-				l=r;
-				if (l>=srcrx)break;
-				r+=wx1;
-			}
-			u=d;
-			if (u>=srcry)break;
-			d+=wy1;
-		}
-
-		ulong rev=wx0*wy0;
-		g1[(x+y*wx1)*3+0] = (unsigned char)(b_sm/rev);
-		g1[(x+y*wx1)*3+1] = (unsigned char)(g_sm/rev);
-		g1[(x+y*wx1)*3+2] = (unsigned char)(r_sm/rev);
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//はeventがなんのコマンドだったか取得
+		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
+		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
+		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
+		/*
+			krnid_=HCLGetEventLogs(cnt,1)//1はkernel idを返す
+			kinfos.cnt=HCLGetKernelName(krnid_)
+		*/
+		loop
 		
-	}
-"}
-	prg=HCLCreateProgramWithSource(clsource)
-	krn=HCLCreateKernel(prg,"gzoom")
-	memii66=HCLCreateBufferFrom(ii66)
-	memij66=HCLCreateBufferFrom(ij66)
-	HCLSetkrns krn,memij66,memii66,192,33,128,22
+	offset=qued_time.0
+	
+		repeat event_num
+		start_time.cnt-=offset
+		end_time.cnt-=offset
+		qued_time.cnt-=offset
+		subd_time.cnt-=offset
+		loop
+
+	scalex=end_time.(event_num-1)
+	
+
+	//計算時間をグラフで表示
+	//軸
+	line 30,30,30,450
+	pos 3,240
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	font msgothic,12
+	mes "時間(μs)"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes scalex*cnt/8000
+		loop
+		
 	return
 
 
-*krngzoom
-	HCLWriteBuffer memij66,ij66
-	HCLDoKrn1 krn,128*22,64
-	HCLReadBuffer memii66,ii66
+*view2
+	//実行単位で表示していく
+		repeat event_num
+			hsvcolor rnd(192),200,200
+			//まず実行時間を表示
+			lx=start_time.cnt*580/scalex+30
+			rx=end_time.cnt*580/scalex+30
+			boxf int(lx),100+cnt*50,int(rx),130+cnt*50
+			
+			//文字表示
+			color 0,0,0
+			pos int(lx),90+cnt*50
+			mes kinfos.cnt
+			
+			//キューに入れられた時間やsubmitされた時間表示
+			color 100,200,0
+			lx=qued_time.cnt*580/scalex+30
+			line int(lx),100+cnt*50,int(lx),130+cnt*50
+			color 100,100,0
+			lx=subd_time.cnt*580/scalex+30
+			line int(lx),100+cnt*50,int(lx),130+cnt*50
+			
+		loop
 	return

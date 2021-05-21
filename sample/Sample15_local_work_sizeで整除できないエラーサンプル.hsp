@@ -1,5 +1,6 @@
 // cnt+cnt=2*cnt を10000並列でやるサンプル
 // global_sizeがlocal_sizeで割れないのでエラーになります。
+// でも一部のGPUによっては正常に実行できたりします。ワケワカンネェ・・・
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
@@ -31,6 +32,10 @@
 	mes "計算end"
 	
 		repeat 27
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	pos 300,0
+		repeat 27,n-27//ちゃんと最後まで計算で埋まっているか
 		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
 	stop

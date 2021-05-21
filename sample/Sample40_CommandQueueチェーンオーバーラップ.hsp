@@ -33,13 +33,15 @@
 		event_num++
 
 		HCLSetKrns krn,clmem_A.cnt,clmem_B.cnt,loopnum//loopnum=thread内のループ数
-		if cnt!=0:HCLSetWaitEvent last_ken_ev
-		HCLDoKrn1 krn,n,local_size,event_num//計算内容としてはAを元にある数値を計算しBに代入するというもの
+		if cnt!=0:HCLSetWaitEvent last_ken_ev//前のカーネルの計算が終わったら次のカーネルを計算してほしい
+		HCLDoKrn1 krn,n,local_size,event_num//
 		last_ken_ev=event_num
 		event_num++
 
 		HCLReadBuffer clmem_B.cnt,host_B,n*4,0,n*4*cnt,0,event_num
 		event_num++
+
+		HCLFlush
 		loop
 	//ここまでオーバーラップ計算
 	//////////////////////////////////////

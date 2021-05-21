@@ -38,17 +38,12 @@
 	
 	HCLDoKrn1 krn,n,64,2//event_id 2。これはキューに入れる操作をするだけ、実行はまだ
 
-	//CPUのタイミングでCL_COMPLETEつまりGOサインを出すことができる
-	lastms=gettime(7)//ms
-		repeat -1
-		if gettime(7)!=lastms{
-			HCLSetUserEventStatus 10,CL_COMPLETE
-			break
-		}
-		await 0//CPU処理を想定
-		loop
-	//この後HCLDoKrn1のカーネルの計算が走る
-
+	//CPUのタイミングでCL_COMPLETEにセット。つまりGPUへGOサインを出すことができる
+	wait 1//CPU処理を想定
+	HCLSetUserEventStatus 10,CL_COMPLETE//この後HCLDoKrn1のカーネルの計算が走る
+	//
+	HCLFinish
+	
 	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
 	HCLFinish
 	

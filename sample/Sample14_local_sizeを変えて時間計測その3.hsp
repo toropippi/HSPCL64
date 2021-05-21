@@ -1,6 +1,6 @@
 //こちらは演算律速になる問題を解かせたときのlocal_sizeごとの計算時間のグラフになります。
 //結果は、どのGPU CPUで実行したかで結果が大きく異なると思います。
-//一応私の環境RTX3080での計算結果をSample14_result.pngでおいておきます。
+//一応私の環境RTX3080とRyzen3 3200G(Vega8)の計算結果をSample14_result.pngでおいておきます。
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("SinDiv.cl")
@@ -22,8 +22,8 @@
 	HCLSetKernel krn,1,clmem_B
 	HCLSetKernel krn,2,497//1thread内のループ数
 
-	start_lsz=29//local_size=1から始めるとすごい時間がかかるので	
-	title "計算中..."
+	start_lsz=23//local_size=1から始めるとすごい時間がかかるので	
+	title "計算中...20秒くらいかかります"
 	wait 1
 		repeat 128-start_lsz,start_lsz
 		local_size=cnt+1

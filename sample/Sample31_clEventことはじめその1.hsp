@@ -1,8 +1,14 @@
 //これ以降、event関連のサンプルが多いです。
-//eventから、実行開始時間、実行終了時間、実行コマンド内容が取得できます。
-
 //eventはReadBufferやHCLDoKrn1などに関連付けられ、それぞれ実行時間や実行状況の取得、実行条件の指定をできるのでとても便利です。
-//まずは手動でプロファイリングのコードを作ってみたというサンプルです。
+
+//HCLGetEventLogsでeventの実行時間などを取得できます。
+//HCLGetEventStatusでeventが実行終了しているかどうかの判定ができます。
+//HCLSetWaitEvent、HCLSetWaitEventsで任意のコマンドに任意のeventの終了待ちができます。
+//HCLWaitForEvent、HCLWaitForEventsでCPUがeventの終了待ちを行います。
+//HCLCreateUserEvent、HCLSetUserEventStatusでUser_eventを作成したり状態をsetすることができます。
+//_ExHCLSetEventMaxをHCLInitの前に実行することで、eventの上限を増やすことができます。
+
+//まずはHCLGetEventLogsで、手動でプロファイリングのコードを作ってみたというサンプルです。
 #include "HSPCL64.as"
 	randomize
 	HCLinit
@@ -28,6 +34,7 @@
 	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
 	
 	HCLDoKrn1 krn,n,64,2//event_id 2
+	//HCLFinish//このHCLFinishは本来いらないけどいれたらAMD GPUのgfx902でもkrnの正しいtimeスタンプ取得できた
 	HCLReadBuffer clmem_C,host_C,n*4,,,,3//event_id 3
 	
 	//eventから時間情報を取得。返り値は64bit int
@@ -100,3 +107,10 @@
 			mes kinfos.cnt
 		loop
 	return
+
+
+
+
+//一部のAMD GPU(例えばgfx902)だとkernel実行開始終了時間と、データ転送開始終了時間でズレが生じて、それぞれバラバラの時間が取得されるというバグ？不具合？仕様？があります。
+//これだからOpenCL・・いやなんでも
+//と思っていたらHCLDoKrn1のあとHCLFinishをいれることで正しいtimeが取得できた。でもいちいちカーネル実行終了待ちしてはパフォーマンス出せないし結局使えないんじゃ・・・いやなんでも
