@@ -1,32 +1,174 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//単精度でコーソクフーリエ変換
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 #include "hspcl32.as"
 	HCLini 1
-	HCLSetDev 0
-	sz=1024*1024*128;128Mb、この大きさなら転送に少し時間がかかるはず
+	if HCLDevCount=0:dialog "対応ビデオカードがありません。終了します",1:end
+	HCLSetDev 0;0番目のデバイスを使って計算する
+	
+	HCLBuildProgram "fft.cl",prgid;
+	HCLCreateKernel prgid,"fft",krnfft;
+	HCLCreateKernel prgid,"kbitReverse",krnrev;
 
-	HCLCreateBuffer vram1,sz
-	dim i,sz/4
-	i.20000000=2345,25643256,437,3265,6456,56
-	HCLWriteBuffer vram1,i,sz;gpuに転送ここではブロッキングモードon
-	dim i,sz/4;また0に初期化
-	HCLReadBuffer vram1,i,sz,0,0,0;ブロッキングモードオフで実行
+	冪指数=3
+	n=1<<冪指数
 
-	mes i.20000000;ここで0が表示されればまだ転送が終わっていない
-	mes i.20000001
-	mes i.20000002
-	mes i.20000003
-	mes i.20000004
-	mes i.20000005
-	mes "ここで0が表示されればまだデータ転送が終わっていない(ブロッキングモードoff成功)"
+	HCLCreateBuffer fftarray,n*2*4;1要素当たり実数と虚数があり、1つの数字は4byte
+	HCLCreateBuffer fftarrayd,n*2*4;ダミー
+	
+	gosub*fftの初期値設定
 
-	HCLWaitTask;ここで転送終わるまで待つことになる
+	HCLSetKernel krnfft,0,fftarrayd;
+	HCLSetKernel krnfft,1,n;
+	HCLSetKernel krnfft,2,冪指数
+	HCLSetKernel krnrev,0,fftarray
+	HCLSetKernel krnrev,1,fftarrayd
+	HCLSetKernel krnrev,2,冪指数
 
-	pos 0,160
-	mes i.20000000;ここで転送終わっている
-	mes i.20000001
-	mes i.20000002
-	mes i.20000003
-	mes i.20000004
-	mes i.20000005
-	mes "ここで0以外が表示されればデータ転送終わっている(HCLWaitTask成功)"
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+	HCLDoKrn1 krnrev,n,0;ビット逆順。これで結果がfftarraydに入る。
+	repeat 冪指数//冪指数回ループ。cntもカーネルで使用する
+		HCLSetKernel krnfft,3,cnt
+		HCLDoKrn1 krnfft,n/2,0;fftの1段階実行
+	loop
+	HCLWaitTask
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+
+
+	HCLReadBuffer fftarrayd,hsp_data,n*2*4//結果取得
+
+	pos 0,0
+	mes "gpuで計算、実数部"
+	repeat n
+		mes hsp_data(cnt*2)
+	loop
+
+	pos 320,0
+	mes "gpuで計算、虚数部"
+	repeat n
+		mes hsp_data(cnt*2+1)
+	loop
+
+	gosub*検算
 	HCLbye
 	stop
+
+
+
+
+
+
+*fftの初期値設定
+	fdim hsp_data,n*2//実数と虚数が交互にはいる配列
+	repeat n
+		hsp_data(cnt*2)=float(cnt)//とりあえず実数部だけ代入
+	loop
+	HCLWriteBuffer fftarray,hsp_data,n*2*4
+	return
+
+
+
+
+
+*検算
+	beki=冪指数
+	LIST_SIZE=1<<beki
+	LIST_SIZE2=LIST_SIZE>>1
+	LIST_SIZE8=LIST_SIZE<<3
+	ddim hsp_data_i,n//実数
+	ddim hsp_data_r,n//虚数
+	repeat n
+		hsp_data_i(cnt)=1.0*(cnt)//とりあえず実数部だけ代入
+	loop
+	fft hsp_data_i,hsp_data_r,1
+
+	pos 0,200
+	mes "cpuで計算、実数部"
+	repeat n
+		mes hsp_data_i(cnt)
+	loop
+
+	pos 320,200
+	mes "cpuで計算、虚数部"
+	repeat n
+		mes hsp_data_r(cnt)
+	loop
+	return
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////検算用。HSPソース側のfft
+#deffunc fft array A,array B,int inv
+	ddim c,LIST_SIZE
+	ddim d,LIST_SIZE
+
+	repeat beki;fft
+	bekii=LIST_SIZE>>(cnt+1)
+		repeat LIST_SIZE2
+		t2 = cnt\bekii;
+		t0 = (cnt/bekii)*bekii*2 + t2;
+		t1 = t0+bekii;
+		r4=A(t1)
+		i4=B(t1);
+		rm0=A(t0)-r4
+		im0=B(t0)-i4;
+		pii=-3.14159265358979323846264338328*t2/bekii*inv;
+		dsin=sin(pii)
+		dcos=cos(pii);
+		A(t0) += r4;
+		B(t0) += i4;
+		A(t1) = rm0*dcos-im0*dsin;
+		B(t1) = rm0*dsin+im0*dcos;
+		loop
+	loop
+
+
+	repeat LIST_SIZE;ビット逆順
+	ic=cnt/65536
+	ic = (ic&0x00005555)<<1 | (ic&0x0000AAAA)>>1;
+	ic = (ic&0x00003333)<<2 | (ic&0x0000CCCC)>>2;
+	ic = (ic&0x00000F0F)<<4 | (ic&0x0000F0F0)>>4;
+	ic = (ic&0x000000FF)<<8 | (ic&0x0000FF00)>>8;
+	iic=cnt\65536
+	iic = (iic&0x00005555)<<1 | (iic&0x0000AAAA)>>1;
+	iic = (iic&0x00003333)<<2 | (iic&0x0000CCCC)>>2;
+	iic = (iic&0x00000F0F)<<4 | (iic&0x0000F0F0)>>4;
+	iic = (iic&0x000000FF)<<8 | (iic&0x0000FF00)>>8;
+	ic=(iic*32768+ic/2)>>(31-beki);
+	C(cnt)=A(ic)
+	D(cnt)=B(ic)
+	loop
+
+	if inv=-1{
+			repeat LIST_SIZE
+			a.cnt=c.cnt/LIST_SIZE
+			b.cnt=d.cnt/LIST_SIZE
+			loop
+		}else{
+			memcpy a,c,LIST_SIZE8
+			memcpy b,d,LIST_SIZE8
+		}
+	return

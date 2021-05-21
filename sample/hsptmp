@@ -1,58 +1,58 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//倍精度で高速フーリエ変換
-//Nサイズが大きい場合
+//単精度で高速フーリエ変換
+//Nサイズが少ないので1SM内で完結するコード
 /////////////////////////////////////////////////////////////////////////////////////////////////
 #include "HSPCL64.as"
 	HCLinit
 	randomize
-	M=24//冪指数。メモリにおさまる範囲で28あたりがmaxか
+	M=3//冪指数。多分9以降は共有メモリサイズオーバーでエラーになる
 	N=1<<M
 	
-	prgid=HCLCreateProgram("FFT.cl")
-	krnfft=HCLCreateKernel(prgid,"FFT")
-	krnBitRev=HCLCreateKernel(prgid,"BitRev")
+	ddim hsp_dataD_r,N//実数double初期値
+	ddim hsp_dataD_i,N//虚数double初期値
+	ddim hsp_retD_i,N//実数double結果格納用
+	ddim hsp_retD_r,N//虚数double結果格納用
+	dim hsp_dataF,N*2//実数と虚数が交互にはいるfloat型配列、初期値
+	dim hsp_retF,N*2//実数と虚数が交互にはいるfloat型配列、結果格納用
+	gosub*fftの初期値設定
 	
-	memA=HCLCreateBuffer(N*2*8)//実数と虚数があり、1つの数字は8byte
-	memB=HCLCreateBuffer(N*2*8)//Aの計算用ダミー変数
+	prgid=HCLCreateProgram("FFTlocal.cl")
+	krnfft=HCLCreateKernel(prgid,"fp_FFTlocal")
+	fftarray=HCLCreateBuffer(N*2*4)//1要素当たり実数と虚数があり、1つの数字は4byte
+	HCLWriteBuffer fftarray,hsp_dataF,N*2*4
 
-	//初期値
-	pattern=1.2345
-	offset=0
-	size=N*2*8
-	HCLFillBuffer8 memA,pattern,offset,size
-	HCLFinish
+	HCLSetKernel krnfft,0,fftarray
+	HCLSetKernel krnfft,1,M
+	HCLSetKernel krnfft,2,0,N*8//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+	HCLDoKrn1 krnfft,N/2,N/2//共有メモリにおさまるサイズなら一括で計算できる。カーネル内でビット逆順もしてる
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+	HCLReadBuffer fftarray,hsp_retF,N*2*4//結果取得
+
 	pos 0,0
 	mes "GPU\n実数		虚数"
 	pos 0,38
 		repeat limit(N,1,9)
-		mes ""+HCLReadIndex_i64(memA,cnt*2)+"	"+HCLReadIndex_i64(memA,cnt*2+1)
-		loop
-	wait 500
-
-	
-	HCLSetKrns krnBitRev,memA,M
-	HCLSetKrns krnfft,memA,memB,M
-	//GPUでFFTの部分/////////////////////////////////////////////////////////
-		repeat M
-		HCLSetKernel krnfft,3,cnt
-		HCLDoKrn1 krnfft,N/2,limit(N/2,1,128)
-		loop
-	HCLDoKrn1 krnBitRev,N,limit(N,1,128)
-	HCLFinish
-	//GPUでFFTの部分/////////////////////////////////////////////////////////
-
-	
-	pos 0,0
-	mes "GPU\n実数		虚数"
-	pos 0,38
-		repeat limit(N,1,9)
-		mes ""+HCLReadIndex_dp(memA,cnt*2)+"	"+HCLReadIndex_dp(memA,cnt*2+1)
+		mes ""+FloatToDouble(hsp_retF(cnt*2))+"	"+FloatToDouble(hsp_retF(cnt*2+1))
 		loop
 
-	//gosub*DFT検算
+	gosub*DFT検算
 	stop
 
-/*
+
+
+*fftの初期値設定
+		repeat N//初期値
+		hsp_dataD_r.cnt=1.0*cnt//0.01*(rnd(101)-50)//虚数部
+		hsp_dataD_i.cnt=0.0//0.01*(rnd(101)-50)//実数部
+		loop
+		
+		repeat N
+		hsp_dataF(cnt*2+0)=DoubleToFloat(hsp_dataD_r.cnt)//実数部
+		hsp_dataF(cnt*2+1)=DoubleToFloat(hsp_dataD_i.cnt)//虚数部
+		loop
+	return
 
 
 *DFT検算
@@ -78,6 +78,6 @@
 	mes "CPUで検算(DFT)\n実数		虚数"
 	pos 0,258
 		repeat limit(N,1,9)
-		mes ""+hsp_retD_i(cnt)+"	"+hsp_retD_r(cnt)
+		mes ""+hsp_retD_r(cnt)+"	"+hsp_retD_i(cnt)
 		loop
-	return*/
+	return

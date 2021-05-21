@@ -44,13 +44,13 @@
 
 *fft‚Ì‰Šú’lİ’è
 		repeat N//‰Šú’l
-		hsp_dataD_i.cnt=0.01*(rnd(101)-50)//À”•”
 		hsp_dataD_r.cnt=0.01*(rnd(101)-50)//‹•”•”
+		hsp_dataD_i.cnt=0.01*(rnd(101)-50)//À”•”
 		loop
 		
 		repeat N
-		hsp_dataF(cnt*2+0)=DoubleToFloat(hsp_dataD_i.cnt)//À”•”
-		hsp_dataF(cnt*2+1)=DoubleToFloat(hsp_dataD_r.cnt)//‹•”•”
+		hsp_dataF(cnt*2+0)=DoubleToFloat(hsp_dataD_r.cnt)//À”•”
+		hsp_dataF(cnt*2+1)=DoubleToFloat(hsp_dataD_i.cnt)//‹•”•”
 		loop
 	return
 
@@ -78,6 +78,6 @@
 	mes "CPU‚ÅŒŸZ(DFT)\nÀ”		‹•”"
 	pos 0,258
 		repeat limit(N,1,9)
-		mes ""+hsp_retD_i(cnt)+"	"+hsp_retD_r(cnt)
+		mes ""+hsp_retD_r(cnt)+"	"+hsp_retD_i(cnt)
 		loop
 	return

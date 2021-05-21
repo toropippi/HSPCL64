@@ -45,7 +45,7 @@ __kernel void fp_FFTlocal(__global Vec2 *buffer,int M,__local Vec2 *block)
 		float i1 = block[t1].i;
 		float r0 = block[t0].r - r1;
 		float i0 = block[t0].i - i1;
-		float rad = PI * t / dleng;//invで-がかかる
+		float rad = -PI * t / dleng;
 		float fsin = sin(rad);
 		float fcos = cos(rad);
 		block[t0].r += r1;
@@ -81,7 +81,7 @@ __kernel void dp_FFTlocal(__global dVec2 *buffer,int M,__local dVec2 *block)
 		double i1 = block[t1].i;
 		double r0 = block[t0].r - r1;
 		double i0 = block[t0].i - i1;
-		double rad = PI * t / dleng;//invで-がかかる
+		double rad = -PI * t / dleng;//invで-がかかる
 		double dsin = sin(rad);
 		double dcos = cos(rad);
 		block[t0].r += r1;

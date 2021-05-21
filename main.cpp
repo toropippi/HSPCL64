@@ -1228,7 +1228,7 @@ static int cmdfunc(int cmd)
 	}
 
 	//GPU上で実行
-	case 0x63://HCLFillBuffer4
+	case 0x63://HCLFillBuffer_i32
 	{
 		//引数1 buffer
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
@@ -1264,7 +1264,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x64://HCLFillBuffer8
+	case 0x64://HCLFillBuffer_i64
 	{
 		//引数1 buffer
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
@@ -1293,9 +1293,42 @@ static int cmdfunc(int cmd)
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
 
-		//cl_uint2 clpt2;
-		//clpt2.x = pattern % 4294967296;
-		//clpt2.y = pattern / 4294967296;
+		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+		if (ret != CL_SUCCESS) { retmeserr(ret); }
+		num_event_wait_list = 0;
+		break;
+	}
+
+	//GPU上で実行
+	case 0x8B://HCLFillBuffer_dp
+	{
+		//引数1 buffer
+		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+
+		//引数2 pattern
+		double pattern = code_getd();
+
+		//引数3、offset(byte)
+		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+
+		//引数4、size(byte)
+		INT64 prm5 = Code_geti32i64();//パラメータ5
+
+		cl_int ret;
+		//outevent関連
+		int outeventptr = code_getdi(-1);
+		cl_event* outevent = NULL;
+		if (outeventptr >= 0)
+		{
+			clReleaseEvent(cppeventlist[outeventptr]);
+			outevent = &cppeventlist[outeventptr];
+			evinfo[outeventptr].k = prm5;
+			evinfo[outeventptr].devno = clsetdev;
+			evinfo[outeventptr].queno = clsetque;
+		}
+		//wait event list関連
+		cl_event* ev_ = GetWaitEvlist();
 
 		ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
 			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
@@ -1687,7 +1720,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x71:	// HCLFlush//コマンドキューのブロッキングみたいな
+	case 0x71:	// HCLFlush//コマンドキュー
 	{
 		cl_int ret = clFlush(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque]);
 		if (ret != CL_SUCCESS) retmeserr11(ret);

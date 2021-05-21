@@ -8,9 +8,9 @@ typedef struct{
 
 
 
-unsigned int reversebits(uint id)
+uint reversebits(uint id)
 {
-	unsigned int j = id;
+	uint j = id;
 	j = (j & 0x55555555) <<  1 | (j & 0xAAAAAAAA) >>  1; 
 	j = (j & 0x33333333) <<  2 | (j & 0xCCCCCCCC) >>  2; 
 	j = (j & 0x0F0F0F0F) <<  4 | (j & 0xF0F0F0F0) >>  4; 
@@ -33,7 +33,7 @@ __kernel void BitRev(__global dVec2 *buffer,int M)
 }
 
 //thread数は(N/2, 1, 1)
-__kernel void FFT(__global dVec2 *buffer,__global dVec2 *bufferdmy,int M,int loopidx)
+__kernel void FFT(__global dVec2 *buffer,int M,int loopidx)
 {
 	uint id = get_global_id(0);
 	
@@ -45,7 +45,7 @@ __kernel void FFT(__global dVec2 *buffer,__global dVec2 *bufferdmy,int M,int loo
 	double i1 = buffer[t1].i;
 	double r0 = buffer[t0].r - r1;
 	double i0 = buffer[t0].i - i1;
-	double rad = PI * t / dleng;//invで-がかかる
+	double rad = -PI * t / dleng;//invで-がかかる
 	double dsin = sin(rad);
 	double dcos = cos(rad);
 	buffer[t0].r += r1;

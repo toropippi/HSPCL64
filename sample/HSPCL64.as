@@ -37,8 +37,9 @@
 #cmd HCLReadBuffer_NonBlocking $87
 #cmd HCLGet_NonBlocking_Status $88
 #cmd HCLCopyBuffer $62
-#cmd HCLFillBuffer4 $63
-#cmd HCLFillBuffer8 $64
+#cmd HCLFillBuffer_i32 $63
+#cmd HCLFillBuffer_i64 $64
+#cmd HCLFillBuffer_dp $8B
 #cmd HCLReleaseMemObject $65
 
 #cmd HCLReadIndex_i32 $66

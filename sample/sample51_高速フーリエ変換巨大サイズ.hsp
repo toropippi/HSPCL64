@@ -11,30 +11,21 @@
 	prgid=HCLCreateProgram("FFT.cl")
 	krnfft=HCLCreateKernel(prgid,"FFT")
 	krnBitRev=HCLCreateKernel(prgid,"BitRev")
-	
-	memA=HCLCreateBuffer(N*2*8)//実数と虚数があり、1つの数字は8byte
-	memB=HCLCreateBuffer(N*2*8)//Aの計算用ダミー変数
 
-	//初期値
-	pattern=1.2345
-	offset=0
-	size=N*2*8
-	HCLFillBuffer8 memA,pattern,offset,size
-	HCLFinish
-	pos 0,0
-	mes "GPU\n実数		虚数"
-	pos 0,38
-		repeat limit(N,1,9)
-		mes ""+HCLReadIndex_i64(memA,cnt*2)+"	"+HCLReadIndex_i64(memA,cnt*2+1)
+	
+	ddim hs_A,N*2
+		repeat N*2
+		hs_A.cnt=0.0001*rnd(30000)
 		loop
-	wait 500
+	memA=HCLCreateBufferFrom(hs_A)//実数と虚数があり、1つの数字は8byte
+	//初期設定終わり
 
 	
+	HCLSetKrns krnfft,memA,M
 	HCLSetKrns krnBitRev,memA,M
-	HCLSetKrns krnfft,memA,memB,M
 	//GPUでFFTの部分/////////////////////////////////////////////////////////
 		repeat M
-		HCLSetKernel krnfft,3,cnt
+		HCLSetKernel krnfft,2,cnt
 		HCLDoKrn1 krnfft,N/2,limit(N/2,1,128)
 		loop
 	HCLDoKrn1 krnBitRev,N,limit(N,1,128)
@@ -45,19 +36,23 @@
 	pos 0,0
 	mes "GPU\n実数		虚数"
 	pos 0,38
-		repeat limit(N,1,9)
+	ansviewnum=limit(N,1,9)
+		repeat ansviewnum
 		mes ""+HCLReadIndex_dp(memA,cnt*2)+"	"+HCLReadIndex_dp(memA,cnt*2+1)
 		loop
 
-	//gosub*DFT検算
+	gosub*DFT検算
 	stop
 
-/*
+
 
 
 *DFT検算
 	//DFT計算。二重ループ
-		repeat N
+	
+	ddim ret_r,ansviewnum
+	ddim ret_i,ansviewnum
+		repeat ansviewnum
 		t=cnt
 			repeat N
 			x=cnt
@@ -66,18 +61,18 @@
 			s=sin(w)
 			c=cos(w)
 
-			r=hsp_dataD_r.x
-			i=hsp_dataD_i.x
+			r=hs_A(x*2  )
+			i=hs_A(x*2+1)
 
-			hsp_retD_r.t+=r*c-i*s
-			hsp_retD_i.t+=r*s+i*c
+			ret_r.t+=r*c-i*s
+			ret_i.t+=r*s+i*c
 			loop
 		loop
 	
 	pos 0,220
 	mes "CPUで検算(DFT)\n実数		虚数"
 	pos 0,258
-		repeat limit(N,1,9)
-		mes ""+hsp_retD_i(cnt)+"	"+hsp_retD_r(cnt)
+		repeat ansviewnum
+		mes ""+ret_r(cnt)+"	"+ret_i(cnt)
 		loop
-	return*/
+	return
