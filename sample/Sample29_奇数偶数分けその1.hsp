@@ -38,16 +38,15 @@
 	HCLFinish
 	mes "カーネル実行終了"
 	
-
 	//GPUからデーター取りだし集計
-	sdim host_kisu,65536
+	dim host_kisu,65536/4
 	HCLReadBuffer kisu,host_kisu,65536;vram → host_kisu  に65536byteコピー
 	奇数の数=0
 	repeat 65536
 		奇数の数+=peek(host_kisu,cnt)
 	loop
 
-	sdim host_gusu,65536
+	dim host_gusu,65536/4
 	HCLReadBuffer gusu,host_gusu,65536;vram → k  に65536byteコピー
 	偶数の数=0
 	repeat 65536

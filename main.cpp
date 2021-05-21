@@ -168,6 +168,7 @@ void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size
 		size, vptr, num_event_wait_list__, ev_, outevent);
 	thread_start--;
 	if (ret != CL_SUCCESS) { retmeserr2(ret); }
+	return;
 }
 
 void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
@@ -178,8 +179,45 @@ void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
 		size, vptr, num_event_wait_list__, ev_, outevent);
 	thread_start--;
 	if (ret != CL_SUCCESS) { retmeserr2(ret); }
+	return;
+}
+
+//prm3は参照渡しであることに注意
+void AutoReadWriteCopySize(INT64 &prm3,PVal* pval, cl_mem prm1)
+{
+	INT64 host_sz = pval->size;
+	INT64 dev_sz = GetMemSize((cl_mem)prm1);
+	if (prm3 == -1)
+	{
+		prm3 = min(dev_sz, host_sz);
+	}
+	else
+	{
+		if (prm3 > host_sz)
+		{
+			std::string ss = "";
+			ss += "コピーサイズ>HSP配列変数サイズ です。\nコピーサイズ=";
+			ss += std::to_string(prm3);
+			ss += "\nHSP配列変数サイズ=";
+			ss += std::to_string(host_sz);
+			MessageBox(NULL, ss.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+		if (prm3 > dev_sz)
+		{
+			std::string ss = "";
+			ss += "コピーサイズ>デバイスメモリサイズ です。\nコピーサイズ=";
+			ss += std::to_string(prm3);
+			ss += "\nデバイスメモリサイズ=";
+			ss += std::to_string(dev_sz);
+			MessageBox(NULL, ss.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+	}
+	return;
 }
 ////////////自作関数ここまで
+
 
 
 
@@ -407,11 +445,10 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x5F://HCLCreateBufferFrom
 	{
-		PVal* pval;
-		APTR aptr = code_getva(&pval);
-		size_t sz = pval->size;
+		PVal* pval1 = code_getpval();
+		size_t sz = pval1->size;
 		cl_int ret;
-		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sz, (pval->pt), &ret);
+		mem_obj = clCreateBuffer(context[clsetdev], CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sz, (pval1->pt), &ret);
 		if (ret != CL_SUCCESS) retmeserr9(ret);
 		ref_int64val = (INT64)mem_obj;
 		break;
@@ -975,9 +1012,7 @@ static int cmdfunc(int cmd)
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
-		PVal* pval;
-		APTR aptr = code_getva(&pval);
-		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
@@ -988,7 +1023,7 @@ static int cmdfunc(int cmd)
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 		
 		//引数省略ならサイズは自動
-		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1044,9 +1079,7 @@ static int cmdfunc(int cmd)
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
-		PVal* pval;
-		APTR aptr = code_getva(&pval);
-		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
@@ -1057,7 +1090,7 @@ static int cmdfunc(int cmd)
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 
 		//引数省略ならサイズは自動
-		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1081,16 +1114,13 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-
 	//コンパイル時に-pthread が必要
 	case 0x86:	// HCLWriteBuffer_NonBlocking
 	{
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
-		PVal* pval;
-		APTR aptr = code_getva(&pval);
-		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
@@ -1100,7 +1130,7 @@ static int cmdfunc(int cmd)
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 
 		//引数省略ならサイズは自動
-		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1145,9 +1175,7 @@ static int cmdfunc(int cmd)
 		//引数1
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
-		PVal* pval;
-		APTR aptr = code_getva(&pval);
-		//*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
 		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
 		//引数4、コピー先のofset
@@ -1157,7 +1185,8 @@ static int cmdfunc(int cmd)
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 
 		//引数省略ならサイズは自動
-		if (prm3 == -1)prm3 = GetMemSize((cl_mem)prm1);
+		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
+		
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1204,7 +1233,26 @@ static int cmdfunc(int cmd)
 		INT64 prm5 = Code_getdi32di64(0);// コピー先オフセット
 		INT64 prm6 = Code_getdi32di64(0);// コピー元オフセット
 		//引数省略ならサイズは自動
-		if (prm4 == -1)prm4 = GetMemSize((cl_mem)prm2);
+		INT64 sz2 = GetMemSize((cl_mem)prm2);
+		INT64 sz3 = GetMemSize((cl_mem)prm3);
+		if (prm4 == -1)
+		{
+			prm4 = min(sz2, sz3);
+		}
+		else 
+		{
+			if (prm4 < sz2) 
+			{
+				MessageBox(NULL, "コピーサイズ>コピー先メモリサイズ です。", "エラー", 0);
+				puterror(HSPERR_UNSUPPORTED_FUNCTION);
+			}
+			if (prm4 < sz3)
+			{
+				MessageBox(NULL, "コピーサイズ>コピー元メモリサイズ です。", "エラー", 0);
+				puterror(HSPERR_UNSUPPORTED_FUNCTION);
+			}
+		}
+
 
 		//outevent関連
 		int outeventptr = code_getdi(-1);//outeventするか
@@ -1871,6 +1919,8 @@ static int cmdfunc(int cmd)
 
 		break;
 	}
+	
+	//旧double to float
 	/*
 	case 0x81:  //double to float
 	{
