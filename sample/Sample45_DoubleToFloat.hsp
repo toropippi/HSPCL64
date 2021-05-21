@@ -8,10 +8,13 @@
 		repeat n
 		host_A.cnt=0.001*cnt
 		loop
-	DoubleToFloat host_A,host_B
+		
+		repeat n
+		host_B.cnt=DoubleToFloat(host_A.cnt)
+		loop
 
 	//試しに出力。float型を無理やりint型にしているので意味不明な数字になっている
-	mes "doule型初期値	floatをintにキャストして表示"
+	mes "double型初期値	floatをintにキャストして表示"
 		repeat 20
 		mes ""+host_A.cnt+"	"+host_B.cnt+""
 		loop
@@ -25,7 +28,9 @@
 "},n,64,host_B
 
 	//これでhost_B(float型)が二倍になった
-	FloatToDouble host_B,host_A
+		repeat n
+		host_A.cnt=FloatToDouble(host_B.cnt)
+		loop
 	pos 390,0
 	mes "floatで2倍にしたあとdouble型へ"
 		repeat 20

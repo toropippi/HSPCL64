@@ -5,11 +5,11 @@
 	winy=768
 	screen 0,winx,winy
 	maxkz=winx*winy;マンデルブロー画像の大きさ
-	title "マンデルブロー単精度。マウス、ホイール操作可"
+	title "マンデルブロー倍精度。マウス、ホイール操作可"
 	
 	HCLSetDevice 0//計算に使うデバイス
 	prg=HCLCreateProgram("Mandelbrot.cl")
-	krn=HCLCreateKernel(prg,"fp_calc")//マンデルブロー計算カーネル設定
+	krn=HCLCreateKernel(prg,"dp_calc")//マンデルブロー計算カーネル設定
 	vram=HCLCreateBuffer(3*maxkz)//HSP側VRAMと同じ 1ドット=3*char
 	HCLSetKernel krn,0,vram;グラボ上のメモリ、mref で取得した変数にこれをコピーすれば画面更新できる;この「vram」はGPUメモリ上に確保したメモリ領域のポインタ値で、これは不変なのでここで一回セットすればループごとに設定しなくていい
 	HCLSetKernel krn,4,winx
@@ -27,9 +27,9 @@
 *main
 	gosub*keymove
 
-	HCLSetKernel krn,1,DoubleToFloat(gtx)
-	HCLSetKernel krn,2,DoubleToFloat(gty)
-	HCLSetKernel krn,3,DoubleToFloat(gtz/winx)
+	HCLSetKernel krn,1,gtx//ここに直接doubleを指定するようにした
+	HCLSetKernel krn,2,gty//ここに直接doubleを指定するようにした
+	HCLSetKernel krn,3,gtz/winx//ここに直接doubleを指定するようにした
 
 	HCLDoKernel krn,2,global_size,local_size
 	HCLReadBuffer vram,hspvram;mref で取得した変数にvramをコピー
