@@ -2,25 +2,34 @@
 //注意としてはmref の66で画面情報を取得する場合、画面横幅が4の倍数でないといけない
 #include "HSPCL64.as"
 	HCLinit
-	gsel 0,-1
+	wx0=320
+	wy0=240
+	wx1=420
+	wy1=360
 
-
-
-	screen 4,192,33
-	mref ij66,66
-		repeat 40
-		pos rnd(192),rnd(20)
-		mes rnd(9999)
+	screen 0,wx0,wy0,0
+		repeat 123
+		pos rnd(320),rnd(240)
+		mes rnd(32766)
 		loop
-	screen 3,128,22
-	mref ii66,66
-	gosub*clset
-	gosub*krngzoom
-	redraw 1
+	screen 1,wx1,wy1,0
+	HCLgzoom 0,1//0→1に拡大縮小
 	stop
 
-*clset
-	clsource={"__kernel void gzoom(__global unsigned char* g0,__global unsigned char* g1
+#module
+
+#deffunc HCLgzoom int gselid0, int gselid1
+	gsel gselid0
+	wx0=ginfo(12)
+	wy0=ginfo(13)
+	mref host_g0,66//これを拡大縮小コピーしたい。アンチエイジング付きで
+	
+	gsel gselid1
+	wx1=ginfo(12)
+	wy1=ginfo(13)
+	mref host_g1,66
+	
+	HCLCall {"__kernel void gzoom(__global unsigned char* g0,__global unsigned char* g1
 	,int wx0,int wy0,int wx1,int wy1)
 	{
 		int gid=get_global_id(0);
@@ -67,17 +76,8 @@
 		g1[(x+y*wx1)*3+2] = (unsigned char)(r_sm/rev);
 		
 	}
-"}
-	prg=HCLCreateProgramWithSource(clsource)
-	krn=HCLCreateKernel(prg,"gzoom")
-	memii66=HCLCreateBufferFrom(ii66)
-	memij66=HCLCreateBufferFrom(ij66)
-	HCLSetkrns krn,memij66,memii66,192,33,128,22
+"},wx1*wy1,0,host_g0,host_g1,wx0,wy0,wx1,wy1
+	gsel gselid1
+	redraw 1
 	return
-
-
-*krngzoom
-	HCLWriteBuffer memij66,ij66
-	HCLDoKrn1 krn,128*22,64
-	HCLReadBuffer memii66,ii66
-	return
+#global

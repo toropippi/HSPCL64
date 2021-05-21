@@ -4,8 +4,6 @@
 	HCLinit
 	gsel 0,-1
 
-
-
 	screen 4,192,33
 	mref ij66,66
 		repeat 40
@@ -18,6 +16,7 @@
 	gosub*krngzoom
 	redraw 1
 	stop
+
 
 *clset
 	clsource={"__kernel void gzoom(__global unsigned char* g0,__global unsigned char* g1
