@@ -1,5 +1,5 @@
 //これ以降、event関連のサンプルが多いです。
-//eventはReadBufferやHCLDoKrn1などに関連付けられ、それぞれ実行時間や実行状況の取得、実行条件の指定をできるのでとても便利です。
+//eventはHCLReadBuffer,HCLWriteBufferやHCLDoKrn1などに関連付けられ、それぞれ実行時間や実行状況の取得、実行条件の指定をできるのでとても便利です。
 
 //HCLGetEventLogsでeventの実行時間などを取得できます。
 //HCLGetEventStatusでeventが実行終了しているかどうかの判定ができます。

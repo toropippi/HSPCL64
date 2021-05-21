@@ -21,7 +21,7 @@
 	gtz=2.0;‰æ–Ê‚Ì”ÍˆÍ
 
 	global_size=winx,winy
-	local_size=8,13
+	local_size=8,8
 	gosub*check0
 
 *main

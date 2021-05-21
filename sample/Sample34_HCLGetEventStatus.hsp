@@ -1,0 +1,32 @@
+//HCLGetEventStatusでカーネル実行が終了したかどうかを判定できます。
+//HCLFinishでもカーネル実行終了待ちができますが、ブロッキングされるためCPU稼働率が100%(コアあたり)にはりつくので気持ち悪いです。
+//それを回避する策として、HCLGetEventStatusでカーネル完了していなければwaitをいれる
+//というプログラムを組むことでCPUに負荷をかけずに待つことができます。
+#include "HSPCL64.as"
+	randomize
+	HCLinit
+
+	prg=HCLCreateProgram("SinDiv.cl")
+	krn=HCLCreateKernel(prg,"SinDiv")
+	
+	n=1024*1024
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	HCLSetKrns krn,clmem_A,clmem_B,18911//1thread内のループ数
+
+	mes "計算中...数秒くらいかかります"
+	redraw 1
+	wait 1
+
+	//重い計算
+	event_id=0
+	HCLDoKrn1 krn,n,64,event_id//event id=0
+
+	HCLFlush//ここにFlushをはさまないと永遠とkrnを実行してくれないことがある。
+	repeat -1//直前のカーネルが終了したらループを抜ける
+		await 16
+		if HCLGetEventStatus(event_id)==0:break
+	loop
+	
+	mes "計算終了"
+	stop
