@@ -1263,7 +1263,6 @@ static int cmdfunc(int cmd)
 			}
 		}
 
-
 		//outeventŠÖ˜A
 		int outeventptr = code_getdi(-1);//outevent‚·‚é‚©
 		cl_event* outevent = NULL;
