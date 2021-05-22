@@ -1,0 +1,75 @@
+//HSPCL32のサンプルを移植
+#include "HSPCL64.as"
+	HCLinit
+	randomize
+
+	screen 0,640,480
+	font "MS ゴシック",40,1
+	mes "※操作はマウス左クリック"
+	mes "※fpsは60に抑えられています"
+	mes "※Escで終了"
+	wait 20
+
+	maxkz=640*480;max粉の数64の倍数であること
+	ipn=2;アンチエイリアス係数
+	local_item_size=64;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
+	prgid=HCLCreateProgram("suna.cl")
+	mema=HCLCreateBuffer(4*3*maxkz);float型3つにx,y,z座標が格納されている
+	memb=HCLCreateBuffer(4*3*maxkz);float型3つにx,y,z速度が格納されている
+	vram=HCLCreateBuffer(3*maxkz);HSP側VRAMと同じ 1ドット=3*char
+	vram2=HCLCreateBuffer(4*maxkz*ipn*ipn);裏VRAMアンチエイリアス前 1ドット=1*float
+
+	gosub*syoki
+	dim i,1
+
+	mref i,66
+
+	krnidou=HCLCreateKernel(prgid,"kona");粉移動し裏画面出力
+	krncl=HCLCreateKernel(prgid,"konacl");裏画面からHSP VRAM画面に出力ついでにアンチエイリアス
+	fpsf=0
+	ms=gettime(5)*60000+gettime(6)*1000+gettime(7)
+*main
+	getkey keyc,1
+	gosub*idou
+	gosub*cl
+	HCLReadBuffer vram,i,3*maxkz
+	msg=gettime(5)*60000+gettime(6)*1000+gettime(7)-ms
+	pos 0,0:color 255,55,55:mes "fps="+(fpsf*1000/msg)+""
+	await 16
+	getkey key,27:if key:end
+	redraw 1
+	fpsf++
+	goto*main
+
+*syoki;砂の初期位置を決める
+	dim i,maxkz*3
+	w=0
+		repeat maxkz
+		i.w=DoubleToFloat((0.001*(rnd(6400)*100+rnd(100))-320.0)*0.71)
+		w+
+		i.w=DoubleToFloat((0.001*(rnd(4800)*100+rnd(100))-240.0)*0.71)
+		w+
+		i.w=DoubleToFloat(125.0)
+		w+
+		loop
+	
+	HCLWriteBuffer mema,i,4*3*maxkz;粉位置情報をGPUに転送
+	return
+*idou
+	HCLSetKernel krnidou,0,mema
+	HCLSetKernel krnidou,1,memb
+	HCLSetKernel krnidou,2,vram2
+	HCLSetKernel krnidou,3,DoubleToFloat(1.0*(mousex-320)+0.001*rnd(1000))
+	HCLSetKernel krnidou,4,DoubleToFloat(1.0*(240-mousey)+0.001*rnd(1000))
+	HCLSetKernel krnidou,5,DoubleToFloat(125.0)
+	HCLSetKernel krnidou,6,ipn
+	HCLSetKernel krnidou,7,DoubleToFloat(keyc)
+	HCLDoKernel krnidou,1,maxkz,local_item_size
+	return
+
+*cl
+	HCLSetKernel krncl,0,vram2
+	HCLSetKernel krncl,1,vram
+	HCLSetKernel krncl,2,ipn
+	HCLDoKernel krncl,1,maxkz,local_item_size
+	return

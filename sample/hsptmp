@@ -1,8 +1,5 @@
-#include "hspcl32.as"
-	HCLini 0
-	HCLSetDev 0;計算に使うデバイス
-	if HCLDevCount=0:dialog "対応ビデオカードがありません。終了します",1:end;openCL対応デバイス数
-
+#include "HSPCL64.as"
+	HCLinit
 
 #define WX 128//変えるときはカーネルソースもかえること
 #define WY 128//変えるときはカーネルソースもかえること
@@ -13,104 +10,103 @@
 #define ipn 4//変えるときはカーネルソースもかえること
 #define konagire 4
 #define taba 4
-#define DT float(0.5)
-#define DX float(1.0)
-#define DY float(1.0)
-#define にゅ～ float(0.00001)//粘性項
-#define speeed float(0.45)
+#define DT 0.5
+#define DX 1.0
+#define DY 1.0
+#define にゅ～ 0.00001//粘性項
+#define speeed 0.45
 
-	rDT=float(1.0/DT)
+	rDT=1.0/DT
 	arufa=にゅ～*DT
-	ar1fa=float(1.0/(1.0+4.0*arufa))
-
-
+	ar1fa=1.0/(1.0+4.0*arufa)
 
 	screen 0,WX*ipn,WY*ipn
 	mref iiii,66
 
+	dim global_size,2
+	dim local_size,2
+	global_size=WX,WY
+	local_size=128,1;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
 
-	dim local_item_size,2
-	local_item_size=128,1;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
-	global_item_size=WX,WY;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
-	lis1=local_item_size.0*local_item_size.1
+	prg=HCLCreateProgram("nabie.cl")
+	krn00=HCLCreateKernel(prg,"newgrad")
+	krn01=HCLCreateKernel(prg,"newgrad")
+	krn02=HCLCreateKernel(prg,"newgrad")
+	krn10=HCLCreateKernel(prg,"dcip0")
+	krn11=HCLCreateKernel(prg,"dcip0")
+	krn12=HCLCreateKernel(prg,"dcip0")
+	krn50=HCLCreateKernel(prg,"nensei0")
+	krn51=HCLCreateKernel(prg,"nensei1")
+	krn20=HCLCreateKernel(prg,"pressure0")
+	krn21=HCLCreateKernel(prg,"pressure1")
+	krn22=HCLCreateKernel(prg,"div")
+	//krn23=HCLCreateKernel(prg,"narasi")
+	krn3=HCLCreateKernel(prg,"rhs")
+	krn4=HCLCreateKernel(prg,"veloc")
+	kout=HCLCreateKernel(prg,"out")
+	kout0=HCLCreateKernel(prg,"out0")
+	syokise=HCLCreateKernel(prg,"syokise")
+	ryuusi=HCLCreateKernel(prg,"ryuusi")
 
-	HCLBuildProgram "nabie.cl"	 	,prg;
-	HCLCreateKernel prg,"newgrad"	,krn00;
-	HCLCreateKernel prg,"newgrad"	,krn01;
-	HCLCreateKernel prg,"newgrad"	,krn02;
-	HCLCreateKernel prg,"dcip0"	 	,krn10;
-	HCLCreateKernel prg,"dcip0"	 	,krn11;
-	HCLCreateKernel prg,"dcip0"	 	,krn12;
-	HCLCreateKernel prg,"nensei0" 	,krn50;
-	HCLCreateKernel prg,"nensei1" 	,krn51;
-	HCLCreateKernel prg,"pressure0"	,krn20;
-	HCLCreateKernel prg,"pressure1"	,krn21;
-	HCLCreateKernel prg,"div"	 	,krn22;
-	HCLCreateKernel prg,"narasi"	 	,krn23;
-	HCLCreateKernel prg,"rhs"	 	,krn3;
-	HCLCreateKernel prg,"veloc"	 	,krn4;
-	HCLCreateKernel prg,"copyy"	 	,copy;
-	HCLCreateKernel prg,"out"	 	,kout;
-	HCLCreateKernel prg,"out0"	 	,kout0;
-	HCLCreateKernel prg,"syokise"	,syokise;
-	HCLCreateKernel prg,"ryuusi"		,ryuusi;
+	dim kkx,WX*WY
+	repeat WX*WY:kkx.cnt=DoubleToFloat(0):loop
 
+	YU=HCLCreateBufferFrom(kkx)
+	YUN=HCLCreateBufferFrom(kkx)
+	GXU=HCLCreateBufferFrom(kkx)
+	GYU=HCLCreateBufferFrom(kkx)
 
-	fdim kkx,WX*WY
+	YV=HCLCreateBufferFrom(kkx)
+	YVN=HCLCreateBufferFrom(kkx)
+	GXV=HCLCreateBufferFrom(kkx)
+	GYV=HCLCreateBufferFrom(kkx)	
 
-	HCLCreateBuffer YU,4*WX*WY	:HCLWriteBuffer YU,kkx,4*WX*WY
-	HCLCreateBuffer YUN,4*WX*WY	:HCLWriteBuffer YUN,kkx,4*WX*WY
-	HCLCreateBuffer GXU,4*WX*WY	:HCLWriteBuffer GXU,kkx,4*WX*WY
-	HCLCreateBuffer GYU,4*WX*WY	:HCLWriteBuffer GYU,kkx,4*WX*WY
+	GXd0=HCLCreateBufferFrom(kkx)
+	GYd0=HCLCreateBufferFrom(kkx)
+	Yd0=HCLCreateBufferFrom(kkx)
+	GXd1=HCLCreateBufferFrom(kkx)
+	GYd1=HCLCreateBufferFrom(kkx)
+	Yd1=HCLCreateBufferFrom(kkx)
+	GXd2=HCLCreateBufferFrom(kkx)
+	GYd2=HCLCreateBufferFrom(kkx)
+	Yd2=HCLCreateBufferFrom(kkx)
 
-	HCLCreateBuffer YV,4*WX*WY	:HCLWriteBuffer YV,kkx,4*WX*WY
-	HCLCreateBuffer YVN,4*WX*WY	:HCLWriteBuffer YVN,kkx,4*WX*WY
-	HCLCreateBuffer GXV,4*WX*WY	:HCLWriteBuffer GXV,kkx,4*WX*WY
-	HCLCreateBuffer GYV,4*WX*WY	:HCLWriteBuffer GYV,kkx,4*WX*WY
+	YP=HCLCreateBufferFrom(kkx)
+	YPN=HCLCreateBufferFrom(kkx)
+	GXP=HCLCreateBufferFrom(kkx)
+	GYP=HCLCreateBufferFrom(kkx)
 
-	HCLCreateBuffer GXd0,4*WX*WY	:HCLWriteBuffer GXd0,kkx,4*WX*WY
-	HCLCreateBuffer GYd0,4*WX*WY	:HCLWriteBuffer GYd0,kkx,4*WX*WY
-	HCLCreateBuffer Yd0,4*WX*WY	:HCLWriteBuffer Yd0,kkx,4*WX*WY
-	HCLCreateBuffer GXd1,4*WX*WY	:HCLWriteBuffer GXd1,kkx,4*WX*WY
-	HCLCreateBuffer GYd1,4*WX*WY	:HCLWriteBuffer GYd1,kkx,4*WX*WY
-	HCLCreateBuffer Yd1,4*WX*WY	:HCLWriteBuffer Yd1,kkx,4*WX*WY
-	HCLCreateBuffer GXd2,4*WX*WY	:HCLWriteBuffer GXd2,kkx,4*WX*WY
-	HCLCreateBuffer GYd2,4*WX*WY	:HCLWriteBuffer GYd2,kkx,4*WX*WY
-	HCLCreateBuffer Yd2,4*WX*WY	:HCLWriteBuffer Yd2,kkx,4*WX*WY
+	YUT=HCLCreateBufferFrom(kkx)
+	YVT=HCLCreateBufferFrom(kkx)
+	YUV=HCLCreateBufferFrom(kkx)
+	YVU=HCLCreateBufferFrom(kkx)
+	DIV=HCLCreateBufferFrom(kkx)
 
-	HCLCreateBuffer YP,4*WX*WY	:HCLWriteBuffer YP,kkx,4*WX*WY
-	HCLCreateBuffer YPN,4*WX*WY	:HCLWriteBuffer YPN,kkx,4*WX*WY
-	HCLCreateBuffer GXP,4*WX*WY	:HCLWriteBuffer GXP,kkx,4*WX*WY
-	HCLCreateBuffer GYP,4*WX*WY	:HCLWriteBuffer GYP,kkx,4*WX*WY
+	kabeP=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeP,kkx,WX*WY
+	kabeX=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeX,kkx,WX*WY
+	kabeY=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeY,kkx,WX*WY
 
-	HCLCreateBuffer YUT,4*WX*WY	:HCLWriteBuffer YUT,kkx,4*WX*WY
-	HCLCreateBuffer YVT,4*WX*WY	:HCLWriteBuffer YVT,kkx,4*WX*WY
-	HCLCreateBuffer YUV,4*WX*WY	:HCLWriteBuffer YUV,kkx,4*WX*WY
-	HCLCreateBuffer YVU,4*WX*WY	:HCLWriteBuffer YVU,kkx,4*WX*WY
-	HCLCreateBuffer DIV,4*WX*WY	:HCLWriteBuffer DIV,kkx,4*WX*WY
+	out=HCLCreateBuffer(3*WX*WY*ipn*ipn);画面
+	RYS=HCLCreateBuffer(4*2*WX*WY*ipn*ipn)
 
-	HCLCreateBuffer kabeP,WX*WY	:HCLWriteBuffer kabeP,kkx,WX*WY
-	HCLCreateBuffer kabeX,WX*WY	:HCLWriteBuffer kabeX,kkx,WX*WY
-	HCLCreateBuffer kabeY,WX*WY	:HCLWriteBuffer kabeY,kkx,WX*WY
+	HCLSetKernel syokise,0,RYS
+	HCLDoKrn1 syokise,WX*ipn*WY*ipn,local_size.0*local_size.1;
 
-	HCLCreateBuffer out,3*WX*WY*ipn*ipn;画面
-	HCLCreateBuffer RYS,4*2*WX*WY*ipn*ipn:HCLSetKernel syokise,0,RYS:HCLDoKrn1 syokise,WX*ipn*WY*ipn,local_item_size.0*local_item_size.1;
-
-	fdim kky,WX*WY
+	dim kky,WX*WY
 
 		repeat WY-1
-		kkx(1+cnt*WX)=speeed
+		kkx(1+cnt*WX)=DoubleToFloat(speeed)
 		loop
 		repeat WY-1
-		kkx(cnt*WX)=speeed
+		kkx(cnt*WX)=DoubleToFloat(speeed)
 		loop
 
-	HCLWriteBuffer YUN,kkx,4*WX*WY
-	HCLWriteBuffer YVN,kky,4*WX*WY
+	HCLWriteBuffer YUN,kkx
+	HCLWriteBuffer YVN,kky
 
-	sdim kbp,WX*WY
-	sdim kbx,WX*WY
-	sdim kby,WX*WY
+	dim kbp,WX*WY/4
+	dim kbx,WX*WY/4
+	dim kby,WX*WY/4
 
 	buffer 1:picload "kabep.png"
 		repeat WX:a3=cnt:repeat WY
@@ -146,18 +142,18 @@
 	gsel 0
 
 
-	fdim kky,WX*WY
-	fdim kkx,WX*WY
-	fdim ryuusihspgawa,konagire*WY*ipn*2
+	dim kky,WX*WY
+	dim kkx,WX*WY
+	dim ryuusihspgawa,konagire*WY*ipn*2
 		repeat konagire*WY*ipn
 		w=cnt*2
-		ryuusihspgawa.w=float((1.940389/taba)*(cnt/(WY*ipn/taba)))
+		ryuusihspgawa.w=DoubleToFloat((1.940389/taba)*(cnt/(WY*ipn/taba)))
 		w+
-		ryuusihspgawa.w=float((1.0*taba*cnt+0.5*taba+0.005)\(WY*ipn))
+		ryuusihspgawa.w=DoubleToFloat((1.0*taba*cnt+0.5*taba+0.005)\(WY*ipn))
 		loop
-	yp00=float(0.0)
+		
 	gosub*syokisetei
-	kirikaein=int(float(2.5)/speeed)
+	kirikaein=int(2.5/speeed)
 
 
 ////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,9 +176,9 @@
 ;→拡散、これはf値のみの更新でいい。f2→f3、f2参照
 ;→　　→　はじめへ
 *keisan
-	copyy YU,YUN
-	copyy YV,YVN
-	copyy YP,YPN
+	HCLCopyBuffer YU,YUN
+	HCLCopyBuffer YV,YVN
+	HCLCopyBuffer YP,YPN
 	gosub*粘性
 	if flm\8=0:gosub*外力
 	gosub*pressure
@@ -194,7 +190,7 @@
 	if flm\8=0:gosub*表示
 	gosub*dcip0
 	if flm\8=0{
-		getkey key,27:if key:goto*sthsr
+		getkey key,27:if key:end
 		await 0
 	}
 	flm++
@@ -206,11 +202,11 @@
 ////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 *粘性
-	copyy GXd0,YUN
-	copyy GYd0,YVN
+	HCLCopyBuffer GXd0,YUN
+	HCLCopyBuffer GYd0,YVN
 		repeat limit(10000.0*にゅ～,0,(WX+WY)/2)
-		HCLDoKrn2 krn50,WX,WY,local_item_size.0,local_item_size.1;
-		HCLDoKrn2 krn51,WX,WY,local_item_size.0,local_item_size.1;
+		HCLDoKernel krn50,2,global_size,local_size
+		HCLDoKernel krn51,2,global_size,local_size
 		loop
 	return
 
@@ -242,64 +238,54 @@
 	return
 
 *pressure
-	HCLDoKrn2 krn22,WX,WY,local_item_size.0,local_item_size.1;div計算
+	HCLDoKernel krn22,2,global_size,local_size;div計算
 
-/*ガス抜き
-	if flm\128=7{
-	HCLReadBuffer YPN,yp00,4,(WX*3+WX/2)*4
-	dbgyp00=double(yp00)
-	if (yp00<float(-99999999999.9))|(yp00>float(9999999999.9)):HCLbye:dialog "計算が発散しました。終了します":end
-	HCLSetKernel krn23,1,yp00
-	HCLDoKrn2 krn23,WX,WY,local_item_size.0,local_item_size.1;
-}*/
-
-	copyy YP,YPN
+	HCLCopyBuffer YP,YPN
 	//圧力計算はコストが高いのでとにかく最適化
 		repeat WX
 		HCLDoKrn1 krn20,ijm2,0
 		HCLDoKrn1 krn21,ijm2,0//ローカルワークサイズはOpenCL実装に任せることに
 		loop
-	HCLwaittask//意外と安定性が増すみたい・・
 	return
 
 *rhs
-	HCLDoKrn2 krn3,WX,WY,local_item_size.0,local_item_size.1;
+	HCLDoKernel krn3,2,global_size,local_size
 	return
 
 *newgrad
-	HCLDoKrn2 krn00,WX,WY,local_item_size.0,local_item_size.1;
-	HCLDoKrn2 krn01,WX,WY,local_item_size.0,local_item_size.1;
-	HCLDoKrn2 krn02,WX,WY,local_item_size.0,local_item_size.1;
+	HCLDoKernel krn00,2,global_size,local_size
+	HCLDoKernel krn01,2,global_size,local_size
+	HCLDoKernel krn02,2,global_size,local_size
 return
 
 *veloc
-	copyy YU,YUN
-	copyy YV,YVN
-	HCLDoKrn2 krn4,WX,WY,local_item_size.0,local_item_size.1;
+	HCLCopyBuffer YU,YUN
+	HCLCopyBuffer YV,YVN
+	HCLDoKernel krn4,2,global_size,local_size
 
-	copyy GXd0,GXU
-	copyy GYd0,GYU
-	copyy Yd0,YUN
+	HCLCopyBuffer GXd0,GXU
+	HCLCopyBuffer GYd0,GYU
+	HCLCopyBuffer Yd0,YUN
 
-	copyy GXd1,GXV
-	copyy GYd1,GYV
-	copyy Yd1,YVN
+	HCLCopyBuffer GXd1,GXV
+	HCLCopyBuffer GYd1,GYV
+	HCLCopyBuffer Yd1,YVN
 
-	copyy GXd2,GXP
-	copyy GYd2,GYP
-	copyy Yd2,YPN
+	HCLCopyBuffer GXd2,GXP
+	HCLCopyBuffer GYd2,GYP
+	HCLCopyBuffer Yd2,YPN
 	return
 *粒子
-	HCLDoKrn1 ryuusi,WX*ipn*WY*ipn,local_item_size.0*local_item_size.1;
+	HCLDoKrn1 ryuusi,WX*ipn*WY*ipn,local_size.0*local_size.1;
 	return
 *粒子復活
 	HCLWriteBuffer RYS,ryuusihspgawa,konagire*WY*ipn*2*4,(konagire*WY*ipn*2*4*hktkais)\(WX*WY*ipn*ipn*4*2),0,1
 	hktkais+
 	return
 *表示
-	HCLDoKrn1 kout0,3*WX*WY*ipn*ipn/4,local_item_size.0*local_item_size.1;
-	HCLDoKrn1 kout,WX*ipn*WY*ipn,local_item_size.0*local_item_size.1;
-	HCLWaitTask
+	HCLDoKrn1 kout0,3*WX*WY*ipn*ipn/4,local_size.0*local_size.1;
+	HCLDoKrn1 kout,WX*ipn*WY*ipn,local_size.0*local_size.1;
+	HCLFinish
 	HCLReadBuffer out,iiii,3*WX*WY*ipn*ipn
 	pos 0,0:color 255,100,100
 	redraw 1
@@ -309,23 +295,10 @@ return
 	return
 
 *dcip0
-	HCLDoKrn2 krn10,WX,WY,local_item_size.0,local_item_size.1;
-	HCLDoKrn2 krn11,WX,WY,local_item_size.0,local_item_size.1;
-	HCLDoKrn2 krn12,WX,WY,local_item_size.0,local_item_size.1;
+	HCLDoKernel krn10,2,global_size,local_size
+	HCLDoKernel krn11,2,global_size,local_size
+	HCLDoKernel krn12,2,global_size,local_size
 	return
-
-#deffunc copyy int a_1,int b_1
-	HCLSetKernel copy,0,a_1
-	HCLSetKernel copy,1,b_1
-	HCLDoKrn2 copy,WX,WY,local_item_size.0,local_item_size.1;
-	return
-
-
-
-*sthsr
-	HCLbye
-	end
-
 
 
 
@@ -337,8 +310,8 @@ return
 	HCLSetKernel krn50,3,YVN
 	HCLSetKernel krn50,4,GXd0
 	HCLSetKernel krn50,5,GYd0
-	HCLSetKernel krn50,6,arufa
-	HCLSetKernel krn50,7,ar1fa
+	HCLSetKernel krn50,6,DoubleToFloat(arufa)
+	HCLSetKernel krn50,7,DoubleToFloat(ar1fa)
 	HCLSetKernel krn50,8,kabeX
 	HCLSetKernel krn50,9,kabeY
 
@@ -348,8 +321,8 @@ return
 	HCLSetKernel krn51,3,YVN
 	HCLSetKernel krn51,4,GXd0
 	HCLSetKernel krn51,5,GYd0
-	HCLSetKernel krn51,6,arufa
-	HCLSetKernel krn51,7,ar1fa
+	HCLSetKernel krn51,6,DoubleToFloat(arufa)
+	HCLSetKernel krn51,7,DoubleToFloat(ar1fa)
 	HCLSetKernel krn51,8,kabeX
 	HCLSetKernel krn51,9,kabeY
 
@@ -364,8 +337,8 @@ return
 	HCLSetKernel krn21,1,YPN
 	HCLSetKernel krn21,2,kabeP
 
-	HCLSetKernel krn23,0,YPN
-	HCLSetKernel krn23,1,yp00
+	//HCLSetKernel krn23,0,YPN
+	//HCLSetKernel krn23,1,yp00
 
 	HCLSetKernel krn3,0,YUN
 	HCLSetKernel krn3,1,YVN
@@ -406,7 +379,7 @@ return
 	HCLSetKernel krn10,5,GXd0
 	HCLSetKernel krn10,6,GYd0
 	HCLSetKernel krn10,7,Yd0
-	HCLSetKernel krn10,8,DT
+	HCLSetKernel krn10,8,DoubleToFloat(DT)
 	HCLSetKernel krn10,9,kabeX
 
 	HCLSetKernel krn11,0,YVN
@@ -417,7 +390,7 @@ return
 	HCLSetKernel krn11,5,GXd1
 	HCLSetKernel krn11,6,GYd1
 	HCLSetKernel krn11,7,Yd1
-	HCLSetKernel krn11,8,DT
+	HCLSetKernel krn11,8,DoubleToFloat(DT)
 	HCLSetKernel krn11,9,kabeY
 
 	HCLSetKernel krn12,0,YPN
@@ -428,7 +401,7 @@ return
 	HCLSetKernel krn12,5,GXd2
 	HCLSetKernel krn12,6,GYd2
 	HCLSetKernel krn12,7,Yd2
-	HCLSetKernel krn12,8,DT
+	HCLSetKernel krn12,8,DoubleToFloat(DT)
 	HCLSetKernel krn12,9,kabeP
 	
 	HCLSetKernel kout,0,out
@@ -439,7 +412,7 @@ return
 	HCLSetKernel ryuusi,0,RYS
 	HCLSetKernel ryuusi,1,YUN
 	HCLSetKernel ryuusi,2,YVN
-	HCLSetKernel ryuusi,3,DT
+	HCLSetKernel ryuusi,3,DoubleToFloat(DT)
 	HCLSetKernel ryuusi,4,GXU
 	HCLSetKernel ryuusi,5,GYU
 	HCLSetKernel ryuusi,6,GXV
