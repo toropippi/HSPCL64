@@ -1282,13 +1282,15 @@ static int cmdfunc(int cmd)
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 
 		//引数2 pattern
-		int pattern = code_geti();
+		int pattern = code_getdi(0);
 
 		//引数3、offset(byte)
-		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 
 		//引数4、size(byte)
-		INT64 prm5 = Code_geti32i64();//パラメータ5
+		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
+		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
+
 
 		cl_int ret;
 		//outevent関連
@@ -1321,10 +1323,12 @@ static int cmdfunc(int cmd)
 		INT64 pattern = Code_getint64();
 
 		//引数3、offset(byte)
-		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 
 		//引数4、size(byte)
-		INT64 prm5 = Code_geti32i64();//パラメータ5
+		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
+		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
+
 
 		cl_int ret;
 		//outevent関連
@@ -1355,13 +1359,14 @@ static int cmdfunc(int cmd)
 		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
 
 		//引数2 pattern
-		double pattern = code_getd();
+		double pattern = code_getdd(0.0);
 
 		//引数3、offset(byte)
-		INT64 prm4 = Code_geti32i64();//パラメータ4:int64
+		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
 
 		//引数4、size(byte)
-		INT64 prm5 = Code_geti32i64();//パラメータ5
+		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
+		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
 
 		cl_int ret;
 		//outevent関連
