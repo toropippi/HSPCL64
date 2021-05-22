@@ -1,34 +1,224 @@
 #include "HSPCL64.as"
 	HCLinit
+	//HCLSetDevice 1
 
-#define WX 128//変えるときはカーネルソースもかえること
-#define WY 128//変えるときはカーネルソースもかえること
-#define IM WX-1
-#define JM WY-1
-#define ijm WX*WY
-#define ijm2 int(0.5*ijm)
-#define ipn 4//変えるときはカーネルソースもかえること
-#define konagire 4
-#define taba 4
-#define DT 0.5
-#define DX 1.0
-#define DY 1.0
-#define にゅ～ 0.00001//粘性項
-#define speeed 0.45
-
-	rDT=1.0/DT
-	arufa=にゅ～*DT
-	ar1fa=1.0/(1.0+4.0*arufa)
+#const WX 128//格子x ここを変えた場合kabep.pngなど4枚の画像も調整する必要あり
+#const WY 128//格子y ここを変えた場合kabep.pngなど4枚の画像も調整する必要あり
+#const WSZ2 WX*WY/2
+#const ipn 4//格子スクリーン拡大倍率
+#const taba 4//粒子の線どうしの縦の間隔(ドット)
+#const DT 0.5//デルタtime、時間刻み
+#const μ 0.00001//粘性率
+#const μDT μ*DT
+#const speed 0.45
+#const alpha (1.0/(1.0+4.0*μDT))
+#const RYSnum WX*WY*ipn*ipn//全体粒子数
+#const RYSloop 128//何stepで粒子の初期化が一周するか
+#const RYS1stepnum RYSnum/RYSloop//粒子座標初期化時に一気に更新する粒子数
 
 	screen 0,WX*ipn,WY*ipn
-	mref iiii,66
+	mref gsel0vram,66
 
-	dim global_size,2
-	dim local_size,2
 	global_size=WX,WY
-	local_size=128,1;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
+	local_size=WX,1
 
-	prg=HCLCreateProgram("nabie.cl")
+	dim kkx,WX*WY//float型を想定
+	dim kky,WX*WY//float型を想定
+		repeat WX*WY
+		kkx.cnt=DoubleToFloat(0)
+		loop
+		repeat WY-1
+		kkx(1+cnt*WX)=DoubleToFloat(speed)
+		loop
+		repeat WY-1
+		kkx(cnt*WX)=DoubleToFloat(speed)
+		loop
+	//描画粒子関連
+	gosub*RYS_Setting
+	
+	//OpenCL関連
+	//コードコンパイル、kernel抽出
+	gosub*CreateKernels
+	//cl_bufferを作成
+	gosub*BufferSetting
+	//SetKernel
+	gosub*KernelSetting
+	//OpenCL関連ここまで
+
+
+
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+;cip移流(壁のところでは参照はするが書き込みはしない)、	 f値とg(微分)値が同時に更新される
+;3次関数の部分では第4/5引数の速度はf3を参照、1から3引数はf3、g1を入力、係数もf3とg1から決定、f4、g2を出力
+;差分式では、f3とg2を参照
+;f4とg3を出力
+;ここで一段落
+
+
+;→外力	 f値のみ更新f0→f1
+;→発散f1参照
+;→圧力sor(壁のところでは参照はするが書き込みはしない)
+;→圧力射影	 f値のみ更新f1→f2
+;→cip微分値反映(ニューグレード、ソースでは圧力の更新しか反映されてないが、外力も含めないとダメ、さっきg値が更新された時のf値から今のf値までどのくらいずれたか)g0→g1、f0とf2参照
+;→拡散、これはf値のみの更新でいい。f2→f3、f2参照
+;→　　→　はじめへ
+*main
+	HCLCopyBuffer YU,YUN
+	HCLCopyBuffer YV,YVN
+	HCLCopyBuffer YP,YPN
+	gosub*粘性
+	if flm\8==0:gosub*外力
+	gosub*pressure
+	gosub*rhs
+	gosub*newgrad
+	gosub*veloc
+	gosub*粒子
+	if flm\5==4:gosub*粒子復活
+	if flm\8==0:gosub*表示
+	gosub*dcip0
+	if flm\8==0{
+		getkey key,27:if key:end
+		await 0
+	}
+	flm++
+	goto*main
+
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+*粘性
+	HCLCopyBuffer GXd0,YUN
+	HCLCopyBuffer GYd0,YVN
+		repeat limit(10000.0*μ,0,(WX+WY)/2)
+		HCLDoKernel krn50,2,global_size,local_size
+		HCLDoKernel krn51,2,global_size,local_size
+		loop
+	return
+
+*外力
+	mkey=key1
+	stick key1,256
+	if key1&256{
+		imaxx=mousex
+		imayy=mousey
+		if mkey=0:omxx=imaxx:omyy=imayy//クリックした瞬間なら
+		xsa=omxx-imaxx
+		ysa=omyy-imayy
+		if (xsa!0)|(ysa!0){
+			HCLReadBuffer YUN,kkx,4*WX*WY
+			HCLReadBuffer YVN,kky,4*WX*WY
+				repeat 16
+				wwwx=(imaxx/ipn+cnt\4)\WX
+				wwwy=(imayy/ipn+cnt/4)\WY
+				if peek(kbx,wwwx+wwwy*WX):kkx(wwwx+wwwy*WX)=DoubleToFloat(FloatToDouble(kkx(wwwx+wwwy*WX))-(0.013*xsa))
+				if peek(kby,wwwx+wwwy*WX):kky(wwwx+wwwy*WX)=DoubleToFloat(FloatToDouble(kky(wwwx+wwwy*WX))-(0.013*ysa))
+				loop
+			HCLWriteBuffer YUN,kkx,4*WX*WY
+			HCLWriteBuffer YVN,kky,4*WX*WY
+		}
+		omxx=imaxx
+		omyy=imayy
+	}
+	return
+
+*pressure
+	HCLDoKernel krn22,2,global_size,local_size;div計算
+	HCLCopyBuffer YP,YPN
+	//圧力計算はコストが高いのでとにかく最適化
+		repeat 48
+		HCLDoKrn1 krn20,WSZ2,0
+		HCLDoKrn1 krn21,WSZ2,0//ローカルワークサイズはOpenCL実装に任せることに
+		loop
+	return
+
+*rhs
+	HCLDoKernel krn3,2,global_size,local_size
+	return
+
+*newgrad
+	HCLDoKernel krn00,2,global_size,local_size
+	HCLDoKernel krn01,2,global_size,local_size
+	HCLDoKernel krn02,2,global_size,local_size
+return
+
+*veloc
+	HCLCopyBuffer YU,YUN
+	HCLCopyBuffer YV,YVN
+	HCLDoKernel krn4,2,global_size,local_size
+
+	HCLCopyBuffer GXd0,GXU
+	HCLCopyBuffer GYd0,GYU
+	HCLCopyBuffer Yd0,YUN
+
+	HCLCopyBuffer GXd1,GXV
+	HCLCopyBuffer GYd1,GYV
+	HCLCopyBuffer Yd1,YVN
+
+	HCLCopyBuffer GXd2,GXP
+	HCLCopyBuffer GYd2,GYP
+	HCLCopyBuffer Yd2,YPN
+	return
+
+*粒子//粒子移動ルーチン
+	HCLDoKrn1 ryuusi,RYSnum,local_size.0*local_size.1;
+	return
+
+*粒子復活
+	//CPU→GPU転送バージョン
+	//HCLWriteBuffer RYS,ryuusihspgawa,RYS1stepnum*2*4,RYS1stepnum*2*4*hktkais,0,1
+
+	//GPU→GPU転送バージョン、速度で有利なためこちらを採用
+	//コピー先メモリオブジェクトid , コピー元メモリオブジェクトid , コピーサイズ , コピー先オフセット , コピー元オフセット
+	HCLCopyBuffer RYS,RYS_syoki,RYS1stepnum*2*4,RYS1stepnum*2*4*hktkais,0
+	
+	hktkais++
+	hktkais\=RYSloop
+	return
+
+*表示
+	HCLDoKrn1 kout0,3*WX*WY*ipn*ipn/4,local_size.0*local_size.1;
+	HCLDoKrn1 kout,WX*ipn*WY*ipn,local_size.0*local_size.1;
+	//HCLFinish
+	HCLReadBuffer out,gsel0vram,3*WX*WY*ipn*ipn
+	pos 0,0:color 255,100,100
+	gsel 0
+	redraw 1
+	//秒がかわったら
+	if mtim!=gettime(6){
+		mtim=gettime(6)
+		viewfps=flm-lastflm
+		lastflm=flm
+	}
+	mes "fps"+viewfps
+	redraw 0
+	return
+
+*dcip0
+	HCLDoKernel krn10,2,global_size,local_size
+	HCLDoKernel krn11,2,global_size,local_size
+	HCLDoKernel krn12,2,global_size,local_size
+	return
+
+
+//粒子関連の初期設定
+*RYS_Setting
+	dim ryuusihspgawa,RYS1stepnum*2//粒子発生初期位置x,yが格納されている
+		repeat RYS1stepnum
+		ryuusihspgawa(cnt*2)=DoubleToFloat((1.940389/taba)*(cnt/(WY*ipn/taba)))
+		ryuusihspgawa(cnt*2+1)=DoubleToFloat((1.0*taba*cnt+0.5*taba+0.005)\(WY*ipn))
+		loop
+	//この粒子初期値をstepごとにRYSに書き込んでいく。このときCPU→GPUだと遅くなりそうなので予めGPUに転送しておく。
+	//どうせ中身の数値は変わらないので
+	RYS_syoki=HCLCreateBufferFrom(ryuusihspgawa)
+	return
+
+
+*CreateKernels
+	prg=HCLCreateProgram("nabie.cl","-D WX="+WX+" -D WY="+WY+" -D ipn="+ipn+"")//BuildOpntionでOpenCLに#define送る
 	krn00=HCLCreateKernel(prg,"newgrad")
 	krn01=HCLCreateKernel(prg,"newgrad")
 	krn02=HCLCreateKernel(prg,"newgrad")
@@ -40,66 +230,55 @@
 	krn20=HCLCreateKernel(prg,"pressure0")
 	krn21=HCLCreateKernel(prg,"pressure1")
 	krn22=HCLCreateKernel(prg,"div")
-	//krn23=HCLCreateKernel(prg,"narasi")
 	krn3=HCLCreateKernel(prg,"rhs")
 	krn4=HCLCreateKernel(prg,"veloc")
 	kout=HCLCreateKernel(prg,"out")
 	kout0=HCLCreateKernel(prg,"out0")
-	syokise=HCLCreateKernel(prg,"syokise")
+	firstSetting=HCLCreateKernel(prg,"firstSetting")
 	ryuusi=HCLCreateKernel(prg,"ryuusi")
+	return
 
-	dim kkx,WX*WY
-	repeat WX*WY:kkx.cnt=DoubleToFloat(0):loop
+*BufferSetting
+	YU=HCLCreateBufferFrom(kky)
+	YUN=HCLCreateBufferFrom(kky)
+	GXU=HCLCreateBufferFrom(kky)
+	GYU=HCLCreateBufferFrom(kky)
 
-	YU=HCLCreateBufferFrom(kkx)
-	YUN=HCLCreateBufferFrom(kkx)
-	GXU=HCLCreateBufferFrom(kkx)
-	GYU=HCLCreateBufferFrom(kkx)
+	YV=HCLCreateBufferFrom(kky)
+	YVN=HCLCreateBufferFrom(kky)
+	GXV=HCLCreateBufferFrom(kky)
+	GYV=HCLCreateBufferFrom(kky)	
 
-	YV=HCLCreateBufferFrom(kkx)
-	YVN=HCLCreateBufferFrom(kkx)
-	GXV=HCLCreateBufferFrom(kkx)
-	GYV=HCLCreateBufferFrom(kkx)	
+	GXd0=HCLCreateBufferFrom(kky)
+	GYd0=HCLCreateBufferFrom(kky)
+	Yd0=HCLCreateBufferFrom(kky)
+	GXd1=HCLCreateBufferFrom(kky)
+	GYd1=HCLCreateBufferFrom(kky)
+	Yd1=HCLCreateBufferFrom(kky)
+	GXd2=HCLCreateBufferFrom(kky)
+	GYd2=HCLCreateBufferFrom(kky)
+	Yd2=HCLCreateBufferFrom(kky)
 
-	GXd0=HCLCreateBufferFrom(kkx)
-	GYd0=HCLCreateBufferFrom(kkx)
-	Yd0=HCLCreateBufferFrom(kkx)
-	GXd1=HCLCreateBufferFrom(kkx)
-	GYd1=HCLCreateBufferFrom(kkx)
-	Yd1=HCLCreateBufferFrom(kkx)
-	GXd2=HCLCreateBufferFrom(kkx)
-	GYd2=HCLCreateBufferFrom(kkx)
-	Yd2=HCLCreateBufferFrom(kkx)
+	YP=HCLCreateBufferFrom(kky)
+	YPN=HCLCreateBufferFrom(kky)
+	GXP=HCLCreateBufferFrom(kky)
+	GYP=HCLCreateBufferFrom(kky)
 
-	YP=HCLCreateBufferFrom(kkx)
-	YPN=HCLCreateBufferFrom(kkx)
-	GXP=HCLCreateBufferFrom(kkx)
-	GYP=HCLCreateBufferFrom(kkx)
+	YUT=HCLCreateBufferFrom(kky)
+	YVT=HCLCreateBufferFrom(kky)
+	YUV=HCLCreateBufferFrom(kky)
+	YVU=HCLCreateBufferFrom(kky)
+	DIV=HCLCreateBufferFrom(kky)
 
-	YUT=HCLCreateBufferFrom(kkx)
-	YVT=HCLCreateBufferFrom(kkx)
-	YUV=HCLCreateBufferFrom(kkx)
-	YVU=HCLCreateBufferFrom(kkx)
-	DIV=HCLCreateBufferFrom(kkx)
+	kabeP=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeP,kky,WX*WY
+	kabeX=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeX,kky,WX*WY
+	kabeY=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeY,kky,WX*WY
 
-	kabeP=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeP,kkx,WX*WY
-	kabeX=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeX,kkx,WX*WY
-	kabeY=HCLCreateBuffer(WX*WY):HCLWriteBuffer kabeY,kkx,WX*WY
+	out=HCLCreateBuffer(WX*WY*ipn*ipn*3);画面
+	RYS=HCLCreateBuffer(RYSnum*4*2)
 
-	out=HCLCreateBuffer(3*WX*WY*ipn*ipn);画面
-	RYS=HCLCreateBuffer(4*2*WX*WY*ipn*ipn)
-
-	HCLSetKernel syokise,0,RYS
-	HCLDoKrn1 syokise,WX*ipn*WY*ipn,local_size.0*local_size.1;
-
-	dim kky,WX*WY
-
-		repeat WY-1
-		kkx(1+cnt*WX)=DoubleToFloat(speeed)
-		loop
-		repeat WY-1
-		kkx(cnt*WX)=DoubleToFloat(speeed)
-		loop
+	HCLSetKernel firstSetting,0,RYS
+	HCLDoKrn1 firstSetting,RYSnum,local_size.0*local_size.1;
 
 	HCLWriteBuffer YUN,kkx
 	HCLWriteBuffer YVN,kky
@@ -138,180 +317,17 @@
 	HCLWriteBuffer kabeP,kbp,WX*WY
 	HCLWriteBuffer kabeX,kbx,WX*WY
 	HCLWriteBuffer kabeY,kby,WX*WY
-
-	gsel 0
-
-
-	dim kky,WX*WY
-	dim kkx,WX*WY
-	dim ryuusihspgawa,konagire*WY*ipn*2
-		repeat konagire*WY*ipn
-		w=cnt*2
-		ryuusihspgawa.w=DoubleToFloat((1.940389/taba)*(cnt/(WY*ipn/taba)))
-		w+
-		ryuusihspgawa.w=DoubleToFloat((1.0*taba*cnt+0.5*taba+0.005)\(WY*ipn))
-		loop
-		
-	gosub*syokisetei
-	kirikaein=int(2.5/speeed)
-
-
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-;cip移流(壁のところでは参照はするが書き込みはしない)、	 f値とg(微分)値が同時に更新される
-;本コピが完璧にあっている
-;3次関数の部分では第4/5引数の速度はf3を参照、1から3引数はf3、g1を入力、係数もf3とg1から決定、f4、g2を出力
-;差分式では、f3とg2を参照
-;f4とg3を出力
-;ここで一段落
-
-
-;→外力	 f値のみ更新f0→f1
-;→発散f1参照
-;→圧力sor(壁のところでは参照はするが書き込みはしない)
-;→圧力射影	 f値のみ更新f1→f2
-;→cip微分値反映(ニューグレード、ソースでは圧力の更新しか反映されてないが、外力も含めないとダメ、さっきg値が更新された時のf値から今のf値までどのくらいずれたか)g0→g1、f0とf2参照
-;→拡散、これはf値のみの更新でいい。f2→f3、f2参照
-;→　　→　はじめへ
-*keisan
-	HCLCopyBuffer YU,YUN
-	HCLCopyBuffer YV,YVN
-	HCLCopyBuffer YP,YPN
-	gosub*粘性
-	if flm\8=0:gosub*外力
-	gosub*pressure
-	gosub*rhs
-	gosub*newgrad
-	gosub*veloc
-	gosub*粒子
-	if flm\kirikaein=(kirikaein-1):gosub*粒子復活
-	if flm\8=0:gosub*表示
-	gosub*dcip0
-	if flm\8=0{
-		getkey key,27:if key:end
-		await 0
-	}
-	flm++
-	flmps++
-	goto*keisan
-
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////メインルーチン////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-*粘性
-	HCLCopyBuffer GXd0,YUN
-	HCLCopyBuffer GYd0,YVN
-		repeat limit(10000.0*にゅ～,0,(WX+WY)/2)
-		HCLDoKernel krn50,2,global_size,local_size
-		HCLDoKernel krn51,2,global_size,local_size
-		loop
 	return
 
-*外力
-	mkey=key1
-	stick key1,256
-	if key1&256{
-		imaxx=mousex
-		imayy=mousey
-		if mkey=0:omxx=imaxx:omyy=imayy
-		xzzzsa=omxx-imaxx
-		yzzzsa=omyy-imayy
-		if (xzzzsa!0)|(yzzzsa!0)|(1){
-			HCLReadBuffer YUN,kkx,4*WX*WY
-			HCLReadBuffer YVN,kky,4*WX*WY
-				repeat 16
-				wwwx=(imaxx/ipn+cnt\4)\WX
-				wwwy=(imayy/ipn+cnt/4)\WY
-				if peek(kbx,wwwx+wwwy*WX):kkx(wwwx+wwwy*WX)-=float(0.013*xzzzsa)
-				if peek(kby,wwwx+wwwy*WX):kky(wwwx+wwwy*WX)-=float(0.013*yzzzsa)
-				loop
-			HCLWriteBuffer YUN,kkx,4*WX*WY
-			HCLWriteBuffer YVN,kky,4*WX*WY
-
-		}
-		omxx=imaxx
-		omyy=imayy
-	}
-	return
-
-*pressure
-	HCLDoKernel krn22,2,global_size,local_size;div計算
-
-	HCLCopyBuffer YP,YPN
-	//圧力計算はコストが高いのでとにかく最適化
-		repeat WX
-		HCLDoKrn1 krn20,ijm2,0
-		HCLDoKrn1 krn21,ijm2,0//ローカルワークサイズはOpenCL実装に任せることに
-		loop
-	return
-
-*rhs
-	HCLDoKernel krn3,2,global_size,local_size
-	return
-
-*newgrad
-	HCLDoKernel krn00,2,global_size,local_size
-	HCLDoKernel krn01,2,global_size,local_size
-	HCLDoKernel krn02,2,global_size,local_size
-return
-
-*veloc
-	HCLCopyBuffer YU,YUN
-	HCLCopyBuffer YV,YVN
-	HCLDoKernel krn4,2,global_size,local_size
-
-	HCLCopyBuffer GXd0,GXU
-	HCLCopyBuffer GYd0,GYU
-	HCLCopyBuffer Yd0,YUN
-
-	HCLCopyBuffer GXd1,GXV
-	HCLCopyBuffer GYd1,GYV
-	HCLCopyBuffer Yd1,YVN
-
-	HCLCopyBuffer GXd2,GXP
-	HCLCopyBuffer GYd2,GYP
-	HCLCopyBuffer Yd2,YPN
-	return
-*粒子
-	HCLDoKrn1 ryuusi,WX*ipn*WY*ipn,local_size.0*local_size.1;
-	return
-*粒子復活
-	HCLWriteBuffer RYS,ryuusihspgawa,konagire*WY*ipn*2*4,(konagire*WY*ipn*2*4*hktkais)\(WX*WY*ipn*ipn*4*2),0,1
-	hktkais+
-	return
-*表示
-	HCLDoKrn1 kout0,3*WX*WY*ipn*ipn/4,local_size.0*local_size.1;
-	HCLDoKrn1 kout,WX*ipn*WY*ipn,local_size.0*local_size.1;
-	HCLFinish
-	HCLReadBuffer out,iiii,3*WX*WY*ipn*ipn
-	pos 0,0:color 255,100,100
-	redraw 1
-	if mtim!gettime(6):mes "fps"+flmps:mflmps=flmps:flmps=0:else:mes "fps"+mflmps
-	mtim=gettime(6)
-	redraw 0
-	return
-
-*dcip0
-	HCLDoKernel krn10,2,global_size,local_size
-	HCLDoKernel krn11,2,global_size,local_size
-	HCLDoKernel krn12,2,global_size,local_size
-	return
-
-
-
-
-*syokisetei
+*KernelSetting
 	HCLSetKernel krn50,0,YU
 	HCLSetKernel krn50,1,YUN
 	HCLSetKernel krn50,2,YV
 	HCLSetKernel krn50,3,YVN
 	HCLSetKernel krn50,4,GXd0
 	HCLSetKernel krn50,5,GYd0
-	HCLSetKernel krn50,6,DoubleToFloat(arufa)
-	HCLSetKernel krn50,7,DoubleToFloat(ar1fa)
+	HCLSetKernel krn50,6,DoubleToFloat(μDT)
+	HCLSetKernel krn50,7,DoubleToFloat(alpha)
 	HCLSetKernel krn50,8,kabeX
 	HCLSetKernel krn50,9,kabeY
 
@@ -321,8 +337,8 @@ return
 	HCLSetKernel krn51,3,YVN
 	HCLSetKernel krn51,4,GXd0
 	HCLSetKernel krn51,5,GYd0
-	HCLSetKernel krn51,6,DoubleToFloat(arufa)
-	HCLSetKernel krn51,7,DoubleToFloat(ar1fa)
+	HCLSetKernel krn51,6,DoubleToFloat(μDT)
+	HCLSetKernel krn51,7,DoubleToFloat(alpha)
 	HCLSetKernel krn51,8,kabeX
 	HCLSetKernel krn51,9,kabeY
 
@@ -336,9 +352,6 @@ return
 	HCLSetKernel krn21,0,DIV
 	HCLSetKernel krn21,1,YPN
 	HCLSetKernel krn21,2,kabeP
-
-	//HCLSetKernel krn23,0,YPN
-	//HCLSetKernel krn23,1,yp00
 
 	HCLSetKernel krn3,0,YUN
 	HCLSetKernel krn3,1,YVN

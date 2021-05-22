@@ -1241,14 +1241,24 @@ static int cmdfunc(int cmd)
 		}
 		else 
 		{
-			if (prm4 < sz2) 
+			if (prm4 > sz2) 
 			{
-				MessageBox(NULL, "コピーサイズ>コピー先メモリサイズ です。", "エラー", 0);
+				std::string ss = "";
+				ss += "コピーサイズ>コピー先メモリサイズ です。\nコピーサイズ=";
+				ss += std::to_string(prm4);
+				ss += "\nコピー先サイズ=";
+				ss += std::to_string(sz2);
+				MessageBox(NULL, ss.c_str(), "エラー", 0);
 				puterror(HSPERR_UNSUPPORTED_FUNCTION);
 			}
-			if (prm4 < sz3)
+			if (prm4 > sz3)
 			{
-				MessageBox(NULL, "コピーサイズ>コピー元メモリサイズ です。", "エラー", 0);
+				std::string ss = "";
+				ss += "コピーサイズ>コピー元メモリサイズ です。\nコピーサイズ=";
+				ss += std::to_string(prm4);
+				ss += "\nコピー元サイズ=";
+				ss += std::to_string(sz3);
+				MessageBox(NULL, ss.c_str(), "エラー", 0);
 				puterror(HSPERR_UNSUPPORTED_FUNCTION);
 			}
 		}
