@@ -40,7 +40,7 @@
 #cmd HCLFillBuffer_i32 $63
 #cmd HCLFillBuffer_i64 $64
 #cmd HCLFillBuffer_dp $8B
-#cmd HCLReleaseMemObject $65
+#cmd HCLReleaseBuffer $65
 
 #cmd HCLReadIndex_i32 $66
 #cmd HCLReadIndex_i64 $67

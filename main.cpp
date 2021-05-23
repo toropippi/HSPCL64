@@ -1399,7 +1399,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x65://HCLReleaseMemObject
+	case 0x65://HCLReleaseBuffer
 	{
 		INT64 prm2 = Code_getint64();		// ƒpƒ‰ƒ[ƒ^1:memobj
 
