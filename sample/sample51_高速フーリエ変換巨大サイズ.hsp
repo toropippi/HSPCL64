@@ -16,6 +16,9 @@
 
 	
 	ddim hs_A,N*2
+	wait 1
+	title "初期値生成中 10秒くらいかかります・・・"
+	wait 1
 		repeat N*2
 		hs_A.cnt=0.0001*rnd(30000)
 		loop
@@ -70,6 +73,7 @@
 			ret_r.t+=r*c-i*s
 			ret_i.t+=r*s+i*c
 			loop
+		await 1
 		loop
 	
 	pos 0,220

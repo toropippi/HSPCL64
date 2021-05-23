@@ -13,7 +13,7 @@
 	maxkz=640*480;max粉の数64の倍数であること
 	ipn=2;アンチエイリアス係数
 	local_item_size=64;１つのワークユニットに与える処理数、そのワークユニット内で共有メモリが使える
-	prgid=HCLCreateProgram("suna.cl")
+	prgid=HCLCreateProgram("konaasobi1.cl")
 	mema=HCLCreateBuffer(4*3*maxkz);float型3つにx,y,z座標が格納されている
 	memb=HCLCreateBuffer(4*3*maxkz);float型3つにx,y,z速度が格納されている
 	vram=HCLCreateBuffer(3*maxkz);HSP側VRAMと同じ 1ドット=3*char

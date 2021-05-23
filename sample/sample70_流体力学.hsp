@@ -5,7 +5,7 @@
 #const WX 128//格子x ここを変えた場合kabep.pngなど4枚の画像も調整する必要あり
 #const WY 128//格子y ここを変えた場合kabep.pngなど4枚の画像も調整する必要あり
 #const WSZ2 WX*WY/2
-#const ipn 4//格子スクリーン拡大倍率
+#const ipn 6//格子スクリーン拡大倍率
 #const taba 4//粒子の線どうしの縦の間隔(ドット)
 #const DT 0.5//デルタtime、時間刻み
 #const μ 0.00001//粘性率
