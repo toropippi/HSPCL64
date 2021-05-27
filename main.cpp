@@ -588,6 +588,7 @@ static void *reffunc( int *type_res, int cmd )
 		//return reinterpret_cast<void*>(const_cast<char*>(bugchar));
 		//exinfo->refstr = 't';
 		strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
+		ctx->refstr = "gaew4y5hrt";
 		break;
 		// refstr‚Éo—Í
 		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
