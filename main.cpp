@@ -265,9 +265,10 @@ __declspec(align(16)) extern "C" float __fastcall call_extfunc64f(void *proc, IN
 /*------------------------------------------------------------*/
 
 static INT64 ref_int64val;						// 返値のための変数
-static double ref_doubleval;						// 返値のための変数
+static double ref_doubleval;					// 返値のための変数
 static float ref_floatval;						// 返値のための変数
 static int ref_int32val;						// 返値のための変数
+static char* cptr;								// 返値のための変数
 
 static void *reffunc( int *type_res, int cmd )
 {
@@ -282,6 +283,7 @@ static void *reffunc( int *type_res, int cmd )
 	bool fDouble = false;
 	bool fFloat = false;
 	bool fInt = false;
+	bool fStr = false;
 	
 	switch( cmd ) {							// サブコマンドごとの分岐
 
@@ -582,9 +584,11 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x8C:
 	{
-		*type_res = HSPVAR_FLAG_STR;
 		fflush(stdout);
-		return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
+		*type_res = HSPVAR_FLAG_STR;
+		cptr = hspmalloc(sizeof(stdout_dmy));
+		lstrcpy(cptr, stdout_dmy);
+		//return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
 		//exinfo->refstr = 't';
 		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
 		//ctx->refstr = "gaew4y5hrt";
