@@ -584,6 +584,7 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x8C:
 	{
+		printf("bbbbb\n");
 		fflush(stdout);
 		cptr = hspmalloc(sizeof(stdout_dmy));
 		lstrcpy((LPSTR)cptr, stdout_dmy);
