@@ -579,6 +579,18 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
+	case 0x8C:
+	{
+		//char mybuf[8192];
+		setvbuf(stdout, bugchar, _IOFBF, sizeof(bugchar));
+		*type_res = HSPVAR_FLAG_STR;
+		//static const char* kRefstr = "refstr";
+		return reinterpret_cast<void*>(const_cast<char*>(bugchar));
+		break;
+		// refstr‚Éo—Í
+		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
+	}
+
 	////////////////////////////////////////////////////////////‚±‚±‚Ü‚Å
 
 	default:
@@ -1934,20 +1946,6 @@ static int cmdfunc(int cmd)
 		break;
 	}
 	
-	case 0x8C:
-	{
-		char mybuf[8192];
-		setvbuf(stdout, mybuf, _IOFBF, sizeof(mybuf));
-		
-		
-
-		*type_res = HSPVAR_FLAG_STR;
-		static const char* kRefstr = "refstr";
-		return reinterpret_cast<void*>(const_cast<char*>(kRefstr));
-
-		fflush(stdout);
-
-	}
 	//‹Œdouble to float
 	/*
 	case 0x81:  //double to float
