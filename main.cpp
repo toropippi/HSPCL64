@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string>
 #include <stdlib.h>
-//#include <iostream>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <thread>
@@ -584,11 +584,11 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x8C:
 	{
-		printf("bbbbb\n");
+		//printf("bbbbb\n");
 		fflush(stdout);
 		cptr = hspmalloc(sizeof(stdout_dmy));
 		lstrcpy((LPSTR)cptr, stdout_dmy);
-		mes(stdout_dmy, sizeof(stdout_dmy));
+		//mes(stdout_dmy, sizeof(stdout_dmy));
 
 		fStr = true;
 		//return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
@@ -868,8 +868,8 @@ static int cmdfunc(int cmd)
 		}
 
 		//最後にprintf関数を使った場合の標準出力→HSPをやるための前処理
+		std::iostream::sync_with_stdio();
 		setvbuf(stdout, stdout_dmy, _IOFBF, sizeof(stdout_dmy));
-		//std::iostream::sync_with_stdio();
 		break;
 	}
 
