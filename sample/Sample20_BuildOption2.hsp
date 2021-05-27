@@ -3,7 +3,7 @@
 //判定方法は1と1.5を2^(1022)で割って、引き算して2^(1022)をかけるだけ
 #include "HSPCL64.as"
 	HCLinit
-	prg=HCLCreateProgram("denormsSample.cl","-cl-denorms-are-zero")//浮動小数点数の非正規化数を0にするオプション
+	prg=HCLCreateProgram("BuildOptonSample2.cl","-cl-denorms-are-zero")//浮動小数点数の非正規化数を0にするオプション
 	krn=HCLCreateKernel(prg,"Subtraction")
 	
 	clmem=HCLCreateBuffer(3*8)
