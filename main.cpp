@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string>
 #include <stdlib.h>
-#include <iostream>
+//#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <thread>
@@ -869,7 +869,7 @@ static int cmdfunc(int cmd)
 
 		//最後にprintf関数を使った場合の標準出力→HSPをやるための前処理
 		setvbuf(stdout, stdout_dmy, _IOFBF, sizeof(stdout_dmy));
-		std::iostream::sync_with_stdio();
+		//std::iostream::sync_with_stdio();
 		break;
 	}
 

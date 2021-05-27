@@ -1,3 +1,4 @@
+
 //HCLCreateProgramでのbuid optionの解説
 //一番よく使うであろう、-Dオプション
 //OpenCL Cでdefineの定義をビルドオプションから指定することができる
