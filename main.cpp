@@ -585,9 +585,10 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x8C:
 	{
 		fflush(stdout);
-		*type_res = HSPVAR_FLAG_STR;
 		cptr = hspmalloc(sizeof(stdout_dmy));
 		lstrcpy(cptr, stdout_dmy);
+
+		fStr = true;
 		//return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
 		//exinfo->refstr = 't';
 		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
@@ -621,6 +622,11 @@ static void *reffunc( int *type_res, int cmd )
 	if (fInt) {
 		*type_res = HSPVAR_FLAG_INT;
 		return (void *)&ref_int32val;
+	}
+
+	if (fStr) {
+		*type_res = HSPVAR_FLAG_STR;
+		return (void*)cptr;
 	}
 
 
