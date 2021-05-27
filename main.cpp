@@ -16,6 +16,7 @@
 #include "RGB.h"
 
 
+
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
 int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
