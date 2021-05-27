@@ -1936,12 +1936,15 @@ static int cmdfunc(int cmd)
 	
 	case 0x8C:
 	{
-
 		char mybuf[8192];
-
 		setvbuf(stdout, mybuf, _IOFBF, sizeof(mybuf));
-		hello();
-		assert(strcmp(mybuf, "Hello, world!\n") == 0);
+		
+		
+
+		*type_res = HSPVAR_FLAG_STR;
+		static const char* kRefstr = "refstr";
+		return reinterpret_cast<void*>(const_cast<char*>(kRefstr));
+
 		fflush(stdout);
 
 	}
