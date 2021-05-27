@@ -1,24 +1,26 @@
 // 並列数の次はlocal_sizeを指定してみましょう。
 
 // ワークアイテム / work item
-// OpenCL では複数の処理をそれぞれのデバイス(プロセッサ)に並列して割り当てることで
-// 処理を最適化し高速化することを試みます。その分割の単位がワークアイテムです。
+// work itemの数が並列数にあたります。
 // CUDA用語でいうとThreadにあたります。
 
 // ワークグループ / work group
 // 複数のワークアイテムを、いくつかのグループにしたものがワークグループです。
 // CUDA用語でいうとBlockにあたります。
+// NVIDIA GPUでRTX2080を例に挙げると2944CUDA core、46SMあります。
+// 1SMあたり64 CUDA coreを持ちます。このSM内ではすべてのCUDA coreがshared memoryを共有できることになっています。
+// 1つのワークグループは必ず1つのSM内で動くため、各work itemはshared memoryを共有することができます。
 
 // LocalID・GrobalID
 // ワークアイテムにはそれぞれを識別するための ID が与えられます。
-// ID はそれが含まれるワークグループ内で識別するための "LocalID" と、処理全体で識別するための "globalID" とがあります。
+// ID はそれが含まれるワークグループ内で識別するための "LocalID" と、処理全体で識別するための "GlobalID" とがあります。
 
 // local_work_size / work group size
-// ワークグループ内に含まれるワークアイテムの数は local_work_size(変数) もしくは work group size(表記上) で表されます。
+// 1ワークグループあたりのワークアイテム数は local_work_size(変数) もしくは work group size(表記上) で表されます。
 // 以降local_work_sizeはlocal_sizeと省略します。
 
 // global_work_size
-// すべてのワークグループに存在するワークアイテムの数は global_work_size とされます。
+// すべてのワークアイテムの数は global_work_size とされます。
 // 以降global_work_sizeはglobal_sizeと省略します。
 
 //http://neareal.net/index.php?Programming%2FOpenCL%2FDimentionWorkGroupWorkItem

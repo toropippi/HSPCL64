@@ -1,7 +1,8 @@
 //やってることはSample05_VecAdd.hspと同じ
 //時間計測はHSPのgettimeを使ってもいいがOpenCLのAPIを使うことでより正確に測ることができる
 //そのためにはカーネル実行の命令(ここではHCLDoKrn1)でeventを登録するようにする
-//そのevent idから時間情報をとってくることができる
+//event idは0～65535まで使える
+//そのevent idの番号から時間情報をとってくることができる
 //時間の単位はnsナノセカンド
 #include "HSPCL64.as"
 	HCLinit
@@ -31,7 +32,7 @@
 	HCLDoKrn1 krn,n,64,0//GPUで計算。ここの第4引数の0は、この命令をevent_id 0に登録するという意味
 	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
 	
-	//eventから時間情報を取得。返り値は64bit int
+	//eventから時間情報を取得。戻り値は64bit int
 	start_time=HCLGetEventLogs(0,6)//6はCL_PROFILING_COMMAND_STARTのtime
 	end_time=HCLGetEventLogs(0,7)//7はCL_PROFILING_COMMAND_ENDのtime
 	mes "計算start "+start_time

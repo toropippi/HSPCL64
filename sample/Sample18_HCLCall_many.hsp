@@ -1,7 +1,7 @@
 // このSAMPLEはHCLCallの使い方、特に引数関連のことについて何パターンかにわけて理解するためのものです。
 // HCLCall自体は、WriteBufferやReadBufferやCreateProgramなどの命令を内部で自動でやってくれる命令です。
 // 普通HSPで確保した変数をそのままOpnnCLのコードでいじれないですが、これを使うことで擬似的に直接いじれているように見えます。
-// ただパフォーマンスを出すにはちゃんとWriteBufferやReadBufferやCreateProgramを駆使してコードを書くことをおすすめします。
+// ただパフォーマンスを出すにはちゃんとCreateProgramしてWriteBufferやReadBufferを駆使してコードを書くことをおすすめします。
 // HCLCallはあくまで「お試し」でOpenCLコードを動かすときに手軽にできるようにするためのものです。
 
 #include "HSPCL64.as"

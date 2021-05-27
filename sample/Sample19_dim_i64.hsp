@@ -5,7 +5,7 @@
 
 	//HCLinit
 	//]—ˆ‚Ì32bit®”Œ^
-	mes "int"
+	mes "int32"
 	dim test,2
 	test.0=int("2100000000")
 	test.1=int("2200000000")
