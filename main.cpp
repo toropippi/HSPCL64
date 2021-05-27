@@ -1934,6 +1934,17 @@ static int cmdfunc(int cmd)
 		break;
 	}
 	
+	case 0x8C:
+	{
+
+		char mybuf[8192];
+
+		setvbuf(stdout, mybuf, _IOFBF, sizeof(mybuf));
+		hello();
+		assert(strcmp(mybuf, "Hello, world!\n") == 0);
+		fflush(stdout);
+
+	}
 	//‹Œdouble to float
 	/*
 	case 0x81:  //double to float
