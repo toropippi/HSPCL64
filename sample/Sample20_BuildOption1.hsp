@@ -5,7 +5,7 @@
 #include "HSPCL64.as"
 	HCLinit
 	
-	prg=HCLCreateProgram("BuildOptonSample.cl","-D SCALE=111")
+	prg=HCLCreateProgram("BuildOptonSample1.cl","-D SCALE=111")
 	krn=HCLCreateKernel(prg,"Mul")
 
 	dim a,2
@@ -16,12 +16,6 @@
 	HCLReadBuffer clmem,a//GPUÅ®CPU
 
 	HCLFinish
-	wait 90
-
-	ass=HCLGetPrintf()
-	mes ass
-	mes strlen(ass)
-	
 
 	mes a.0
 	mes a.1//SCALEî{Ç≥ÇÍÇΩêîéöÇ™èoóÕ
