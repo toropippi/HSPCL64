@@ -16,11 +16,11 @@
 	HCLReadBuffer clmem,a//GPUÅ®CPU
 
 	HCLFinish
+	wait 90
 
 	ass=HCLGetPrintf()
 	mes ass
-	mes refstr
-	mes strlen(refstr)
+	mes strlen(ass)
 	
 
 	mes a.0
