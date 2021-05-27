@@ -15,5 +15,8 @@
 	HCLDoKrn1 krn,1,1//ŒvZ
 	HCLReadBuffer clmem,a//GPU¨CPU
 
+	HCLGetPrintf
+	mes s
+
 	mes a.0
 	mes a.1//SCALE”{‚³‚ê‚½”š‚ªo—Í

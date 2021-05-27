@@ -74,6 +74,8 @@
 #cmd Min64 $7F
 #cmd Max64 $80
 
+#cmd HCLGetPrintf $8C
+
 #cmd DoubleToFloat $81
 #cmd FloatToDouble $82
 
