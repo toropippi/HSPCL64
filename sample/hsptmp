@@ -1,0 +1,23 @@
+//kernelコード内でprintfをするサンプル
+//デバッグとしてprintfをするのだが
+//HSPで標準出力が眺められないので
+//このコードを実行ファイル形式にして hsptmp.exe > out.txt
+//などとして結果を得るしかない。
+//プラグインのほうで標準出力の内容をなんとかして得ようとしたが無理だった
+#include "HSPCL64.as"
+	HCLinit
+	
+	prg=HCLCreateProgram("Printf.cl")
+	krn=HCLCreateKernel(prg,"prnt")
+
+	dim a,20
+		repeat 20
+		a.cnt=cnt*3
+		loop
+	clmem=HCLCreateBufferFrom(a)
+	HCLSetKernel krn,0,clmem
+	HCLDoKrn1 krn,20,1//このカーネル内でprintfが実行される
+	HCLFinish
+	//今頃標準出力があれば出力されている
+	ass=HCLGetPrintf()
+	mes strlen(ass)
