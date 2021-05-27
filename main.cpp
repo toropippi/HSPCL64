@@ -22,6 +22,7 @@ int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 4;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//全プラットフォームのデバイスの合計数
 int bufferout[1024 * 4];
+char stdout_dmy[1024 * 1024];//標準出力のコピー
 cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
@@ -581,14 +582,12 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x8C:
 	{
-		//char mybuf[8192];
-		setvbuf(stdout, bugchar, _IOFBF, sizeof(bugchar));
 		*type_res = HSPVAR_FLAG_STR;
-		mes(bugchar, sizeof(bugchar));
-		//return reinterpret_cast<void*>(const_cast<char*>(bugchar));
+		fflush(stdout);
+		return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
 		//exinfo->refstr = 't';
-		strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
-		ctx->refstr = "gaew4y5hrt";
+		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
+		//ctx->refstr = "gaew4y5hrt";
 		break;
 		// refstrに出力
 		//strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
@@ -855,6 +854,9 @@ static int cmdfunc(int cmd)
 			cppeventlist[i] = NULL;
 			event_wait_list[i] = NULL;
 		}
+
+		//最後にprintf関数を使った場合の標準出力→HSPをやるための前処理
+		setvbuf(stdout, stdout_dmy, _IOFBF, sizeof(stdout_dmy));
 		break;
 	}
 
