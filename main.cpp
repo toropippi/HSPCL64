@@ -584,7 +584,7 @@ static void *reffunc( int *type_res, int cmd )
 		//char mybuf[8192];
 		setvbuf(stdout, bugchar, _IOFBF, sizeof(bugchar));
 		*type_res = HSPVAR_FLAG_STR;
-
+		mes(bugchar, sizeof(bugchar));
 		//return reinterpret_cast<void*>(const_cast<char*>(bugchar));
 		//exinfo->refstr = 't';
 		strncpy(ctx->refstr, bugchar, HSPCTX_REFSTR_MAX);
