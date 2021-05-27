@@ -586,7 +586,8 @@ static void *reffunc( int *type_res, int cmd )
 	{
 		fflush(stdout);
 		cptr = hspmalloc(sizeof(stdout_dmy));
-		lstrcpy(cptr, stdout_dmy);
+		lstrcpy((LPSTR)cptr, stdout_dmy);
+		mes(stdout_dmy, sizeof(stdout_dmy));
 
 		fStr = true;
 		//return reinterpret_cast<void*>(const_cast<char*>(stdout_dmy));
