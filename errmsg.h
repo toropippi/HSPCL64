@@ -355,7 +355,7 @@ void retmeserr10(cl_int ret)
 	switch (ret) {							//分岐
 
 	case CL_INVALID_COMMAND_QUEUE:
-		MessageBox(NULL, "第一引数が有効な値ではありません", "エラー", 0);
+		MessageBox(NULL, "CL_INVALID_COMMAND_QUEUE　第一引数が有効な値ではありません", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		break;
 	case CL_INVALID_CONTEXT:

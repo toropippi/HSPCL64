@@ -1,45 +1,53 @@
-//バイトニックソートは並列にソートが可能なアルゴリズムです。
-//詳しくは
-//http://blog.livedoor.jp/toropippi/archives/54817221.html
-//
-
+//N*N要素の行列AとBをかけてCを求める計算
+//row major
 #include "HSPCL64.as"
 	HCLinit
 	randomize
-	M=24//冪指数
-	N=1<<M//ソートしたい要素数
 
-	memA=HCLCreateBuffer(N*(4+4))//sizeof(key)+sizeof(index)
+	N=1024*4//Nは128の倍数でないといけない
+	A=HCLCreateBuffer(N*N*4)
+	B=HCLCreateBuffer(N*N*4)
+	C=HCLCreateBuffer(N*N*4)
 	
-	prgid=HCLCreateProgram("BitonicSort.cl")
-	krnSort=HCLCreateKernel(prgid,"ParallelBitonic_B2")
+	prgid=HCLCreateProgram("SGEMM.cl")
+	krnSGEMM=HCLCreateKernel(prgid,"oreoreSGEMM_k")
 	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
 
-
 	//まずは初期値をGPUで生成
-	HCLSetKernel krnRnd,0,memA
-	HCLDoKrn1 krnRnd,N,limit(N,1,256)
+	seed=rnd(9999)
+	HCLSetKrns krnRnd,A,seed
+	HCLDoKrn1 krnRnd,N*N,limit(N*N,1,256)
+	seed=rnd(9999)
+	HCLSetKrns krnRnd,B,seed
+	HCLDoKrn1 krnRnd,N*N,limit(N*N,1,256)
+	HCLFinish
+	
+	//行列行列積
+	mes "計算開始"
+	HCLSetKrns krnSGEMM,N,N,N,A,B,C
+	g_sz=N/8,N/8
+	l_sz=16,16
+	HCLDoKernel krnSGEMM,2,g_sz,l_sz
+	HCLFinish
+	mes "計算終了"
 
-	mes "初期値"
-		repeat 20
-		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
-		loop
-
-	//ソート計算
-	HCLSetKernel krnSort,0,memA
-		repeat M
-		inc=1<<cnt
-			repeat cnt+1
-			HCLSetKrns krnSort,memA,inc,2 << cnt
-			HCLDoKrn1 krnSort,N/2,limit(N/2,1,256)
-            inc /= 2
-			loop
-		loop
-
-
-	pos 320,0
-	mes "ソート後"
-		repeat 20
-		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
-		loop
+	gosub*検算
 	stop
+
+
+*検算
+	x=rnd(N)
+	y=rnd(N)
+	cpuans=0.0
+		repeat N
+		a_=FloatToDouble(HCLReadIndex_i32(A,cnt+y*N))
+		b_=FloatToDouble(HCLReadIndex_i32(B,cnt*N+x))
+		cpuans+=a_*b_
+		loop
+
+	gpuans=FloatToDouble(HCLReadIndex_i32(C,y*N+x))
+
+	mes "x="+x+" y="+y+"の結果"
+	mes "CPU "+cpuans
+	mes "GPU "+gpuans
+	return
