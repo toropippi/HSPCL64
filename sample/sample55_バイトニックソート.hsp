@@ -1,187 +1,42 @@
-//粉あそびゲーム
-//各粉ずつGPGPUで処理
-//p_posは各ドットの座標が格納されている
-//p_vramは1要素1byteで、そのドットが粉かどうかを格納する
+//バイトニックソートは並列にソートが可能なアルゴリズムです。
+//詳しくは
+//http://blog.livedoor.jp/toropippi/archives/54817221.html
 //
-//d3_vramはgsel 0 画面のmrefで取得した変数h_vramに対応
-//w3_vramはgsel 1 画面のmrefで取得した変数h_wvramに対応
-//w_vramはw3_vramのグレースケール化
-//
-//各粉はp_vramの画面状態を参照して、下にいけるか左にいけるか右にいけるかを考える
-//CPUでの処理とは違いGPUの処理ではメモリ書き込みが競合する可能性があるので
-//例えばある瞬間左に移動した粉と右に移動した粉が同時に重なるという事態がおこってしまう
-//
-//それを回避するためにvram_dmy0～vram_dmy2で重ならないようなんとか処理している
+
 #include "HSPCL64.as"
 	HCLinit
-	randomize
+	M=24//冪指数
+	N=1<<M//ソートしたい要素数
 
-	winx=512
-	winy=512
+	memA=HCLCreateBuffer(N*(4+4))//sizeof(key)+sizeof(index)
 	
-	screen 0,winx,winy
-	mref h_vram,66//host vram
-	
-	buffer 1,winx,winy
-	color 0,0,0:boxf
-	mref h_wvram,66//host vram
+	prgid=HCLCreateProgram("BitonicSort.cl")
+	krnSort=HCLCreateKernel(prgid,"ParallelBitonic_B2")
+	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
 
-	p_num=winx*winy/4 //パーティクル数
-	gosub*cl初期設定
-	gosub*壁情報設定
+	//まずは初期値をGPUで生成
+	HCLSetKernel krnRnd,0,memA
+	HCLDoKrn1 krnRnd,N,limit(N,1,256)
 
-
-
-	
-*main
-		repeat 7//粉計算は1フレーム7回やる。これは全部GPU内で完結するので速い
-		HCLSetkernel krnMove,5,rnd(32767)//seed設定
-		HCLSetkernel krnFixPosition,4,rnd(32767)//seed設定
-		HCLSetkernel krnp_pos_init,2,p_offset
-		
-		//p_vramを壁のみの情報に初期化。壁以外は0になっている。壁は255
-		HCLCopyBuffer p_vram,w_vram
-		HCLDoKrn1 krnPsetp_vram,p_num,0//パーティクルをドット情報p_vramに更新。これでパーティクルのあるドットも255になる。
-		HCLDoKrn1 krnMove,p_num,0//パーティクル仮移動
-		HCLDoKrn1 krnFixPosition,winx*winy,0//画面ドットからパーティクル移動の重なりを検出し修正
-		
-		HCLDokrn1 krnp_pos_init,32,32//p_pos座標一部を初期化
-		p_offset+=32
-		p_offset\=p_num
+	mes "初期値"
+		repeat 20
+		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
 		loop
 
-	//一旦画面初期化、壁のみに
-	HCLCopyBuffer d3_vram,w3_vram
-	//パーティクル描画
-	HCLDoKrn1 krnPsetParticle,p_num,0
-	HCLFlush
-
-	//ここはGPUが計算している最中なのでCPU負荷適当にいれとく
-	gosub*sketch
-	await 16
-	
-	HCLReadBuffer d3_vram,h_vram//ここでGPUの計算が全部おわる
-	
-	gsel 0
-	redraw 1
-	gosub*viewFPS
-	goto*main
-
-
-
-//gsel 1は壁情報を保存
-*sketch
-	getkey key,1
-	last_mx=mx
-	last_my=my
-	mx=mousex
-	my=mousey
-	flg=0//変更フラグ
-	if key{
-		gsel 1
-		color 255,255,200
-		leng=int(sqrt((last_mx-mx)*(last_mx-mx)+(last_my-my)*(last_my-my))*0.5+1)
-			repeat leng+1
-			xx=last_mx+(mx-last_mx)*cnt/leng
-			yy=last_my+(my-last_my)*cnt/leng
-			boxf xx-1,yy-1,xx+1,yy+1
-			loop
-		flg=1
-	}
-	getkey key,2
-	if key{
-		gsel 1
-		color 0,0,0
-		boxf mx-6,my-6,mx+7,my+7
-		flg=1
-		
-		gsel 0
-		color 200,200,255
-		boxf mx-6,my-6,mx+7,my+7
-		color 0,0,0
-		boxf mx-5,my-5,mx+6,my+6
-	}
-
-	if flg==1{
-		HCLWriteBuffer w3_vram,h_wvram,winx*winy*3,0,0,0//ブロッキングモードoff
-		HCLDoKrn1 krnw3_to_w,winx*winy,0//bgr→rへ
-	}
-	return
-
-
-
-
-*cl初期設定
-	if winx\4!=0{
-		dialog "winxは必ず4の倍数にして下さい",1
-		end
-	}
-	p_pos=HCLCreateBuffer(p_num*4);パーティクルの座標int型1つにx+65536*yで値が格納されている
-	d3_vram=HCLCreateBuffer(winx*winy*3);h_vramとやりとりするGPU側配列。画面のドット情報。1要素あたり3char bgr
-	p_vram=HCLCreateBuffer(winx*winy);パーティクルドット情報。1要素あたり1char
-	w3_vram=HCLCreateBuffer(winx*winy*3);壁情報。1要素あたり3char bgr
-	w_vram=HCLCreateBuffer(winx*winy);壁情報。1要素あたり1char。w3のbgrを1charにまとめた感じ
-	vram_dmy0=HCLCreateBuffer(winx*winy*4);パーティクルが下に1ドット動いたときの一時画面情報
-	vram_dmy1=HCLCreateBuffer(winx*winy*4);パーティクルが左に1ドット動いたときの一時画面情報
-	vram_dmy2=HCLCreateBuffer(winx*winy*4);パーティクルが右に1ドット動いたときの一時画面情報
-
-	prgid=HCLCreateProgram("konaasobi2.cl","-D WINX="+winx+" -D WINY="+winy+"")
-	krnMove=HCLCreateKernel(prgid,"Move")//パーティクル仮移動
-	krnFixPosition=HCLCreateKernel(prgid,"FixPosition")//パーティクル本移動
-	krnPsetParticle=HCLCreateKernel(prgid,"PsetParticle")//パーティクル描画
-	krnp_pos_init=HCLCreateKernel(prgid,"p_pos_init")//パーティクル座標、一定時間経過後初期化
-	krnPsetp_vram=HCLCreateKernel(prgid,"Psetp_vram")//パーティクル座標をp_vramにセット
-	krnw3_to_w=HCLCreateKernel(prgid,"w3_to_w")//w3の画像をwにグレースケール化
-
-	HCLSetkrns krnMove,p_pos,vram_dmy0,vram_dmy1,vram_dmy2,p_vram,12345678
-	HCLSetkrns krnFixPosition,p_pos,vram_dmy0,vram_dmy1,vram_dmy2,12345678
-	HCLSetkrns krnPsetParticle,p_pos,d3_vram
-	HCLSetkrns krnp_pos_init,p_pos,p_vram
-	HCLSetkrns krnPsetp_vram,p_pos,p_vram
-	HCLSetkrns krnw3_to_w,w3_vram,w_vram
-
-	HCLFillBuffer_i32 d3_vram,0//初期化
-	HCLFillBuffer_i32 vram_dmy0,-1//初期化
-	HCLFillBuffer_i32 vram_dmy1,-1//初期化
-	HCLFillBuffer_i32 vram_dmy2,-1//初期化
-	HCLFillBuffer_i32 p_pos,(winy-1)*65536//初期座標は一番下
-	return
-
-*壁情報設定
-	gsel 1
-	//ここでシャンパンタワーを描画
-	scale=88
-	scale2=scale*40/100
-	scale3=scale*34/100
-	
-		repeat 4
-		ccnt=cnt
+	//ソート計算
+	HCLSetKernel krnSort,0,memA
+		repeat M
+		inc=1<<cnt
 			repeat cnt+1
-			xx=256+cnt*scale-ccnt*scale/2
-			yy=150+ccnt*scale
-			color 255,255,200
-			boxf xx-scale2,yy-scale2,xx+scale2,yy+scale2
-			color 0,0,0
-			boxf xx-scale3,yy-scale2,xx+scale3,yy+scale3
+			HCLSetKrns krnSort,memA,inc,2 << cnt
+			HCLDoKrn1 krnSort,N/2,limit(N/2,1,256)
+            inc /= 2
 			loop
 		loop
-	
-	
-	HCLWriteBuffer w3_vram,h_wvram,winx*winy*3,0,0
-	HCLDoKrn1 krnw3_to_w,winx*winy,0//bgr→rへ
-	return
 
-*viewFPS
-	gsel 0
-	pos 0,0
-	color 255,0,0
-	mes ""+fps+"FPS"
-	
-	lastg6=g6
-	g6=gettime(6)
-	if gettime(6)!=lastg6{
-		fps=flmcnt
-		flmcnt=0
-	}
-	flmcnt++
-	return
+	pos 320,0
+	mes "ソート後"
+		repeat 20
+		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
+		loop
+	stop

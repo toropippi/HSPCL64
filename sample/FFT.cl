@@ -3,7 +3,39 @@
 typedef struct{
 	double r;
 	double i;
-} dVec2;
+} Complex;
+
+Complex add(Complex a,Complex b)
+{
+	Complex c;
+	c.r = a.r + b.r;
+	c.i = a.i + b.i;
+	return c;
+}
+
+Complex sub(Complex a,Complex b)
+{
+	Complex c;
+	c.r = a.r - b.r;
+	c.i = a.i - b.i;
+	return c;
+}
+
+Complex mul(Complex a,Complex b)
+{
+	Complex c;
+	c.r = a.r * b.r - a.i * b.i;
+	c.i = a.r * b.i + a.i * b.r;
+	return c;
+}
+
+Complex radtow(double rad)
+{
+	Complex w;
+	w.r = cos(rad);
+	w.i = sin(rad);
+	return w;
+}
 
 
 
@@ -21,19 +53,19 @@ uint reversebits(uint id)
 
 
 //thread数は(N, 1, 1)
-__kernel void BitRev(__global dVec2 *buffer,int M)
+__kernel void BitRev(__global Complex *buffer,int M)
 {
 	uint id = get_global_id(0);
 	uint rid=reversebits(id)>>(32-M);
 	if (id>=rid)return;
-	dVec2 d2a=buffer[id];
-	dVec2 d2b=buffer[rid];
+	Complex d2a=buffer[id];
+	Complex d2b=buffer[rid];
 	buffer[id]=d2b;
 	buffer[rid]=d2a;
 }
 
 //thread数は(N/2, 1, 1)
-__kernel void FFT(__global dVec2 *buffer,int M,int loopidx)
+__kernel void CooleyTukey(__global Complex *buffer,int M,int loopidx)
 {
 	uint id = get_global_id(0);
 	
@@ -41,15 +73,44 @@ __kernel void FFT(__global dVec2 *buffer,int M,int loopidx)
 	uint t = id % dleng;
 	uint t0 = (id / dleng) * dleng * 2 + t;
 	uint t1 = t0 + dleng;
-	double r1 = buffer[t1].r;
-	double i1 = buffer[t1].i;
-	double r0 = buffer[t0].r - r1;
-	double i0 = buffer[t0].i - i1;
-	double rad = -PI * t / dleng;//invで-がかかる
-	double dsin = sin(rad);
-	double dcos = cos(rad);
-	buffer[t0].r += r1;
-	buffer[t0].i += i1;
-	buffer[t1].r = r0 * dcos - i0 * dsin;
-	buffer[t1].i = r0 * dsin + i0 * dcos;
+	
+	Complex c1 = buffer[t1];
+	Complex c0 = buffer[t0];
+	
+	double rad = -PI * t / dleng;//invの場合これに-をかける
+	Complex rotate = radtow(rad);
+	
+	buffer[t0] = add(c0,c1);
+	buffer[t1] = mul(sub(c0,c1),rotate);
+}
+
+
+
+
+
+
+//thread数は(N/2, 1, 1)
+__kernel void Stockham(__global Complex *buffer,__global Complex *buffer2,int M,int loopidx)
+{
+	uint id = get_global_id(0);
+	uint s = 1<<loopidx;
+	uint N = 1<<M;
+	
+	uint t = id % s;
+	uint in0 = id;
+	uint in1 = id+N/2;
+	uint out0 = (id/s)*s*2+t;
+	uint out1 = out0+s;
+	
+	
+	Complex c0 = buffer[in0];
+	Complex c1 = buffer[in1];
+	
+	double rad = -PI*t/s;
+	Complex rotate = radtow(rad);
+	
+	c1 = mul(c1,rotate);
+	
+	buffer2[out0] = add(c0,c1);
+	buffer2[out1] = sub(c0,c1);
 }

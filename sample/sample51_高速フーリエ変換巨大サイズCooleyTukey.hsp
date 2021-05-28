@@ -3,6 +3,7 @@
 //Nサイズが大きい場合
 //先程のサンプルではM回ループと最後のビット逆順を1つのカーネル内で実行していた。
 //今回はそれぞれのSTEPを抽出して実行している。
+//なお時間がかかるのはCPU処理のせい
 /////////////////////////////////////////////////////////////////////////////////////////////////
 #include "HSPCL64.as"
 	HCLinit
@@ -11,7 +12,7 @@
 	N=1<<M
 	
 	prgid=HCLCreateProgram("FFT.cl")
-	krnfft=HCLCreateKernel(prgid,"FFT")
+	krnfft=HCLCreateKernel(prgid,"CooleyTukey")
 	krnBitRev=HCLCreateKernel(prgid,"BitRev")
 
 	
@@ -28,18 +29,17 @@
 	HCLSetKrns krnfft,memA,M
 	HCLSetKrns krnBitRev,memA,M
 	//GPUでFFTの部分/////////////////////////////////////////////////////////
+	mes "計算開始"
 		repeat M
 		HCLSetKernel krnfft,2,cnt
 		HCLDoKrn1 krnfft,N/2,limit(N/2,1,128)
 		loop
 	HCLDoKrn1 krnBitRev,N,limit(N,1,128)
 	HCLFinish
+	mes "計算終了"
 	//GPUでFFTの部分/////////////////////////////////////////////////////////
 
-	
-	pos 0,0
 	mes "GPU\n実数		虚数"
-	pos 0,38
 	ansviewnum=limit(N,1,9)
 		repeat ansviewnum
 		mes ""+HCLReadIndex_dp(memA,cnt*2)+"	"+HCLReadIndex_dp(memA,cnt*2+1)
@@ -76,9 +76,8 @@
 		await 1
 		loop
 	
-	pos 0,220
+	mes
 	mes "CPUで検算(DFT)\n実数		虚数"
-	pos 0,258
 		repeat ansviewnum
 		mes ""+ret_r(cnt)+"	"+ret_i(cnt)
 		loop

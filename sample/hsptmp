@@ -1,23 +1,45 @@
-//kernelコード内でprintfをするサンプル
-//デバッグとしてprintfをするのだが
-//HSPで標準出力が眺められないので
-//このコードを実行ファイル形式にして hsptmp.exe > out.txt
-//などとして結果を得るしかない。
-//プラグインのほうで標準出力の内容をなんとかして得ようとしたが無理だった
+//バイトニックソートは並列にソートが可能なアルゴリズムです。
+//詳しくは
+//http://blog.livedoor.jp/toropippi/archives/54817221.html
+//
+
 #include "HSPCL64.as"
 	HCLinit
-	
-	prg=HCLCreateProgram("Printf.cl")
-	krn=HCLCreateKernel(prg,"prnt")
+	randomize
+	M=24//冪指数
+	N=1<<M//ソートしたい要素数
 
-	dim a,20
+	memA=HCLCreateBuffer(N*(4+4))//sizeof(key)+sizeof(index)
+	
+	prgid=HCLCreateProgram("BitonicSort.cl")
+	krnSort=HCLCreateKernel(prgid,"ParallelBitonic_B2")
+	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
+
+
+	//まずは初期値をGPUで生成
+	HCLSetKernel krnRnd,0,memA
+	HCLDoKrn1 krnRnd,N,limit(N,1,256)
+
+	mes "初期値"
 		repeat 20
-		a.cnt=cnt*3
+		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
 		loop
-	clmem=HCLCreateBufferFrom(a)
-	HCLSetKernel krn,0,clmem
-	HCLDoKrn1 krn,20,1//このカーネル内でprintfが実行される
-	HCLFinish
-	//今頃標準出力があれば出力されている
-	ass=HCLGetPrintf()
-	mes strlen(ass)
+
+	//ソート計算
+	HCLSetKernel krnSort,0,memA
+		repeat M
+		inc=1<<cnt
+			repeat cnt+1
+			HCLSetKrns krnSort,memA,inc,2 << cnt
+			HCLDoKrn1 krnSort,N/2,limit(N/2,1,256)
+            inc /= 2
+			loop
+		loop
+
+
+	pos 320,0
+	mes "ソート後"
+		repeat 20
+		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
+		loop
+	stop

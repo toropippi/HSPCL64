@@ -1,20 +1,91 @@
 #define PI 3.14159265358979323846264338328
 
 typedef struct{
-	float r;
-	float i;
-} Vec2;
-typedef struct{
 	double r;
 	double i;
-} dVec2;
+} Complex;
+
+typedef struct{
+	float r;
+	float i;
+} fComplex;
 
 
-
-
-unsigned int reversebits(uint id)
+Complex add(Complex a,Complex b)
 {
-	unsigned int j = id;
+	Complex c;
+	c.r = a.r + b.r;
+	c.i = a.i + b.i;
+	return c;
+}
+
+Complex sub(Complex a,Complex b)
+{
+	Complex c;
+	c.r = a.r - b.r;
+	c.i = a.i - b.i;
+	return c;
+}
+
+Complex mul(Complex a,Complex b)
+{
+	Complex c;
+	c.r = a.r * b.r - a.i * b.i;
+	c.i = a.r * b.i + a.i * b.r;
+	return c;
+}
+
+Complex radtow(double rad)
+{
+	Complex w;
+	w.r = cos(rad);
+	w.i = sin(rad);
+	return w;
+}
+
+fComplex fcadd(fComplex a,fComplex b)
+{
+	fComplex c;
+	c.r = a.r + b.r;
+	c.i = a.i + b.i;
+	return c;
+}
+
+fComplex fcsub(fComplex a,fComplex b)
+{
+	fComplex c;
+	c.r = a.r - b.r;
+	c.i = a.i - b.i;
+	return c;
+}
+
+fComplex fcmul(fComplex a,fComplex b)
+{
+	fComplex c;
+	c.r = a.r * b.r - a.i * b.i;
+	c.i = a.r * b.i + a.i * b.r;
+	return c;
+}
+
+fComplex fcradtow(float rad)
+{
+	fComplex w;
+	w.r = cos(rad);
+	w.i = sin(rad);
+	return w;
+}
+
+
+
+
+
+
+
+
+
+uint reversebits(uint id)
+{
+	uint j = id;
 	j = (j & 0x55555555) <<  1 | (j & 0xAAAAAAAA) >>  1; 
 	j = (j & 0x33333333) <<  2 | (j & 0xCCCCCCCC) >>  2; 
 	j = (j & 0x0F0F0F0F) <<  4 | (j & 0xF0F0F0F0) >>  4; 
@@ -24,11 +95,10 @@ unsigned int reversebits(uint id)
 }
 
 
-
 //#define M (8)
 //#define N (1<<M)
 //thread数は(N/2, 1, 1)
-__kernel void fp_FFTlocal(__global Vec2 *buffer,int M,__local Vec2 *block)
+__kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *block)
 {
 	uint id = get_global_id(0);
 	block[id * 2] = buffer[id * 2];
@@ -41,22 +111,20 @@ __kernel void fp_FFTlocal(__global Vec2 *buffer,int M,__local Vec2 *block)
 		uint t0 = (id / dleng) * dleng * 2 + t;
 		uint t1 = t0 + dleng;
 		barrier(CLK_LOCAL_MEM_FENCE);
-		float r1 = block[t1].r;
-		float i1 = block[t1].i;
-		float r0 = block[t0].r - r1;
-		float i0 = block[t0].i - i1;
-		float rad = -PI * t / dleng;
-		float fsin = sin(rad);
-		float fcos = cos(rad);
-		block[t0].r += r1;
-		block[t0].i += i1;
-		block[t1].r = r0 * fcos - i0 * fsin;
-		block[t1].i = r0 * fsin + i0 * fcos;
+		
+		fComplex c1 = block[t1];
+		fComplex c0 = block[t0];
+		
+		float rad = -PI * t / dleng;//invの場合これに-をかける
+		fComplex rotate = fcradtow(rad);
+		
+		block[t0] = fcadd(c0,c1);
+		block[t1] = fcmul(fcsub(c0,c1),rotate);
 	}
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
-	Vec2 reim0 = block[reversebits(id * 2) >> (32 - M)];//32はuint=32bitの32
-	Vec2 reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
+	fComplex reim0 = block[reversebits(id * 2) >> (32 - M)];//32はuint=32bitの32
+	fComplex reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
 	buffer[id * 2] = reim0;
 	buffer[id * 2 + 1] = reim1;
 }
@@ -64,7 +132,7 @@ __kernel void fp_FFTlocal(__global Vec2 *buffer,int M,__local Vec2 *block)
 
 
 //thread数は(N/2, 1, 1)
-__kernel void dp_FFTlocal(__global dVec2 *buffer,int M,__local dVec2 *block)
+__kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
 {
 	uint id = get_global_id(0);
 	block[id * 2] = buffer[id * 2];
@@ -77,22 +145,20 @@ __kernel void dp_FFTlocal(__global dVec2 *buffer,int M,__local dVec2 *block)
 		uint t0 = (id / dleng) * dleng * 2 + t;
 		uint t1 = t0 + dleng;
 		barrier(CLK_LOCAL_MEM_FENCE);
-		double r1 = block[t1].r;
-		double i1 = block[t1].i;
-		double r0 = block[t0].r - r1;
-		double i0 = block[t0].i - i1;
-		double rad = -PI * t / dleng;//invで-がかかる
-		double dsin = sin(rad);
-		double dcos = cos(rad);
-		block[t0].r += r1;
-		block[t0].i += i1;
-		block[t1].r = r0 * dcos - i0 * dsin;
-		block[t1].i = r0 * dsin + i0 * dcos;
+		
+		Complex c1 = block[t1];
+		Complex c0 = block[t0];
+		
+		double rad = -PI * t / dleng;//invの場合これに-をかける
+		Complex rotate = radtow(rad);
+		
+		block[t0] = add(c0,c1);
+		block[t1] = mul(sub(c0,c1),rotate);
 	}
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
-	dVec2 reim0 = block[reversebits(id * 2) >> (32 - M)];//32はuint=32bitの32
-	dVec2 reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
+	Complex reim0 = block[reversebits(id * 2) >> (32 - M)];//32はuint=32bitの32
+	Complex reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
 	buffer[id * 2] = reim0;
 	buffer[id * 2 + 1] = reim1;
 }

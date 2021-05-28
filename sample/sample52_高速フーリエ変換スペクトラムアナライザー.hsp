@@ -10,7 +10,7 @@
 	N=1<<M
 	
 	prgid=HCLCreateProgram("FFT.cl")
-	krnfft=HCLCreateKernel(prgid,"FFT")
+	krnfft=HCLCreateKernel(prgid,"CooleyTukey")
 	krnBitRev=HCLCreateKernel(prgid,"BitRev")
 
 	

@@ -1,0 +1,86 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//倍精度で高速フーリエ変換
+//Nサイズが大きい場合
+//先程のサンプルではM回ループを1つのカーネル内で実行していた。
+//今回はそれぞれのSTEPを抽出して実行している。
+//なお時間がかかるのはCPU処理のせい
+/////////////////////////////////////////////////////////////////////////////////////////////////
+#include "HSPCL64.as"
+	HCLinit
+	randomize
+	M=24//冪指数。メモリにおさまる範囲で28あたりがmaxか
+	N=1<<M
+	
+	prgid=HCLCreateProgram("FFT.cl")
+	krnfft=HCLCreateKernel(prgid,"Stockham")
+
+	
+	ddim hs_A,N*2
+	wait 1
+	title "初期値生成中 10秒くらいかかります・・・"
+	wait 1
+		repeat N*2
+		hs_A.cnt=0.0001*rnd(30000)
+		loop
+	memA=HCLCreateBufferFrom(hs_A)//実数と虚数があり、1つの数字は8byte
+	memB=HCLCreateBufferFrom(hs_A)//memAのダミー
+	//初期設定終わり
+
+	HCLSetKrns krnfft,memA,memB,M
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+	mes "計算開始"
+		repeat M
+		HCLSetKrns krnfft,memA,memB,M,cnt
+		//swap(memA,memB)
+		tmp=memA:memA=memB:memB=tmp
+		HCLDoKrn1 krnfft,N/2,limit(N/2,1,128)
+		loop
+	HCLFinish
+	mes "計算終了"
+	//GPUでFFTの部分/////////////////////////////////////////////////////////
+
+	mes "GPU\n実数		虚数"
+	ansviewnum=limit(N,1,9)
+		repeat ansviewnum
+		mes ""+HCLReadIndex_dp(memA,cnt*2)+"	"+HCLReadIndex_dp(memA,cnt*2+1)
+		loop
+
+	wait 1
+	title "検算中。1分くらいかかります・・・"
+	wait 1
+	gosub*DFT検算
+	stop
+
+
+
+//検算はHSPでやるのでとても遅い。注意
+*DFT検算
+	//DFT計算。二重ループ
+	ddim ret_r,ansviewnum
+	ddim ret_i,ansviewnum
+		repeat ansviewnum
+		t=cnt
+			repeat N
+			x=cnt
+			w=-3.14159265358979323846264338328*2.0*t*x/N
+
+			s=sin(w)
+			c=cos(w)
+
+			r=hs_A(x*2  )
+			i=hs_A(x*2+1)
+
+			ret_r.t+=r*c-i*s
+			ret_i.t+=r*s+i*c
+			loop
+		await 1
+		loop
+	
+
+	mes
+	mes "CPUで検算(DFT)\n実数		虚数"
+		repeat ansviewnum
+		mes ""+ret_r(cnt)+"	"+ret_i(cnt)
+		loop
+	title "検算終了"
+	return
