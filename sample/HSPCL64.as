@@ -1,4 +1,4 @@
-#runtime "hsp3_64"
+#include "hsp3_64.as"
 #regcmd "hsp3cmdinit","HSPCL64.dll", 1
 #cmd int64 $00
 #cmd qpeek $01
