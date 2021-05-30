@@ -26,7 +26,7 @@
 #cmd HCLCreateKernel $5A
 #cmd HCLSetKernel $5B
 #cmd HCLSetKrns $5C
-#cmd HCLGetKernelName_ $79
+#cmd HCLGetKernelName $79
 #cmd HCLReleaseKernel $5D
 
 #cmd HCLCreateBuffer $5E
@@ -41,6 +41,9 @@
 #cmd HCLFillBuffer_i64 $64
 #cmd HCLFillBuffer_dp $8B
 #cmd HCLReleaseBuffer $65
+#cmd HCLdim_i32FromBuffer $8C
+#cmd HCLdim_i64FromBuffer $8D
+#cmd HCLdim_dpFromBuffer $8E
 
 #cmd HCLReadIndex_i32 $66
 #cmd HCLReadIndex_i64 $67
@@ -51,6 +54,8 @@
 
 #cmd HCLCall $6C
 #cmd HCLDoKrn1 $6D
+#cmd HCLDoKrn2 $52
+#cmd HCLDoKrn3 $7E
 #cmd HCLDoKernel $6E
 #cmd HCLDoKrn1_sub	$6F
 #cmd HCLFinish $70
@@ -73,8 +78,6 @@
 
 #cmd Min64 $7F
 #cmd Max64 $80
-
-#cmd HCLGetPrintf $8C
 
 #cmd DoubleToFloat $81
 #cmd FloatToDouble $82
@@ -637,21 +640,6 @@
 	}else{
 		return str(int64(0))
 	}
-
-#defcfunc HCLGetKernelName var kernelid
-	ptrk=int64(0):szs=0
-	HCLGetKernelName_ kernelid,ptrk,szs
-	if szs!=0{
-		dupptr64 out,ptrk,szs,2;2文字列型、ptrkは整数ポインタ、szsはサイズ、「out」はここで作成された新しい変数
-		//この時点でoutは、C++側で定義している変数のポインタを参照している→今後内容が変わる可能性
-		sdim retstr,szs
-		retstr=out
-		return retstr
-	}else{
-		return ""
-	}
-
-
 
 
 

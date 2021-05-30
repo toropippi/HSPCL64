@@ -1,53 +1,39 @@
-//N*N要素の行列AとBをかけてCを求める計算
-//row major
+//やってることはSample05_VecAdd.hspと同じ
+//HCLCreateKernelで取得したkrn変数から、元の関数名を取得できます。
 #include "HSPCL64.as"
 	HCLinit
-	randomize
-
-	N=1024*4//Nは128の倍数でないといけない
-	A=HCLCreateBuffer(N*N*4)
-	B=HCLCreateBuffer(N*N*4)
-	C=HCLCreateBuffer(N*N*4)
+	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
+	krn=HCLCreateKernel(prg,"vecAdd")//"VecAdd.cl"にかかれた関数をもってくる
 	
-	prgid=HCLCreateProgram("SGEMM.cl")
-	krnSGEMM=HCLCreateKernel(prgid,"oreoreSGEMM_k")
-	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
-
-	//まずは初期値をGPUで生成
-	seed=rnd(9999)
-	HCLSetKrns krnRnd,A,seed
-	HCLDoKrn1 krnRnd,N*N,limit(N*N,1,256)
-	seed=rnd(9999)
-	HCLSetKrns krnRnd,B,seed
-	HCLDoKrn1 krnRnd,N*N,limit(N*N,1,256)
-	HCLFinish
+	n=256//配列サイズ
+	clmem_A=HCLCreateBuffer(n*4)//指定はbyte数で
+	clmem_B=HCLCreateBuffer(n*4)//4はint型のサイズ
+	clmem_C=HCLCreateBuffer(n*4)
 	
-	//行列行列積
-	mes "計算開始"
-	HCLSetKrns krnSGEMM,N,N,N,A,B,C
-	g_sz=N/8,N/8
-	l_sz=16,16
-	HCLDoKernel krnSGEMM,2,g_sz,l_sz
-	HCLFinish
-	mes "計算終了"
-
-	gosub*検算
-	stop
-
-
-*検算
-	x=rnd(N)
-	y=rnd(N)
-	cpuans=0.0
-		repeat N
-		a_=FloatToDouble(HCLReadIndex_i32(A,cnt+y*N))
-		b_=FloatToDouble(HCLReadIndex_i32(B,cnt*N+x))
-		cpuans+=a_*b_
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt//HSPで初期値を代入
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
+	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
+	
+	HCLSetKernel krn,0,clmem_A//OpenCLコードの"vecAdd"に引数を適応
+	HCLSetKernel krn,1,clmem_B//OpenCLコードの"vecAdd"に引数を適応
+	HCLSetKernel krn,2,clmem_C//OpenCLコードの"vecAdd"に引数を適応
+	
+	//mes "計算start"
+	HCLDoKrn1 krn,n,n//GPUで計算。HCLDoKrn1は1次元の数で並列数を指定する命令
+	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+	//mes "計算end"
+	
+		repeat 256
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
 		loop
 
-	gpuans=FloatToDouble(HCLReadIndex_i32(C,y*N+x))
-
-	mes "x="+x+" y="+y+"の結果"
-	mes "CPU "+cpuans
-	mes "GPU "+gpuans
-	return
+	pos 200,0
+	mes HCLGetKernelName(krn)
+	stop

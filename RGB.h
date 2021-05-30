@@ -112,7 +112,7 @@ static void _ConvRGBtoRGBA(void)
 			dmptr2[idx1] = tmpr;
 			dmptr2[idx1 + 1] = tmpg;
 			dmptr2[idx1 + 2] = tmpb;
-			dmptr2[idx1 + 3] = 255;
+			dmptr2[idx1 + 3] = (char)-1;
 		}
 	}
 	else {
@@ -125,7 +125,7 @@ static void _ConvRGBtoRGBA(void)
 			dmptr2[idx1] = tmpr;
 			dmptr2[idx1 + 1] = tmpg;
 			dmptr2[idx1 + 2] = tmpb;
-			dmptr2[idx1 + 3] = 255;
+			dmptr2[idx1 + 3] = (char)-1;
 			if (toumei_r == tmpr) { if (toumei_g == tmpg) { if (toumei_b == tmpb) { dmptr2[idx1 + 3] = 0; } } }
 		}
 	}
