@@ -15,7 +15,7 @@
 	dim data,64
 	HCLWriteBuffer clmem0,data,256
 	HCLWriteBuffer clmem1,data,256
-	HCLWriteBuffer clmem2,data,256
+	HCLWriteBuffer clmem2,data,256//writeしないと実際には確保されない
 
 	//これでGPUメモリが4.0GB+0.5GB+α確保されたことに
 	//GPU-Zなどで確認するとメモリが使われているのがわかります。
