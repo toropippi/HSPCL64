@@ -9,7 +9,7 @@
 	n=1024*1024*512//配列サイズ 512MB
 	clmem1=HCLCreateBuffer(n)
 
-	n=int64(1024)*1024*1024*2//配列サイズ 4GB
+	n=int64(1024)*1024*1024*4//配列サイズ 4GB
 	clmem2=HCLCreateBuffer(n)
 
 	dim data,64
