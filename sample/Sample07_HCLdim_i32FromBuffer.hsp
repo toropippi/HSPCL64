@@ -23,7 +23,7 @@
 	
 	mes "計算start"
 	HCLDoKrn1 krn,n,n//GPUで計算。HCLDoKrn1は1次元の数で並列数を指定する命令
-	//HCLFinish
+	HCLFinish
 	mes "計算end"
 
 	//ここでHSP側の配列変数を生成してReadBufferしてくる。配列のサイズは自動で決定される
