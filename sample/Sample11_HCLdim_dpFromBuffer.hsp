@@ -1,4 +1,5 @@
 //やってることはSample05_VecAdd.hspの浮動小数点版
+//今度はhsot_CをHSPで最初から生成せず、clmemからReadしてくるタイミングで初期化&確保
 #include "HSPCL64.as"
 	HCLinit
 	prg=HCLCreateProgram("VecAdd.cl")//OpenCLのコードが書かれたファイル。コンパイルもここで
