@@ -1,11 +1,21 @@
-//eventは必ずしもDoKernelやWriteReadBufferに絡めたものでないといけないわけではありません。
-//自分で"UserEvent"を作成することもできます。
-//注意としてはHCLGetEventLogs命令で"UserEvent"が扱えないことです。タイムスタンプ代わりにするのは難しそうです・・・
+//さらにeventから
+//CL_PROFILING_COMMAND_QUEUED:コマンドがキューに入った時間
+//CL_PROFILING_COMMAND_SUBMIT:コマンドがサブミットされた時間
+//も取得できます。(そこまで必要なのかというのはさておき)
+
+//基本的に時間取得系は
+//CL_PROFILING_COMMAND_QUEUED
+//CL_PROFILING_COMMAND_SUBMIT
+//CL_PROFILING_COMMAND_START
+//CL_PROFILING_COMMAND_END
+//の4種類です。
+//それぞれHCLGetEventLogsの第2引数の4,5,6,7に対応します。
+
+//このサンプルではCL_PROFILING_COMMAND_QUEUEDとCL_PROFILING_COMMAND_SUBMITのタイミングを線で
+//CL_PROFILING_COMMAND_START～CL_PROFILING_COMMAND_ENDを塗りつぶしでグラフにプロットします。
 #include "HSPCL64.as"
 	randomize
-	wait 1
 	HCLinit
-	//HCLSetDevice 0
 	prg=HCLCreateProgram("VecAdd.cl")
 	krn=HCLCreateKernel(prg,"vecAdd")
 	
@@ -22,38 +32,21 @@
 		host_B.cnt=cnt
 		loop
 	
-	HCLWriteBuffer clmem_A,host_A,n*4,,,0,0//event_id 0
-	HCLWriteBuffer clmem_B,host_B,n*4,,,0,1//event_id 1
+	HCLWriteBuffer clmem_A,host_A,n*4,,,,0//event_id 0
+	HCLWriteBuffer clmem_B,host_B,n*4,,,,1//event_id 1
 	
 	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
-
-	//UserEvent作成。これはHCLDoKrn1の実行開始タイミングを
-	//Eventで制御したいために作成
-	HCLCreateUserEvent 10//event_id 10
-	//これをした時点でevent id 10はCL_SUBMITEDの状態になる
-
-	//次に実行するHCLDoKrn1やReadBuffer系命令に、Event待ちしてもらう
-	//具体的にはevent id 10がCL_COMPLETEになるまでHCLDoKrn1の実行開始を待つ
-	HCLSetWaitEvent 10
 	
-	HCLDoKrn1 krn,n,64,2//event_id 2。これはキューに入れる操作をするだけ、実行はまだ
+	HCLDoKrn1 krn,n,64,2//event_id 2
+	HCLReadBuffer clmem_C,host_C,n*4,,,,3//event_id 3
 
-	//CPUのタイミングでCL_COMPLETEにセット。つまりGPUへGOサインを出すことができる
-	wait 1//CPU処理を想定
-	HCLSetUserEventStatus 10,CL_COMPLETE//この後HCLDoKrn1のカーネルの計算が走る
-	//
-	HCLFinish
 	
-	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
-	HCLFinish
-	
+	//eventから時間情報を取得。返り値は64bit int
 	event_num=4
 	gosub*view1
 	gosub*view2
 	stop
 	
-
-
 
 *view1
 	//まずはすべての計算時間を取得
@@ -90,11 +83,10 @@
 
 	scalex=end_time.(event_num-1)
 	
+
 	//計算時間をグラフで表示
 	//軸
 	line 30,30,30,450
-	line 30,30,27,35
-	line 30,30,33,35
 	pos 3,240
 
 	line 30,450,620,450
@@ -135,5 +127,4 @@
 			line int(lx),100+cnt*50,int(lx),130+cnt*50
 			
 		loop
-
 	return

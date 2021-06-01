@@ -6,7 +6,7 @@
 //HCLSetWaitEvent、HCLSetWaitEventsで任意のコマンドに任意のeventの終了待ちができます。
 //HCLWaitForEvent、HCLWaitForEventsでCPUがeventの終了待ちを行います。
 //HCLCreateUserEvent、HCLSetUserEventStatusでUser_eventを作成したり状態をsetすることができます。
-//_ExHCLSetEventMaxをHCLInitの前に実行することで、eventの上限を増やすことができます。
+//_ExHCLSetEventMaxをHCLInitの前に実行することで、eventの上限を増やすことができます。デフォルトではevent id 0～65535まで使えます
 
 //まずはHCLGetEventLogsで、手動でプロファイリングのコードを作ってみたというサンプルです。
 #include "HSPCL64.as"
@@ -54,14 +54,10 @@
 		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
 		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
 		
-		kinfo.cnt=HCLGetEventLogs(cnt,0)//はeventがなんのコマンドだったか取得
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
 		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
 		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
 		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
-		/*
-			krnid_=HCLGetEventLogs(cnt,1)//1はkernel idを返す
-			kinfos.cnt=HCLGetKernelName(krnid_)
-		*/
 		loop
 		
 	offset=start_time.0
@@ -101,7 +97,6 @@
 			lx=start_time.cnt*580/scalex+30
 			rx=end_time.cnt*580/scalex+30
 			boxf int(lx),200,int(rx),240
-
 			pos int(lx),190-(cnt==2)*10
 			color 0,0,0
 			mes kinfos.cnt

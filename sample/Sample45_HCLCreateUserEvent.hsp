@@ -1,9 +1,10 @@
-//WriteやReadをnon blockingにすると
-//各行の処理が、実行完了しないまま次に進んでいることが目で見て分かります。
+//eventは必ずしもDoKernelやWriteReadBufferに絡めたものでないといけないわけではありません。
+//自分で"UserEvent"を作成することもできます。
+//注意としてはHCLGetEventLogs命令で"UserEvent"が扱えないことです。タイムスタンプ代わりにするのは難しそうです・・・
 #include "HSPCL64.as"
 	randomize
+	wait 1
 	HCLinit
-	//HCLSetDevice 0
 	prg=HCLCreateProgram("VecAdd.cl")
 	krn=HCLCreateKernel(prg,"vecAdd")
 	
@@ -20,21 +21,46 @@
 		host_B.cnt=cnt
 		loop
 	
-	HCLWriteBuffer clmem_A,host_A,n*4,,,0,0//event_id 0
-	HCLWriteBuffer clmem_B,host_B,n*4,,,0,1//event_id 1
+	HCLWriteBuffer clmem_A,host_A,n*4,,,1,0//event_id 0
+	HCLWriteBuffer clmem_B,host_B,n*4,,,1,1//event_id 1
 	
 	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
+
+	//UserEvent作成。これはHCLDoKrn1の実行開始タイミングを
+	//Eventで制御したいために作成
+	HCLCreateUserEvent 10//event_id 10
+	//これをした時点でevent id 10はCL_SUBMITEDの状態になる
+
+	//次に実行するHCLDoKrn1やReadBuffer系命令に、Event待ちしてもらう
+	//具体的にはevent id 10がCL_COMPLETEになるまでHCLDoKrn1の実行開始を待つ
+	HCLSetWaitEvent 10
 	
-	HCLDoKrn1 krn,n,64,2//event_id 2
-	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
-	
-	//eventから時間情報を取得。返り値は64bit int
+	HCLDoKrn1 krn,n,64,2//event_id 2。ここではキューに入れる操作をするだけ、実行はまだ
+	HCLFlush
+
+	//CPUのタイミングでCL_COMPLETEにセット。つまりGPUへGOサインを出すことができる
+	//ここでは3ms時間待つ
+	gosub*wait3ms
+	HCLSetUserEventStatus 10,CL_COMPLETE//この後HCLDoKrn1のカーネルの計算が走る
+	//
 	HCLFinish
+	
+	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
+	HCLFinish
+	
 	event_num=4
 	gosub*view1
 	gosub*view2
 	stop
 	
+
+*wait3ms
+	ms0=gettime(7)
+		repeat 9999999
+		ms1=gettime(7)
+		if (ms1-ms0+1000)\1000>=3:break
+		loop
+	return
 
 *view1
 	//まずはすべての計算時間を取得
@@ -71,10 +97,11 @@
 
 	scalex=end_time.(event_num-1)
 	
-
 	//計算時間をグラフで表示
 	//軸
 	line 30,30,30,450
+	line 30,30,27,35
+	line 30,30,33,35
 	pos 3,240
 
 	line 30,450,620,450
@@ -115,4 +142,5 @@
 			line int(lx),100+cnt*50,int(lx),130+cnt*50
 			
 		loop
+
 	return

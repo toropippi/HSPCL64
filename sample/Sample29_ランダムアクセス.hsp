@@ -6,9 +6,30 @@
 
 #include "HSPCL64.as"
 	HCLinit
-	prg=HCLCreateProgram("randaccess.cl")
+	source={"
+//簡易ランダム、ワングハッシュ
+uint wang_hash(uint seed)
+{
+	seed = (seed ^ 61) ^ (seed >> 16);
+	seed *= 9;
+	seed = seed ^ (seed >> 4);
+	seed *= 0x27d4eb2d;
+	seed = seed ^ (seed >> 15);
+	return seed;
+}
+
+__kernel void test(__global int *vram) {
+	uint ic = get_global_id(0);//0～1024*1024*256 つまり2^28
+	uint nweic=wang_hash(ic*99326473)%N;
+	vram[nweic]=get_global_id(0);//ここでのメモリアクセスはランダムである
+}
+"}
+
+	n=int64(1024)*1024*256//int型の要素数
+	clmemm=HCLCreateBuffer(n*4)//1GB vram取得
+	
+	prg=HCLCreateProgramWithSource(source,"-D N="+n+"")
 	krn=HCLCreateKernel(prg,"test")
-	clmemm=HCLCreateBuffer(int64(1024)*1024*1024)//1GB vram取得
 	
 	HCLSetKernel krn,0,clmemm
 

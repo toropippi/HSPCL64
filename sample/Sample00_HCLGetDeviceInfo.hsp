@@ -8,7 +8,7 @@
 	repeat HCLGetDeviceCount()
 		screen cnt,1280,840
 		HCLSetDevice cnt
-		mes "デバイスid								"+cnt
+		mes "デバイスid								"+HCLGetSettingDevice()
 		mes "プラットフォーム名							"+HCLGetDeviceInfo_s(CL_PLATFORM_NAME);プラットフォームid取得
 		mes "プラットフォームベンダー名						"+HCLGetDeviceInfo_s(CL_PLATFORM_VERSION);プラットフォームベンダー
 		mes "デバイス名								"+HCLGetDeviceInfo_s(CL_DEVICE_NAME);デバイス名取得

@@ -1,18 +1,6 @@
-//さらにeventから
-//CL_PROFILING_COMMAND_QUEUED:コマンドがキューに入った時間
-//CL_PROFILING_COMMAND_SUBMIT:コマンドがサブミットされた時間
-//も取得できます。(そこまで必要なのかというのはさておき)
-
-//基本的に時間取得系は
-//CL_PROFILING_COMMAND_QUEUED
-//CL_PROFILING_COMMAND_SUBMIT
-//CL_PROFILING_COMMAND_START
-//CL_PROFILING_COMMAND_END
-//の4種類です。
-//それぞれHCLGetEventLogsの第2引数の4,5,6,7に対応します。
-
-//このサンプルではCL_PROFILING_COMMAND_QUEUEDとCL_PROFILING_COMMAND_SUBMITのタイミングを線で
-//CL_PROFILING_COMMAND_START～CL_PROFILING_COMMAND_ENDを塗りつぶしでグラフにプロットします。
+//WriteやReadをnon blockingにすると
+//各行の処理が、実行完了しないまま次に進んでいることが目で見て分かります。
+//ただしNVIDIA GPUでは強制ブロッキングになってしまう不具合があるのでうまくいきません。result.pngも参照ください。
 #include "HSPCL64.as"
 	randomize
 	HCLinit
@@ -32,15 +20,19 @@
 		host_B.cnt=cnt
 		loop
 	
-	HCLWriteBuffer clmem_A,host_A,n*4,,,,0//event_id 0
-	HCLWriteBuffer clmem_B,host_B,n*4,,,,1//event_id 1
+	HCLWriteBuffer clmem_A,host_A,n*4,,,0,0//event_id 0
+	HCLWriteBuffer clmem_B,host_B,n*4,,,0,1//event_id 1
 	
 	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
 	
 	HCLDoKrn1 krn,n,64,2//event_id 2
-	HCLReadBuffer clmem_C,host_C,n*4,,,,3//event_id 3
+	
+	HCLFlush
+	
+	HCLReadBuffer clmem_C,host_C,n*4,,,0,3//event_id 3
 	
 	//eventから時間情報を取得。返り値は64bit int
+	HCLFinish
 	event_num=4
 	gosub*view1
 	gosub*view2

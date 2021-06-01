@@ -2,7 +2,6 @@
 	HCLinit
 	
 	n=1024*1024*32
-	dim host_A,n
 	clmem_A=HCLCreateBuffer(n*4)
 	clmem_B=HCLCreateBuffer(n*4)
 	
@@ -16,6 +15,14 @@
 	HCLCopyBuffer clmem_B,clmem_A,n*4,0,0
 
 	//åãâ ï\é¶
+	pos 0,0
+	mes "clmem_AÇÃíÜêg"
+		repeat 17
+		mes HCLReadIndex_i32(clmem_A,cnt)
+		loop
+
+	pos 320,0
+	mes "clmem_BÇÃíÜêg"
 		repeat 17
 		mes HCLReadIndex_i32(clmem_B,cnt)
 		loop
