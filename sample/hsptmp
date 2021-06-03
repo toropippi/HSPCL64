@@ -30,6 +30,7 @@ __kernel void fill1(__global char* a)
 	//コマンドキュー0では52のfillを配列の先頭から実行
 	HCLSetCommandQueue 0
 	HCLDokrn1 krnfill0,1,1,0//event id=0
+	HCLFlush
 
 	//コマンドキュー1では-11のfillを配列の末尾から実行
 	HCLSetCommandQueue 1
