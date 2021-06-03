@@ -1,4 +1,5 @@
 #include "HSPCL64.as"
+	randomize
 	HCLinit
 	n=1024*1024*3//3MbA‚±‚Ì‘å‚«‚³‚È‚çfill‚É­‚µŠÔ‚ª‚©‚©‚é‚Í‚¸
 
