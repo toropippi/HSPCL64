@@ -1,3 +1,5 @@
+//fill0：メモリの先頭から末尾に1byteずつ52を代入するコード
+//fill1：メモリの末尾から先頭に1byteずつ-11を代入するコード
 #include "HSPCL64.as"
 	randomize
 	HCLinit
@@ -47,15 +49,14 @@ __kernel void fill1(__global char* a)
 	event_num=2
 	gosub*view1
 	gosub*view2
-	
 	//配列の中身可視化
 	screen 2,1024,1024,0
 	HCLdim_i32FromBuffer data,clmem
 	mref vrm,66
 	memcpy vrm,data,n
 	redraw 1
-	stop
 	
+	stop
 
 *view1
 	//まずはすべての計算時間を取得
@@ -88,7 +89,6 @@ __kernel void fill1(__global char* a)
 
 	scalex=end_time.(event_num-1)
 	
-
 	//計算時間をグラフで表示
 	//軸
 	line 30,30,30,450
@@ -130,6 +130,5 @@ __kernel void fill1(__global char* a)
 			color 100,100,0
 			lx=subd_time.cnt*580/scalex+30
 			line int(lx),100+cnt*50,int(lx),130+cnt*50
-			
 		loop
 	return
