@@ -5,7 +5,7 @@
 #const WX 512
 #const WY 512
 
-	HCLSetDevice 1
+	//HCLSetDevice 0
 	prg=HCLCreateProgram("LifeGame.cl","-D WX="+WX+" -D WY="+WY+"")
 	krnGameMain=HCLCreateKernel(prg,"GameMain")
 	krnCellView=HCLCreateKernel(prg,"CellView")
@@ -70,8 +70,6 @@
 	
 	gosub*fpsview
 	count++
-
-	if count==30:bmpsave "aaa.bmp"
 	
 	if event_id>=8:event_id=0
 	goto*main
