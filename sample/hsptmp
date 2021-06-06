@@ -65,12 +65,13 @@
 		gsel 1
 		color 255,255,255:boxf:color 0,0,0
 		ViewEvents4 event_id-1
-		bmpsave "aaa.bmp"
 		gsel 0
 	}
 	
 	gosub*fpsview
 	count++
+
+	if count==30:bmpsave "aaa.bmp"
 	
 	if event_id>=8:event_id=0
 	goto*main
