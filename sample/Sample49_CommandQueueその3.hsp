@@ -3,6 +3,7 @@
 //今度はHCLSetCommandQueueで実行するCommandQueue番号を変えることでオーバーラップ実行させることが可能になります。
 //デフォルトで1deviceあたり切り替えられるCommandQueueは4つまであります。
 #include "HSPCL64.as"
+#include "ViewTimeStamp_module.as"
 	randomize
 	HCLinit
 	
@@ -39,27 +40,24 @@
 	HCLDoKrn1 krnid,65536*64/64,256,4//event id 4
 	HCLDoKrn1 krnid,65536*64/64,256,5//event id 5
 	HCLDoKrn1 krnid,65536*64/64,256,6//event id 6
-	HCLFlush//*1下記に注釈
 	HCLSetCommandQueue 1
 	HCLDoKrn1 krnid,65536*64/64,256,7//event id 7
 	HCLDoKrn1 krnid,65536*64/64,256,8//event id 8
 	HCLDoKrn1 krnid,65536*64/64,256,9//event id 9
 	HCLDoKrn1 krnid,65536*64/64,256,10//event id 10
 	HCLDoKrn1 krnid,65536*64/64,256,11//event id 11
-	HCLFlush
 	HCLSetCommandQueue 2
 	HCLDoKrn1 krnid,65536*64/64,256,12//event id 12
 	HCLDoKrn1 krnid,65536*64/64,256,13//event id 13
 	HCLDoKrn1 krnid,65536*64/64,256,14//event id 14
 	HCLDoKrn1 krnid,65536*64/64,256,15//event id 15
 	HCLDoKrn1 krnid,65536*64/64,256,16//event id 16
-	HCLFlush
 	HCLSetCommandQueue 3
 	HCLDoKrn1 krnid,65536*64/64,256,17//event id 17
 	HCLDoKrn1 krnid,65536*64/64,256,18//event id 18
 	HCLDoKrn1 krnid,65536*64/64,256,19//event id 19
 	HCLDoKrn1 krnid,65536*64/64,256,20//event id 20
-	HCLFlush
+	HCLFlush//*1下記に注釈
 
 
 	HCLSetCommandQueue 0
@@ -105,84 +103,14 @@
 
 	//タイムスタンプ可視化
 	screen 1,640,480,0
-	event_num=23
-	gosub*view1
-	gosub*view2
+	ViewEvents3 23
 	stop
-
-
-
-
-*view1
-	//まずはすべての計算時間を取得
-	dim_i64 kinfo,event_num
-	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
-	dim cmdq_no,event_num
-		repeat event_num
-		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
-		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
-		cmdq_no.cnt=HCLGetEventLogs(cnt,3)//3は何番のcommand queで実行されたか取得
-		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
-		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
-		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
-		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
-		loop
-		
-	offset=start_time.0
-	
-		repeat event_num
-		start_time.cnt-=offset
-		end_time.cnt-=offset
-		loop
-
-	scalex=end_time.(event_num-1)
-
-	//計算時間をグラフで表示
-	//軸
-	line 30,30,30,450
-	line 30,30,27,35
-	line 30,30,33,35
-	pos 0,240
-	font msgothic,12
-	mes "Queue\n番号"
-
-	line 30,450,620,450
-	line 620,450,615,447
-	line 620,450,615,453
-	pos 270,460
-	mes "時間(μs)"
-		repeat 9
-		line 30+cnt*580/8,450,30+cnt*580/8,445
-		pos 30+cnt*580/8,450
-		mes scalex*cnt/8000
-		loop
-		
-	return
-
-
-*view2
-	//実行単位で表示していく
-		repeat event_num
-			hsvcolor rnd(192),200,200
-			//まず実行時間を表示
-			lx=start_time.cnt*580/scalex+30
-			rx=end_time.cnt*580/scalex+30
-			yy=270-int(cmdq_no.cnt)*50
-			boxf int(lx),yy,int(rx),yy+30
-			
-			//文字表示
-			color 0,0,0
-			pos int(lx),yy-10
-			mes kinfos.cnt
-		loop
-	return
 
 
 //*1
 //HCLDoKrn1やHCLWriteBufferのblockingフラグにnonBlockingを指定したときのような「非同期実行」は
 //CPU側がこれらタスク(コマンド)をキューに入れたあと、GPUがアイドルならすぐ実行されるものと思われがちですがちょっと違います。
-//GPUがアイドル状態でもなかなかタスクを実行してくれないことがあります。(なんでこんな仕様?なのか)
+//GPUがアイドル状態でもなかなかタスクを実行してくれないことがあります。(なんでこんな仕様なのか?)
 //HCLFlushはキューのコマンドを強制的にデバイスに発行する命令です。
-//つまり投入したコマンドを早く実行しろ、と発破をかける命令です
+//つまり投入したコマンドを早く実行しろ、と発破をかける命令です。
+//HCLSetDeviceで指定しているデバイスのすべてのCommandQueueに対して行います。

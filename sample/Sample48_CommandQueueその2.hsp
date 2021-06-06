@@ -1,9 +1,7 @@
-//fill0：メモリの先頭から末尾に1byteずつ52を代入するコード
-//fill1：メモリの末尾から先頭に1byteずつ-11を代入するコード
-
-//今度はHCLSetCommandQueueで実行するCommandQueue番号を変えることで同時実行させることが可能になります。
-//この際、__global char* aに対して２つのカーネルから同時に書き込みを行うためデータ競合(data race)が起ります。
-//結果、メモリには52と-11が混在した状態になります。
+//先程のサンプルに加え
+//CommandQueueが違うとHCLReadBufferやWriteBufferも同時実行され、正しい結果が得られないことがあります。
+//一見不便なように思えますが逆に使いこなすことで
+//計算と転送のオーバーラップができることになます。これは1つのCommandQueueだけでは絶対にできません。
 
 #include "HSPCL64.as"
 #include "ViewTimeStamp_module.as"
@@ -35,6 +33,7 @@ __kernel void fill1(__global char* a)
 	clmem=HCLCreateBuffer(n)
 	HCLSetKernel krnfill0,0,clmem
 	HCLSetKernel krnfill1,0,clmem
+	dim data,n/4
 
 	//コマンドキュー0では52のfillを配列の先頭から実行
 	HCLSetCommandQueue 0
@@ -45,18 +44,25 @@ __kernel void fill1(__global char* a)
 	HCLDokrn1 krnfill1,1,1,1//event id=1
 	HCLFlush
 
+	//コマンドキュー2ではReadbuffer
+	HCLSetCommandQueue 2
+	HCLReadBuffer clmem,data,n,0,0,0,2//blocking=0 event id=2
+	HCLFlush
+
 	wait 10
 	
 	HCLSetCommandQueue 0
 	HCLFinish
 	HCLSetCommandQueue 1
 	HCLFinish
+	HCLSetCommandQueue 2
+	HCLFinish
 	//実行状況可視化
-	ViewEvents3 2
+	ViewEvents3 3
 	
 	//配列の中身可視化
 	screen 2,1024,1024,0
-	HCLdim_i32FromBuffer data,clmem
+	//HCLdim_i32FromBuffer data,clmem
 	mref vrm,66
 	memcpy vrm,data,n
 	redraw 1

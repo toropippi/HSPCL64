@@ -1,7 +1,7 @@
 //Sample30_奇数偶数分けその2共有メモリサンプル.hspのメモリ転送とカーネル実行を可視化
 //今度はkernel実行を無駄に多くして、つまり同じ計算をなんどもさせて、可視化したときの状況を見る。
-
 #include "HSPCL64.as"
+#include "ViewTimeStamp_module.as"
 	randomize
 	HCLinit
 	//HCLSetDevice 1
@@ -88,71 +88,5 @@
 
 	//タイムスタンプ可視化
 	screen 1,640,480,0
-	event_num=23
-	gosub*view1
-	gosub*view2
+	ViewEvents1 23
 	stop
-
-
-
-
-*view1
-	//まずはすべての計算時間を取得
-	dim_i64 kinfo,event_num
-	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
-		repeat event_num
-		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
-		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
-		
-		kinfo.cnt=HCLGetEventLogs(cnt,0)//はeventがなんのコマンドだったか取得
-		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
-		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
-		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
-		loop
-		
-	offset=start_time.0
-	
-		repeat event_num
-		start_time.cnt-=offset
-		end_time.cnt-=offset
-		loop
-
-	scalex=end_time.(event_num-1)
-
-	//計算時間をグラフで表示
-	//軸
-	line 30,30,30,450
-	pos 3,240
-
-	line 30,450,620,450
-	line 620,450,615,447
-	line 620,450,615,453
-	pos 270,460
-	font msgothic,12
-	mes "時間(μs)"
-		repeat 9
-		line 30+cnt*580/8,450,30+cnt*580/8,445
-		pos 30+cnt*580/8,450
-		mes scalex*cnt/8000
-		loop
-		
-	return
-
-
-*view2
-	//実行単位で表示していく
-		repeat event_num
-			hsvcolor rnd(192),200,200
-			//まず実行時間を表示
-			lx=start_time.cnt*580/scalex+30
-			rx=end_time.cnt*580/scalex+30
-			boxf int(lx),200,int(rx),230
-			
-			//文字表示
-			color 0,0,0
-			pos int(lx),189
-			mes kinfos.cnt
-		loop
-	return

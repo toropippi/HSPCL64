@@ -1,107 +1,95 @@
-//eventのタイムスタンプを表示するモジュール
-//他のコードから参照される
-
-
-#ifdef CL_VERSION_1_0
-
 #include "HSPCL64.as"
-	randomize
-	HCLinit
-	prg=HCLCreateProgram("VecAdd.cl")
-	krn=HCLCreateKernel(prg,"vecAdd")
+#define MB_ICONINFORMATION $40
+#define MB_OK 0
+#uselib "user32.dll"
+#func MessageBox "MessageBoxA" int,int,int,int
+
+	INT64_ZERO = int64(0)
+	INT64_ONE = int64(1)
+
+	a = "こんにちは"
+	b = "てすと"
+
+	// ウィンドウハンドルは64bitアプリでも32bit分しか使っていない
+	// https://msdn.microsoft.com/en-us/library/aa384203(VS.85).aspx
+	// int64(hwnd) でOK!
 	
-	n=65536
+	dimtype prmData, vartype("int64"), 4
+	prmData = int64(hwnd), varptr64(a), varptr64(b), int64(MB_OK | MB_ICONINFORMATION)
 	
-	dim host_A,n
-	dim host_B,n
-	dim host_C,n
-		repeat n
-		host_A.cnt=cnt
-		host_B.cnt=cnt
-		loop
-		
-	clmem_A=HCLCreateBufferFrom(n*4)
-	clmem_B=HCLCreateBufferFrom(n*4)
-	clmem_C=HCLCreateBuffer(n*4)
+	dimtype prmInfo, vartype("int64"), 4
+	prmInfo = INT64_ZERO, INT64_ZERO, INT64_ZERO, INT64_ZERO
 	
-	HCLSetKrns krn,clmem_A,clmem_B,clmem_C
+	// 
+	// callfunc64i()
+	// 外部関数を実行します
+	// 戻り値: int64
+	// 
+	// 第1引数: 実行先関数の引数データ（配列）
+	// 第2引数: 実行先関数の引数の型情報（配列）
+	//          引数が int/int64の場合は、INT64_ZERO
+	//          引数が flaot/doubleの場合は、INT64_ONE
+	//          を指定します。
+	// 第3引数: 関数のアドレス
+	// 第4引数: 実行先関数の引数の数 (= 配列の要素数)
+	// 
+	// ※ 戻り値がdouble版は「callfunc64d」関数
+	//            float版は「callfunc64f」関数
+	// 
+	mes "MessageBox()の戻り値: " + callfunc64i(prmData, prmInfo, varptr64(MessageBox), 4)
+
+	// 
+	// int64()
+	// int64型の変数に変換します
+	// 戻り値: int64
+	//
+	// 第1引数: 変換元値または変数(文字列,数値,実数)
+	// 
+	mes "int64最大値: " + int64("9223372036854775807")
 	
-	HCLDoKrn1 krn,n,64,0//event_id 0
+	// 
+	// qpoke
+	// バッファに8byte書き込み
+	// 
+	// ※ poke系命令の8byte版です。
+	//    使い方は同じです。
+	// 
+
+	sdim buf, 64
+	qpoke buf, 0, int64("9223372036854775807")
 	
-	HCLFinish
-	HCLReadBuffer clmem_C,host_C,n*4,,,,1//event_id 1
+	// 
+	// qpeek()
+	// バッファから8byte読み出し
+	// 戻り値: int64
+	// 
+	// ※ peek系関数の8byte版です。
+	//    使い方は同じです。
+	// 
+	mes "bufの先頭から8バイト読み込む: " + qpeek(buf, 0)
 	
-	//eventから時間情報を取得。返り値は64bit int
-	ViewEvents 2
-
-#endif
-
-
-
-
-
-
-#module ViewTimeStamp
-
-
-#deffunc ViewEvents int event_num
-	//まずはすべての計算時間を取得
-	dim_i64 kinfo,event_num
-	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
-		repeat event_num
-		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
-		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
-		
-		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
-		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
-		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
-		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt="KERNEL"
-		loop
-		
-	offset=start_time.0
+	//
+	// varptr64()
+	// 変数/命令/関数のポインタを返す
+	// 戻り値: int64
+	// 
+	// ※ varptr関数の64bit版です。
+	//    使い方は同じです。
+	// 
+	ptr = varptr64(MessageBox)
+	mes "MessageBox()のポインタ: " + ptr
 	
-		repeat event_num
-		start_time.cnt-=offset
-		end_time.cnt-=offset
-		loop
-
-	scalex=end_time.(event_num-1)
+	a = "あいうえお"
+	mes "a: " + a
+	aPtr = varptr64(a)
 	
-
-	//計算時間をグラフで表示
-	//軸
-	line 30,30,30,450
-	pos 3,240
-
-	line 30,450,620,450
-	line 620,450,615,447
-	line 620,450,615,453
-	pos 270,460
-	font msgothic,12
-	mes "時間(μs)"
-		repeat 9
-		line 30+cnt*580/8,450,30+cnt*580/8,445
-		pos 30+cnt*580/8,450
-		mes scalex*cnt/8000
-		loop
-
-
-
-
-	//実行単位で表示していく
-		repeat event_num
-			hsvcolor rnd(192),200,200
-			lx=start_time.cnt*580/scalex+30
-			rx=end_time.cnt*580/scalex+30
-			boxf int(lx),200,int(rx),240
-			pos int(lx),190-(cnt==2)*10
-			color 0,0,0
-			mes kinfos.cnt
-		loop
-	return
-
-
-
-#global
+	//
+	// dupptr64
+	// ポインタからクローン変数を作成
+	// 
+	// ※ dupptr命令の64bit版です。
+	//    使い方は同じです。
+	// 
+	
+	dupptr64 b, aPtr, 64, vartype("str")
+	mes "b: " + b

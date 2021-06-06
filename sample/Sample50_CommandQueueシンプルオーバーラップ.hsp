@@ -4,7 +4,7 @@
 #include "HSPCL64.as"
 	randomize
 	HCLinit
-	//HCLSetDevice 0
+	//HCLSetDevice 1
 	
 	n=1024*1024*32
 	local_size=128
@@ -38,14 +38,15 @@
 
 		HCLReadBuffer clmem_B.cnt,host_B,n*4,0,n*4*cnt,0,event_num
 		event_num++
-		HCLFlush
 		loop
+	HCLFlush
 	//ここまでオーバーラップ計算
 	//////////////////////////////////////
 		repeat 4
 		HCLSetCommandQueue cnt
 		HCLFinish
 		loop
+	
 	gosub*view1
 	gosub*view2
 	stop

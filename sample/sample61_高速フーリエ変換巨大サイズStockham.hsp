@@ -17,7 +17,7 @@
 	
 	ddim hs_A,N*2
 	wait 1
-	title "初期値生成中 10秒くらいかかります・・・"
+	title "CPUで初期値生成中 10秒くらいかかります・・・"
 	wait 1
 		repeat N*2
 		hs_A.cnt=0.0001*rnd(30000)
@@ -46,7 +46,7 @@
 		loop
 
 	wait 1
-	title "検算中。1分くらいかかります・・・"
+	title "CPUで検算中。1分くらいかかります・・・"
 	wait 1
 	gosub*DFT検算
 	stop
