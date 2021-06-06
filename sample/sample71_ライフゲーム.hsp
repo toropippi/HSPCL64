@@ -6,6 +6,8 @@
 #const WX 512
 #const WY 512
 
+	//HCLSetDevice 0
+	
 	prg=HCLCreateProgram("LifeGame.cl","-D WX="+WX+" -D WY="+WY+"")
 	krnGameMain=HCLCreateKernel(prg,"GameMain")
 	krnCellView=HCLCreateKernel(prg,"CellView")
