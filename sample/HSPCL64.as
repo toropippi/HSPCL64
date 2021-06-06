@@ -82,10 +82,11 @@
 #cmd DoubleToFloat $81
 #cmd FloatToDouble $82
 
+/*
 #cmd _ConvRGBtoBGR 		$83
 #cmd _ConvRGBAtoRGB 		$84
 #cmd _ConvRGBtoRGBA 		$85
-
+*/
 
 
 
@@ -641,8 +642,7 @@
 		return str(int64(0))
 	}
 
-
-
+/*
 #deffunc convRGBtoBGR array a,array b
 	sizea=varsize(a)
 	sizeb=varsize(b)
@@ -662,5 +662,5 @@
 	if sizea>sizeb:sizea=sizeb
 	if toumeiflg=0:_convRGBtoRGBA a,b,sizea,0,0,0,0:else:_convRGBtoRGBA a,b,sizea,1,tmpr,tmpg,tmpb
 	return
-
+*/
 #global
