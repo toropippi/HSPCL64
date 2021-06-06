@@ -1,0 +1,61 @@
+//GPUに確保したメモリの中で最大値、最小値を求めたいや、合計値を求めたい
+//というときに全部の配列を参照する必要があり、このような操作をリダクションといいます。
+//一般的にメモリ律速になるので最後に実行バンド幅の測定結果を表示しています。
+#include "HSPCL64.as"
+	HCLinit
+	n=128*1000*1000//128M要素
+
+	source={"
+//local_size=256固定
+__kernel void Sum(__global uint* A,__global uint* ans)
+{
+	uint gid = get_global_id(0);
+	uint lid = get_local_id(0);
+	uint grid = get_group_id(0);
+	__local uint asum[256];
+	
+	uint v=A[grid*512+lid]+A[grid*512+256+lid];
+	asum[lid]=v;
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	
+	if (lid<128) asum[lid]+=asum[lid+128];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<64) asum[lid]+=asum[lid+64];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<32) asum[lid]+=asum[lid+32];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<16) asum[lid]+=asum[lid+16];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<8) asum[lid]+=asum[lid+8];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<4) asum[lid]+=asum[lid+4];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<2) asum[lid]+=asum[lid+2];
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	if (lid==0) atomic_add(&ans[0],asum[0]+asum[1]);
+}
+"}
+
+
+	prg=HCLCreateProgramWithSource(source)
+	krnSum=HCLCreateKernel(prg,"Sum")
+
+	//メモリ初期化
+	memA=HCLCreateBuffer(n*4)
+	HCLFillBuffer_i32 memA,1
+	memans=HCLCreateBuffer(4)//答え格納用
+	HCLWriteIndex_i32 memans,0,0//0に初期化
+	
+	//リダクション
+	HCLSetkrns krnSum,memA,memans
+	HCLDokrn1 krnSum,n/2,256,0
+	mes "答え = "+HCLReadIndex_i32(memans,0)
+
+	//計算時間
+	start_time=HCLGetEventLogs(0,6)//6はCL_PROFILING_COMMAND_STARTのtime
+	end_time=HCLGetEventLogs(0,7)//7はCL_PROFILING_COMMAND_ENDのtime
+
+	bandwidth=4.0*n/(end_time-start_time)//単位はGB
+	mes "実行バンド幅 "+(bandwidth)+" GB/s"

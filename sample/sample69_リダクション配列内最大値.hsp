@@ -1,0 +1,81 @@
+//GPUに確保したメモリの中で最大値、最小値を求めたいや、合計値を求めたい
+//というときに全部の配列を参照する必要があり、このような操作をリダクションといいます。
+#include "HSPCL64.as"
+	HCLinit
+	n=128*1000*1000//128M要素
+
+	source={"
+//簡易ランダム、ワングハッシュ
+uint wang_hash(uint seed)
+{
+	seed = (seed ^ 61) ^ (seed >> 16);
+	seed *= 9;
+	seed = seed ^ (seed >> 4);
+	seed *= 0x27d4eb2d;
+	seed = seed ^ (seed >> 15);
+	return seed;
+}
+
+//初期値ランダム生成
+__kernel void GenerateRandom(__global uint *buf,uint in_seed) 
+{
+	uint id = get_global_id(0);
+	buf[id] = wang_hash(id*577219813+in_seed);
+}
+
+//local_size=256固定
+__kernel void MaxRdctn(__global int* A,__global int* ans)
+{
+	int gid = get_global_id(0);
+	int lid = get_local_id(0);
+	int grid = get_group_id(0);
+	__local int asum[256];
+	
+	int v=max(A[grid*512+lid],A[grid*512+256+lid]);
+	asum[lid]=v;
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	if (lid<128) asum[lid]=max(asum[lid],asum[lid+128]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<64) asum[lid]=max(asum[lid],asum[lid+64]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<32) asum[lid]=max(asum[lid],asum[lid+32]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<16) asum[lid]=max(asum[lid],asum[lid+16]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<8) asum[lid]=max(asum[lid],asum[lid+8]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<4) asum[lid]=max(asum[lid],asum[lid+4]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	if (lid<2) asum[lid]=max(asum[lid],asum[lid+2]);
+	barrier(CLK_LOCAL_MEM_FENCE);
+	
+	if (lid==0) 
+	{
+		atomic_max(&ans[0],max(asum[0],asum[1]));
+	}
+}
+"}
+
+	prg=HCLCreateProgramWithSource(source)
+	krnMaxRdctn=HCLCreateKernel(prg,"MaxRdctn")
+	krnRnd=HCLCreateKernel(prg,"GenerateRandom")
+
+	//メモリ初期化
+	memA=HCLCreateBuffer(n*4)
+	HCLSetKrns krnRnd,memA,rnd(9999)
+	HCLDoKrn1_sub krnRnd,n,64
+	memans=HCLCreateBuffer(4)//答え格納用
+	HCLWriteIndex_i32 memans,0,0//0に初期化
+	
+	//リダクション
+	HCLSetkrns krnMaxRdctn,memA,memans
+	HCLDokrn1 krnMaxRdctn,n/2,256,0
+	mes "答え = "+HCLReadIndex_i32(memans,0)
+
+	//計算時間
+	start_time=HCLGetEventLogs(0,6)//6はCL_PROFILING_COMMAND_STARTのtime
+	end_time=HCLGetEventLogs(0,7)//7はCL_PROFILING_COMMAND_ENDのtime
+
+	bandwidth=4.0*n/(end_time-start_time)//単位はGB
+	mes "実行バンド幅 "+(bandwidth)+" GB/s"

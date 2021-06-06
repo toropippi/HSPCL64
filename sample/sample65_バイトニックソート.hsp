@@ -5,7 +5,7 @@
 
 #include "HSPCL64.as"
 	HCLinit
-	M=24//冪指数
+	M=21//冪指数
 	N=1<<M//ソートしたい要素数
 
 	memA=HCLCreateBuffer(N*(4+4))//sizeof(key)+sizeof(index)
@@ -26,9 +26,10 @@
 	//ソート計算
 	HCLSetKernel krnSort,0,memA
 		repeat M
+		i=cnt
 		inc=1<<cnt
 			repeat cnt+1
-			HCLSetKrns krnSort,memA,inc,2 << cnt
+			HCLSetKrns krnSort,memA,inc,2 << i
 			HCLDoKrn1 krnSort,N/2,limit(N/2,1,256)
             inc /= 2
 			loop
@@ -39,4 +40,5 @@
 		repeat 20
 		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
 		loop
-	stop
+	
+	end

@@ -1,3 +1,4 @@
+//演算律速を再現するコード
 __kernel void SinDiv(__global int* a,__global int* b,int loopnum)
 {
 	uint gid = get_global_id(0);

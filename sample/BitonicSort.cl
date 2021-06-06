@@ -36,7 +36,7 @@ __kernel void GenerateRandom(__global data_t *buf)
 	uint id = get_global_id(0);
 	data_t b;
 	b.index=id;
-	b.key=wang_hash(id*577219813);
+	b.key=wang_hash(id*577219813+556);
 	buf[id]=b;
 }
 
