@@ -1,0 +1,33 @@
+■更新履歴
+	ver 1.0  
+	HCLDokrn2,3実装  
+	HCLdim_i64FromBuffer命令実装  
+	HCLdim_i32FromBuffer命令実装  
+	HCLdim_dpFromBuffer命令実装  
+	ソースリファクタリング&若干の高速化  
+	
+	ver 0.9  
+	HCLReadBufferやHCLWriteBufferのノンブロッキングモードがNVIDIA GPUでつかえないため、同命令のみ別スレッドを立ち上げて強制的にノンブロッキングできるよう命令追加  
+	DoubleToFloat実装  
+	FloatToDouble実装  
+	HCLReadBufferやHCLWriteBufferでメモリアクセスチェックを行ってエラーを出すように  
+	HCLFillBuffer系とReadIndex、WriteIndexの型指定(i32 i64 dp)を共通に  
+	HCLFillBufferで引数省略できるよう修正  
+	サンプル多数追加  
+	他バグ多数修正  
+	
+	ver 0.3  
+	HCLCreateBufferFrom,HCLFlushなど実装  
+	HCLFillBuffer実装  
+	  
+	ver 0.2  
+	2021/5/6  
+	HCLCallを実装  
+	  
+	Ver 0.1  
+	2020/2/14  
+	HSPCL32からHSPCL64へ命令群を移行  
+	OpenGL関連は全部削除  
+	fdimは削除、それに伴いHSP側でfloat型が使えなくなった  
+	clEvent関連を実装  
+	CommandQueue関連を実装  

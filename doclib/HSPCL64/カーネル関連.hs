@@ -4,19 +4,19 @@
 
 ;-------- header --------
 %dll
-HSPCL32.dll
+HSPCL64.dll
 
 %ver
-4.00
+1.0
 
 %date
-2014/09/04
+2021/06/07
 
 %author
-pippi
+toropippi
 
 %note
-hspcl32.as をインクルードしてください。
+hspcl64.as をインクルードしてください。
 
 %type
 GPGPU用プラグイン
