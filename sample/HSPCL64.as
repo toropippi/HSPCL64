@@ -104,12 +104,6 @@
 
 
 
-
-
-
-
-
-
 /* Error Codes */
 #define global CL_SUCCESS                                  0
 #define global CL_DEVICE_NOT_FOUND                         -1

@@ -19,7 +19,7 @@ toropippi
 hspcl64.as ‚ğƒCƒ“ƒNƒ‹[ƒh‚µ‚Ä‚­‚¾‚³‚¢B
 
 %type
-GPGPU—pƒvƒ‰ƒOƒCƒ“
+64bitƒ‰ƒ“ƒ^ƒCƒ€GPGPU—pƒvƒ‰ƒOƒCƒ“
 
 %group
 OpenCLƒJ[ƒlƒ‹ŠÖ˜A
@@ -36,7 +36,7 @@ HCLCreateProgram
 %prm
 (str p1,str p2)
 str p1 : ƒJ[ƒlƒ‹ƒ\[ƒXƒtƒ@ƒCƒ‹–¼  [in]
-var p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“  [in]
+str p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“,È—ª‰Â”\  [in]
 
 %inst
 ƒvƒƒOƒ‰ƒ€id‚ª64bit intŒ^‚Å•Ô‚è‚Ü‚·B
@@ -45,7 +45,7 @@ p2‚É‚Íƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“‚ğ“ü‚ê‚Ä‚­‚¾‚³‚¢B
 —áF"-D SCALE=111"
 
 ƒRƒ“ƒpƒCƒ‹‚³‚ê‚½OpenCLƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚ÍA‚»‚ÌƒfƒoƒCƒXã‚Å‚µ‚©g‚¦‚Ü‚¹‚ñB
-‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ğÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ğHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ğÀs‚µ‚Ä‰º‚³‚¢B
+‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ğÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ğHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLCreateProgram‚ğÀs‚µ‚Ä‰º‚³‚¢B
 
 %href
 HCLCreateProgramWithSource
@@ -62,7 +62,7 @@ HCLCreateProgramWithSource
 %prm
 (str p1,str p2)
 str p1 : ƒJ[ƒlƒ‹ƒ\[ƒX•¶š—ñ  [in]
-str p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“  [in]
+str p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“,È—ª‰Â”\  [in]
 
 %inst
 ƒvƒƒOƒ‰ƒ€id‚ª64bit intŒ^‚Å•Ô‚è‚Ü‚·B
@@ -71,8 +71,7 @@ p2‚É‚Íƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“‚ğ“ü‚ê‚Ä‚­‚¾‚³‚¢B
 —áF"-D SCALE=111"
 
 ƒRƒ“ƒpƒCƒ‹‚³‚ê‚½OpenCLƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚ÍA‚»‚ÌƒfƒoƒCƒXã‚Å‚µ‚©g‚¦‚Ü‚¹‚ñB
-‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ğÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ğHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ğÀs‚µ‚Ä‰º‚³‚¢B
-
+‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ğÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ğHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLCreateProgramWithSource‚ğÀs‚µ‚Ä‰º‚³‚¢B
 
 %href
 HCLCreateProgram
@@ -87,8 +86,8 @@ HCLCreateKernel
 ƒJ[ƒlƒ‹ì¬
 
 %prm
-(int p1,str p2)
-int p1 : ƒvƒƒOƒ‰ƒ€id          [in]
+(int64 p1,str p2)
+int64 p1 : ƒvƒƒOƒ‰ƒ€id          [in]
 str p2 : ƒJ[ƒlƒ‹ŠÖ”–¼        [in]
 
 %inst
@@ -111,8 +110,8 @@ HCLSetKernel
 ƒJ[ƒlƒ‹ƒZƒbƒg
 
 %prm
-int p1,int p2,p3,int p4
-int p1 : ƒJ[ƒlƒ‹id			[in]
+(int64 p1,int p2,p3,int p4)
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : ˆø”‚Ì‡”Ôp(x)‚Ìw’è		[in]
     p3 : ˆø”‚É“n‚·À‘Ì(’è”‚âmem_object)[in]
 int p4 : ƒ[ƒJƒ‹ƒƒ‚ƒŠƒtƒ‰ƒO		[in]
@@ -122,14 +121,18 @@ int p4 : ƒ[ƒJƒ‹ƒƒ‚ƒŠƒtƒ‰ƒO		[in]
 HCLDoKernel‚ÅŒvZ‚·‚é‘O‚É‚±‚ê‚ÅƒJ[ƒlƒ‹‚Ìˆø”‚ğ—\‚ßƒZƒbƒg‚µ‚Ä‚¨‚©‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñB
 
 
-—á‚¦‚ÎƒJ[ƒlƒ‹‘¤‚Ìƒ\[ƒX‚ªu__kernel void vector_add(__global int *array1,int arg2) {}v‚Æ‚¢‚¤‚à‚Ì‚È‚ç
+—á‚¦‚ÎƒJ[ƒlƒ‹‘¤‚Ìƒ\[ƒX‚ª
+
+__kernel void vector_add(__global int *array1,int arg2) {}
+
+‚Æ‚¢‚¤‚à‚Ì‚È‚ç
 HCLSetKernel p1,0,mem_object_A	//(©HCLCreateBuffer‚Åì¬‚µ‚½mem_object id)	;”z—ñ
 HCLSetKernel p1,1,5	//ˆø”2
 ‚Æ2‰ñ‚É“n‚èw’è‚µ‚Ü‚·B
 
-p2‚ÍAvector_add‚Ìˆø”‚Ìˆê”Ô¶‚ğ0‚Æ‚µ‚½”Ô†‚Æ‚µ‚Äl‚¦‚Ü‚·B
+p2‚ÍAvector_add‚Ìˆø”‚Ìˆê”Ô¶‚ğ0”Ô‚Æ‚µ‚Äl‚¦‚Ü‚·B
 
-‚P‰ñƒZƒbƒg‚·‚ê‚ÎŸƒZƒbƒg‚µ’¼‚·‚Ü‚Å“¯‚¶’l‚ªc‚è‚Ü‚·B
+‚P‰ñƒZƒbƒg‚·‚ê‚ÎŸƒZƒbƒg‚µ’¼‚·‚Ü‚Å“K‰‚³‚ê‘±‚¯‚Ü‚·B
 p3‚É‚Í64bit intŒ^A32bit intŒ^A•¶š—ñŒ^•Ï”AdoubleŒ^•Ï”‚ªw’è‚Å‚«‚Ü‚·B
 
 p4‚ğ0ˆÈŠO‚É‚·‚é‚ÆA‚»‚Ìˆø”‚Íƒ[ƒJƒ‹ƒƒ‚ƒŠi‹¤—Lƒƒ‚ƒŠj‚Æ‚µ‚Ä“o˜^‚³‚ê‚Ü‚·Bƒ[ƒJƒ‹ƒƒ‚ƒŠ‚ÍƒOƒ[ƒoƒ‹ƒƒ‚ƒŠ‚æ‚è—e—Ê‚ª­‚È‚¢•ª‚‘¬‚ÉƒAƒNƒZƒX‚ª‰Â”\‚È‘“Çæ‰Â”\ƒƒ‚ƒŠ‚Å‚·B
@@ -171,15 +174,22 @@ HCLSetKrns
 ƒJ[ƒlƒ‹ƒZƒbƒg
 
 %prm
-int p1,int p2,,,,,
-int p1 : ƒJ[ƒlƒ‹id			[in]
-int p2ˆÈ~ : ˆø”‚É“n‚·À‘Ì(’è”‚âmem_object)	[in]
+int64 p1,p2,,,,,
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
+p2ˆÈ~ : ˆø”‚É“n‚·À‘Ì(’è”‚âmem_object)	[in]
 
 %inst
 ƒJ[ƒlƒ‹‚Ìˆø”‚ğ‚Ü‚Æ‚ß‚Äw’è‚µ‚Ü‚·B
 
-HCLSetKernel‚Ìuˆø”‚Ì‡”Ôp(x)‚Ìw’èv‚ª0‚È‚çp2,1‚È‚çp3‚É‚ ‚½‚è‚Ü‚·B
-ƒ[ƒJƒ‹ƒƒ‚ƒŠ‚ÌƒTƒCƒYw’è‚Í‚Å‚«‚Ü‚¹‚ñB
+HCLSetKernel p1,0,mem_object_dpA
+HCLSetKernel p1,1,mem_object_dpB
+
+‚È‚ç
+
+HCLSetkrns p1,mem_object_dpA,mem_object_dpB
+
+‚Æ‚È‚è‚Ü‚·B
+‚È‚¨ƒ[ƒJƒ‹ƒƒ‚ƒŠ‚ÌƒTƒCƒYw’è‚Í‚Å‚«‚Ü‚¹‚ñB
 
 %href
 HCLSetDevice
@@ -190,6 +200,21 @@ HCLDoKrn1
 HCLDoKrn2
 HCLDoKrn3
 
+;--------
+
+%index
+HCLGetKernelName
+ƒJ[ƒlƒ‹–¼æ“¾
+
+%prm
+(int64 p1)
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
+
+%inst
+ƒJ[ƒlƒ‹‚Ì–¼‘O‚ğ•¶š—ñ‚Å•Ô‚µ‚Ü‚·B
+
+%href
+HCLCreateKernel
 ;--------
 
 %index
@@ -204,14 +229,15 @@ int p3 :ƒ[ƒJƒ‹ƒTƒCƒY(1ŸŒ³•À—ñˆ—”)	[in]
 p4ˆÈ~ :ˆø”‚É“n‚·À‘Ì(array‚âvar int‚È‚Ç‚Ì”’l)	[in,out]
 %inst
 
-HCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer“™‚ğ‚¹‚¸ƒJ[ƒlƒ‹‚ğˆê‹C‚ÉÀs‚µ‚Ä‚µ‚Ü‚·B
+HCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer“™‚ğ‚¹‚¸ƒJ[ƒlƒ‹‚ğÀs‚µ‚ÄŒ‹‰Ê‚ğ“¾‚Ü‚·B
+—á‚¦‚ÎOpenCL‚Å”z—ñ‚É’l‚ğ‘‚«‚Şˆ—‚ğ‘‚¢‚ÄÀs‚·‚é‚ÆAp4ˆÈ~‚Éw’è‚µ‚½HSP”z—ñ•Ï”‚ÉŒ‹‰Ê‚ª‘‚«‚Ü‚ê‚Ü‚·B
 p1‚Íƒ\[ƒXƒR[ƒh‚Ì•¶š—ñ
 p2‚É‚ÍƒOƒ[ƒoƒ‹ƒTƒCƒYiÀs‚µ‚½‚¢•À—ñˆ—”j
 p3‚É‚Íƒ[ƒJƒ‹ƒTƒCƒY
 p4ˆÈ~‚ÍƒJ[ƒlƒ‹‚É“n‚·ˆø”‚ğw’è‚µ‚Ä‰º‚³‚¢B
 
-p4ˆÈ~‚Ìˆø”‚Ì”‚ÆOpenCLƒJ[ƒlƒ‹“à‚Ìˆø”‚Ì”‚ª‡‚í‚È‚¢‚ÆƒGƒ‰[‚ª”­¶‚µ‚Ü‚·B
-—á‚¦‚ÎOpenCL‚Å”z—ñ‚É’l‚ğ‘‚«‚Şˆ—‚ğ‚·‚é‚ÆAp4ˆÈ~‚Éw’è‚µ‚½HSP”z—ñ•Ï”‚ÉŒ‹‰Ê‚ª‘‚«‚Ü‚ê‚Ü‚·B
+p4ˆÈ~‚Ìˆø”‚Ì”‚ÆOpenCLƒJ[ƒlƒ‹“à‚Ìˆø”‚Ì”‚ª‡‚í‚È‚¢‚ÆƒGƒ‰[‚É‚È‚è‚Ü‚·B
+
 
 “à•”‚ÅHCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer,HCLWriteBuffer,HCLReadBuffer,HCLReleaseKernel,HCLReleaseProgram,HCLReleaseBuffer‚ğg—p‚µ‚Ä‚¢‚Ü‚·B
 ‚±‚Ì–½—ß‚ÅŠm•Û‚µ‚½VRAM“™‚ÍA‚±‚Ì–½—ß‚ªI‚í‚é‚Ü‚Å‚É•K‚¸”jŠü‚³‚ê‚Ü‚·B
@@ -244,36 +270,42 @@ HCLDoKernel
 ƒJ[ƒlƒ‹Às
 
 %prm
-int p1,int p2,array p3,array p4
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1,int p2,array p3,array p4,int p5
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : work_dim(1`3)			[in]
-array p3:global_work_size		[in]
-array p4:local_work_size		[in]
+array p3 : global_work_size		[in]
+array p4 : local_work_size		[in]
+int p5 : event_id,È—ª‰Â”\		[in]
 %inst
 
 p1‚É‚ÍÀs‚µ‚½‚¢ƒJ[ƒlƒ‹id
 p2‚É‚Í1`3 (work dimensionƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚Æƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ÌŸŒ³)
-p3‚É‚ÍƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY(•À—ñˆ—”)‚ğ‹L‰¯‚·‚é•Ï”
-p4‚É‚Íƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ğ‹L‰¯‚·‚é•Ï”
+p3‚É‚ÍŸŒ³”‚É‰‚¶‚½ƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY(•À—ñˆ—”)‚ğ‹L‰¯‚·‚é•Ï”
+p4‚É‚ÍŸŒ³”‚É‰‚¶‚½ƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ğ‹L‰¯‚·‚é•Ï”
 ‚ğw’è‚µ‚Ä‚­‚¾‚³‚¢B
 p4‚Ì•Ï”‚Ì“à—e‚ª0‚Ìê‡AƒOƒ[ƒoƒ‹ƒ[ƒNƒAƒCƒeƒ€‚ğ‚Ç‚Ì‚æ‚¤‚Éƒ[ƒNƒOƒ‹[ƒv‚É•ªŠ„‚·‚é‚©‚Í OpenCL À‘•‚ªŒˆ’è‚µ‚Ü‚·B
+p5‚Íevent_id‚Å-1`65535‚Ì’l‚ğw’è‚Å‚«‚Ü‚·BÈ—ªƒfƒtƒHƒ‹ƒg‚Å‚Í-1‚Å‚·B
+ƒJ[ƒlƒ‹‚ÌÀsó‘Ô‚ğæ“¾‚·‚é‚É‚Íevent‚ğ‹L˜^‚·‚é•K—v‚ª‚ ‚èA0`65535‚Ì‚Æ‚«‚»‚Ìevent”Ô†‚ÆƒJ[ƒlƒ‹‚ª•R•t‚¯‚³‚ê‚Ü‚·B
+ˆÈ~A‚»‚Ì”Ô†‚Åevent“à—e‚Ìæ“¾(Àsó‹µAÀsŠJnŠÔAÀsI—¹ŠÔ‚È‚Ç)‚ªs‚¦‚Ü‚·B
+”Ô†‚Ìã‘‚«‚à‚Å‚«‚Ü‚·‚ªAã‘‚«‚³‚ê‚é‘O‚Ìeventî•ñ‚Í”jŠü‚³‚ê‚Ü‚·B
 
-
+‚±‚Ì–½—ß©‘Ì‚ÍÀs‚ªŠ®—¹‚·‚é‚Ü‚Å‘Ò‚Â–½—ß‚Å‚Í‚È‚­AOpenCLƒRƒ}ƒ“ƒh‚ğƒLƒ…[‚É“ü‚ê‚é‚¾‚¯‚Å‚ ‚èAÀÛ‚ÌƒJ[ƒlƒ‹‚ÌÀsI—¹‚ğ‘Ò‚Â‚É‚Íevent‚ğg‚¤‚©HCLFinish“™‚Å‘Ò‚Â‚±‚Æ‚É‚È‚è‚Ü‚·B
+‚±‚ê‚ÍˆêŒ©•¡G‚È‚æ‚¤‚Év‚¦‚Ü‚·‚ªAGPU‚ªŒvZ‚µ‚Ä‚¢‚éÅ’†‚ÉCPU‚ª•Ê‚Ìƒ^ƒXƒN‚Éˆ—‚ğ‰ñ‚¹‚é‚Æ‚¢‚¤—˜“_‚ª‚ ‚è‚Ü‚·B
 
 ¡‚±‚Ì–½—ß‚ğg‚¤‘O‚É
-–{ƒvƒ‰ƒOƒCƒ“‚ÌŠî–{ƒRƒ“ƒZƒvƒg‚Í¢ŠEˆêOpenCL‚ğŠÈ’P‚Éˆµ‚¦‚éƒvƒ‰ƒOƒCƒ“‚ğ–Úw‚µ‚ÄŠJ”­‚µ‚Ä‚¨‚è‚Ü‚·B
-‚»‚Ì‚½‚ß“Æ“Á‚Èˆ—‚ª‘½‚¢OpenCLiGPGPUj‚Ì‰Šú—‰ğ‚ğ•â•‚·‚é‚½‚ß‚É
+
+“Æ“Á‚Èˆ—‚ª‘½‚¢OpenCLiGPGPUj‚Ì‰Šú—‰ğ‚ğ•â•‚·‚é‚½‚ß‚É
 ˆ—‚ÌƒŒƒxƒ‹‚ğ‚R’iŠK‚É•ª‚¯‚Ä‚¨‚è‚Ü‚·B
 
 LV1	HCLCall		‚ğ—˜—p‚µ‚½OpenCLiŠÈ’PIj
 LV2	HCLDoKernel	‚ğ—˜—p‚µ‚½OpenCLi’†‚­‚ç‚¢Ij
 LV3	HCLDoKrn1`3‚ğ—˜—p‚µ‚½OpenCLi•’ÊIj
 
-©•ª‚ÌŠwK‚Ì—‰ğ“x‚É•¹‚¹‚ÄãˆÊ‚Ì–½—ß‚ğ—˜—p‚µ‚Ä’¸‚¯‚ê‚ÎK‚¢‚Å‚·B
-i“–‘Rˆ—‘¬“x‚ÍLV3‚Ì•û‚ª“–‘R‘¬‚¢‚Å‚·B‚µ‚©‚µ‚»‚Ì‚½‚ß‚Ì‚æ‚è‚“x‚Èƒƒ‚ƒŠŠÇ—AƒXƒŒƒbƒhŠÇ—‚Ì’m¯“™‚ª•K—v‚Æ‚È‚è‚Ü‚·j
+ŠwK‚Ì—‰ğ“x‚É•¹‚¹‚ÄãˆÊ‚Ì–½—ß‚ğ—˜—p‚µ‚Ä’¸‚¯‚ê‚ÎK‚¢‚Å‚·B
+“–‘Rˆ—‘¬“x‚ÍLV3‚Ì•û‚ª“–‘R‘¬‚¢‚Å‚·B‚µ‚©‚µ‚»‚Ì‚½‚ß‚Ì‚æ‚è‚“x‚Èƒƒ‚ƒŠŠÇ—AƒXƒŒƒbƒhŠÇ—‚Ì’m¯“™‚ª•K—v‚Æ‚È‚è‚Ü‚·B
 
-OpenCLiGPGPUj‚Ìå‚È–ğŠ„‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iƒOƒ‰ƒ{‘¤j‚Ìˆ—‚Ì‹´“n‚µ‚É‚È‚è‚Ü‚·B
-‚µ‚©‚µ‚»‚ê‚É‚Íƒƒ‚ƒŠ‚ÌŠÇ—AƒXƒŒƒbƒhŠÇ—‚È‚Ç‚ª•K—v‚Æ‚È‚èˆ—‚ª”ÏG‚É‚È‚è‚Ü‚½‰SÒ‚É‚Í—‰ğ‚µh‚¢‚Æl‚¦‚Ä‚¨‚è‚Ü‚·B
+OpenCL‚Ìå‚È–ğŠ„‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iGPU‘¤j‚Ìˆ—‚Ì‹´“n‚µ‚É‚È‚è‚Ü‚·B
+‚µ‚©‚µ‚»‚ê‚É‚Íƒƒ‚ƒŠ‚ÌŠÇ—AƒJ[ƒlƒ‹‚Ìw’è‚Æˆø”‚ÌƒZƒbƒg‚È‚Ç‚ª•K—v‚Æ‚È‚èˆ—‚ª”ÏG‚É‚È‚è‚Ü‚½‰SÒ‚É‚Í—‰ğ‚µh‚¢‚Æl‚¦‚Ä‚¨‚è‚Ü‚·B
 
 ‚»‚Ì‚½‚ßOpenCL‚ğ‚±‚ê‚©‚ç—˜—p‚µ‚æ‚¤AŠwK‚µ‚æ‚¤‚Æ‚·‚é•û‚Í
 g—pÒ‚Ìˆ—‚ğŠÈ‘f‰»‚Å‚«‚éHCLCall‚©‚ç‚Ì—˜—p‚ğƒIƒXƒXƒ‚¢‚½‚µ‚Ü‚·B
@@ -296,7 +328,8 @@ HSPƒ†[ƒU[‚Æ‚µ‚ÄHCLDoKerneliOpneCLƒvƒ‰ƒOƒCƒ“j‚ğ—˜—p‚·‚éA—‰ğ‚Ìã‚ÅçT‚«‚â‚·
 	2.‚»‚Ìƒ\[ƒX‚ÌŠÖ”‚ğuƒJ[ƒlƒ‹v‚ÆŒ¾‚í‚ê‚é–½—ß’PˆÊ‚ğHSPã‚ÅŒÅ—L‚Ì–½—ßiHCLCreateKernelj‚Åì¬‚·‚éB
 
 
-	3.ƒJ[ƒlƒ‹ŠÖ”‚Ö‚Ìˆø”‚ğƒZƒbƒg‚·‚éÛA‚»‚Ìˆø”‚Í@CL_mem_object id‚Æ‚¢‚¤ŒÅ—L‚ÌƒIƒuƒWƒFƒNƒgŒ`®‚Å‚ ‚é•K—v‚ª‚ ‚éBCL_mem_object@id‚Í64bit intŒ^‚Ì”’l‚Å‚ ‚éB
+	3.ƒJ[ƒlƒ‹ŠÖ”‚Ö‚Ìˆø”‚ğƒZƒbƒg‚·‚éÛA‚»‚Ìˆø”‚Í@CL_mem_object id‚Æ‚¢‚¤ŒÅ—L‚ÌƒIƒuƒWƒFƒNƒgŒ`®‚Å‚ ‚é•K—v‚ª‚ ‚éB
+	CL_mem_object@id‚Í64bit intŒ^‚Ì”’l‚Å‚ ‚éB
 	‚»‚ÌƒIƒuƒWƒFƒNƒg‚ğ—pˆÓ‚·‚é‚É‚ÍHSPã‚ÅŒÅ—L‚Ì–½—ßHCLCreateBuffer‚É‚Äì¬‚·‚éB
 	‚Ü‚½‚»‚ÌƒIƒuƒWƒFƒNƒg‚ÉHSPã‚Å—pˆÓ‚µ‚½”z—ñ‚ğ“ü‚ê‚İ‚½‚¢‚ÍHSPã‚ÅŒÅ—L‚Ì–½—ßHCLWriteBuffer‚É‚Ä“ü‚ê‚ŞB
 @
@@ -308,7 +341,6 @@ HSPƒ†[ƒU[‚Æ‚µ‚ÄHCLDoKerneliOpneCLƒvƒ‰ƒOƒCƒ“j‚ğ—˜—p‚·‚éA—‰ğ‚Ìã‚ÅçT‚«‚â‚·
 	6.‚»‚µ‚Ä‚»‚ÌŒ‹‰Ê‚ğQÆ‚·‚é‚ÍHSPã‚ÌŒÅ—L‚Ì–½—ßiHCLReadBufferj‚Åƒf[ƒ^‚ğ–ß‚µ‚Ä‚±‚È‚¯‚ê‚Î‚È‚ç‚È‚¢B
 
 ‚±‚Ì‚æ‚¤‚Èˆ—‚ª•K—v‚Æ‚È‚é‚Ì‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iGPU‘¤j‚Ìˆ—/ƒƒ‚ƒŠŠÇ—‚ª•ÊŒÂ‚Æ‚È‚Á‚Ä‚¢‚é‚©‚ç‚Å‚·B
-‚»‚ÌŠÔ‚Ì‹´“n‚µ‚ğs‚¤‚Ì‚ªOpneCL‚Å‚ ‚èA‚»‚Ì‚½‚ß‚É“Æ“Á‚Èˆ—‚ª•K—v‚È‚Á‚Ä‚¨‚è‚Ü‚·B
 ‚È‚¨•Ö‹XãGPU‘¤‚Æ‘‚¢‚Ä‚¢‚Ü‚·‚ªAOpenCLƒfƒoƒCƒX‚ªIntel CPU‚âAMD CPU‚Ìê‡‚à‚ ‚è‚¦‚Ü‚·B‚»‚Ìê‡‚Å‚àƒƒ‚ƒŠŠÇ—‚ª•ÊŒÂ‚Å‚ ‚é‚±‚Æ‚Í•Ï‚í‚è‚È‚¢‚Å‚·B¦‚Â‚Ü‚èSVM‚Íg‚¦‚È‚¢(ver1.0“_)
 
 
@@ -319,7 +351,7 @@ OpenCL‚¾‚¯‚Å‚È‚­CUDA‚Å‚àl‚¦•û‚ğ‚µ‚Ü‚·B
 
 
 html{
-<img src="./doclib/HSPCL32/thumbs/d22.png">
+<img src="./doclib/HSPCL64/thumbs/d22.png">
 }html
 
 
@@ -340,7 +372,67 @@ VRAMƒrƒfƒIƒƒ‚ƒŠ[ƒfƒoƒCƒXƒƒ‚ƒŠ[ƒOƒ[ƒoƒ‹ƒƒ‚ƒŠ[GDDR6iƒAƒNƒZƒXˆê”Ô’
 ‹¤—Lƒƒ‚ƒŠ[‚PŸƒLƒƒƒbƒVƒ…ƒ[ƒJƒ‹ƒƒ‚ƒŠ[i­‚µ‘‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å__local‚Åw’è‚µ‚½•Ï”
 ƒvƒ‰ƒCƒx[ƒgƒƒ‚ƒŠ[ƒŒƒWƒXƒ^iˆê”Ô‘‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å‰½‚àw’è‚µ‚È‚©‚Á‚½‚Ì•Ï”(uint ic@‚Æ‚©‚Í‚±‚ê‚ğ‚³‚µ‚Ä‚¢‚é)
 
-ƒvƒƒOƒ‰ƒ}‚ÍOpenCL‚Åƒf[ƒ^•À—ñˆ—‚ğs‚¤‚½‚ß‚ÉƒCƒ“ƒfƒNƒX‹óŠÔ‚ÌŸŒ³”Aƒ[ƒNƒTƒCƒY‚Ì‘”Aƒ[ƒJƒ‹ƒTƒCƒY‚ğw’è‚·‚é‚±‚Æ‚ÅƒCƒ“ƒfƒNƒX‹óŠÔ‚ğ’è‹`‚µ‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB
+ƒvƒƒOƒ‰ƒ}‚ÍOpenCL‚Åƒf[ƒ^•À—ñˆ—‚ğs‚¤‚½‚ß‚ÉƒCƒ“ƒfƒNƒX‹óŠÔ‚ÌŸŒ³”Aƒ[ƒNƒTƒCƒY‚Ì‘”Aƒ[ƒJƒ‹ƒTƒCƒY‚ğw’è‚·‚é‚±‚Æ‚ÅƒCƒ“ƒfƒNƒX‹óŠÔ‚ğ’è‹`‚µ‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB(Œãq)
+
+ˆÈ‰º‚ÉOpenCL C‚Å‚ÌƒOƒ[ƒoƒ‹id‚È‚Ç‚Ìg‚¢•û‚É‚Â‚¢‚Ä‹LÚ‚µ‚Ü‚·B
+
+—á
+work_dim=2
+global_work_size=4,6
+local_work_size=2,3
+‚ğw’è‚µ‚½‚Æ‚µ‚Ü‚·B
+
+html{
+<img src="./doclib/HSPCL64/thumbs/d22.png">
+}html
+
+•À—ñÀs‚³‚ê‚éƒXƒŒƒbƒh”‚Í4*6‚Ì24ŒÂ‚Æ‚È‚è‚Ü‚·B
+
+¡“x‚ÍƒJ[ƒlƒ‹‘¤‚ÌƒTƒ“ƒvƒ‹‚Å‚·B
+ƒJ[ƒlƒ‹ƒ\[ƒX‚Å‚Í
+__kernel void vector_add(__global double *A, __global double *B, __local double block[] , int bekii, int n) {
+	int i0 = get_global_id(0);
+	int i1 = get_global_id(1);
+EEEEEEEEEŒvZˆ—•”•ªEEEEEEEE
+}
+
+‚Æ‚È‚Á‚Ä‚¢‚é‚Æ‚µ‚Ü‚·B
+ƒJ[ƒlƒ‹‚Í24ŒÂ•À—ñì“®‚µ‚Ü‚·‚ª‚»‚ê‚¼‚ê‚ğŒ©•ª‚¯‚éid‚ª‚ ‚èA‚»‚ê‚ªget_global_id‚Åæ“¾‚Å‚«‚Ü‚·B
+
+get_global_id(0)‚Í0`3‚ğ
+get_global_id(1)‚Í0`5‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
+
+get_local_id ‚Íƒ[ƒNƒOƒ‹[ƒv“à‚Ì¯•Êid‚ğ–ß‚µ‚Ü‚·B
+get_local_id(0)‚Í0`1‚ğ
+get_local_id(1)‚Í0`2‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
+
+get_group_id‚Íƒ[ƒNƒOƒ‹[ƒv‚ÌƒOƒ‹[ƒv¯•Ê”Ô†‚ğ–ß‚µ‚Ü‚·B
+get_group_id(0)‚Í0`1
+get_group_id(1)‚Í0`1‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
+
+get_global_size‚ÍƒOƒ[ƒoƒ‹ƒTƒCƒY‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
+get_global_size(0)‚Í6
+get_global_size(1)‚Í3
+‚Æ‚È‚è‚Ü‚·B
+
+get_local_size‚Íƒ[ƒJƒ‹ƒTƒCƒY‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
+get_local_size(0)‚Í2
+get_local_size(1)‚Í3
+‚Æ‚È‚è‚Ü‚·
+
+get_num_groups‚ÍƒOƒ‹[ƒv”‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
+get_num_groups(0)‚Í3
+get_num_groups(1)‚Í1
+‚Æ‚È‚è‚Ü‚·
+
+
+ˆÈ‰ºA24ƒXƒŒƒbƒh‚ÌŠe’l‚Ì}
+
+html{
+<img src="./doclib/HSPCL64/thumbs/d2.png">
+}html
+
+
 
 
 ¡global_work_size‚Ìw’è
@@ -435,65 +527,6 @@ AMD GPU‚Ì‚±‚Æ‚àl‚¦‚é‚Æ64‚ÅŠ„‚èØ‚ê‚é‚±‚Æ‚ª•K—v‚É‚È‚è‚Ü‚·B
 ‚È‚Ì‚Å–`“ª‚É‘‚¢‚½64,128,256‚ª—Ç‚¢‚Æ‚¢‚¤Œ‹˜_‚É‚È‚èA512,1024‚Íˆê•”‚ÌGPU‚ÅƒGƒ‰[‚ªo‚é‚Ì‚Å‚»‚±‚Ü‚Å‘å‚«‚¢”‚Íw’è‚µ‚È‚¢‚Ù‚¤‚ª–³“ïA‚Æ‚¢‚¤l‚¦‚É‚È‚è‚Ü‚·B
 ‚ ‚­‚Ü‚Å„‚Ìl‚¦‚È‚Ì‚ÅA“š‚¦‚Í‚È‚¢‚à‚Ì‚¾‚Æ‚Ív‚¢‚Ü‚·B‹†‹É“I‚É‚Ílocal_work_size‚ğ‘Sƒpƒ^[ƒ“‚µ‚ÄÅ‘¬‚Ì‚ğÌ—p‚·‚é‚Ì‚ª—Ç‚¢‚Å‚·B
 
-¡NDrange
-ˆÈ‰º‚Éƒ[ƒNƒOƒ‹[ƒv‚âƒOƒ[ƒoƒ‹id‚È‚Ç‚Ì—pŒê‚âg‚¢•û‚Ì‰ğà‚ğÚ‚¹‚Ü‚·B
-
-—á
-work_dim=2
-global_work_size=4,6
-local_work_size=2,3
-‚ğw’è‚µ‚½‚Æ‚µ‚Ü‚·B
-
-html{
-<img src="./doclib/HSPCL32/thumbs/d22.png">
-}html
-
-•À—ñÀs‚³‚ê‚éƒXƒŒƒbƒh”‚Í4*6‚Ì24ŒÂ‚Æ‚È‚è‚Ü‚·B
-
-¡“x‚ÍƒJ[ƒlƒ‹‘¤‚ÌƒTƒ“ƒvƒ‹‚Å‚·B
-ƒJ[ƒlƒ‹ƒ\[ƒX‚Å‚Í
-__kernel void vector_add(__global double *A, __global double *B, __local double block[] , int bekii, int n) {
-	int i0 = get_global_id(0);
-	int i1 = get_global_id(1);
-EEEEEEEEEŒvZˆ—•”•ªEEEEEEEE
-}
-
-‚Æ‚È‚Á‚Ä‚¢‚é‚Æ‚µ‚Ü‚·B
-ƒJ[ƒlƒ‹‚Í24ŒÂ•À—ñì“®‚µ‚Ü‚·‚ª‚»‚ê‚¼‚ê‚ğŒ©•ª‚¯‚éid‚ª‚ ‚èA‚»‚ê‚ªget_global_id‚Åæ“¾‚Å‚«‚Ü‚·B
-
-get_global_id(0)‚Í0`3‚ğ
-get_global_id(1)‚Í0`5‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
-
-get_local_id ‚Íƒ[ƒNƒOƒ‹[ƒv“à‚Ì¯•Êid‚ğ–ß‚µ‚Ü‚·B
-get_local_id(0)‚Í0`1‚ğ
-get_local_id(1)‚Í0`2‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
-
-get_group_id‚Íƒ[ƒNƒOƒ‹[ƒv‚ÌƒOƒ‹[ƒv¯•Ê”Ô†‚ğ–ß‚µ‚Ü‚·B
-get_group_id(0)‚Í0`1
-get_group_id(1)‚Í0`1‚ğ‚»‚ê‚¼‚ê‚Ìƒ[ƒNƒAƒCƒeƒ€‚É–ß‚µ‚Ü‚·BiˆÈ‰º‚Ì}QÆj
-
-get_global_size‚ÍƒOƒ[ƒoƒ‹ƒTƒCƒY‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
-get_global_size(0)‚Í6
-get_global_size(1)‚Í3
-‚Æ‚È‚è‚Ü‚·B
-
-get_local_size‚Íƒ[ƒJƒ‹ƒTƒCƒY‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
-get_local_size(0)‚Í2
-get_local_size(1)‚Í3
-‚Æ‚È‚è‚Ü‚·
-
-get_num_groups‚ÍƒOƒ‹[ƒv”‚ÅA‚Ç‚Ìƒ[ƒNƒAƒCƒeƒ€‚Å‚à–ß‚·’l‚Í“¯‚¶’l‚Å
-get_num_groups(0)‚Í3
-get_num_groups(1)‚Í1
-‚Æ‚È‚è‚Ü‚·
-
-
-ˆÈ‰ºA24ƒXƒŒƒbƒh‚ÌŠe’l‚Ì}
-
-html{
-<img src="./doclib/HSPCL64/thumbs/d2.png">
-}html
-
 
 ¡g—p’ˆÓ
 (1)
@@ -506,10 +539,6 @@ localsize=8,8,4
 uglobal_work_size‚ªlocal_work_size ‚Å®œ‚Å‚«‚È‚¢A‚Ü‚½‚Ílocal_work_size[0]*local_work_size[1]*local_work_size[2]‚ªAˆê‚Â‚Ìƒ[ƒNƒOƒ‹[ƒv“à‚Ìƒ[ƒNƒAƒCƒeƒ€”‚ÌÅ‘å’l‚ğ’´‚¦‚½v
 ‚Æ‚¢‚¤ƒƒbƒZ[ƒW‚ªo‚Ü‚·B
 
-
-(2)
-‚±‚Ì–½—ß‚ÍƒJ[ƒlƒ‹‚ğÀs‚·‚é‚í‚¯‚Å‚Í‚È‚­ƒJ[ƒlƒ‹‚ğƒLƒ…[‚É“ü‚ê‚é‚¾‚¯‚È‚Ì‚ÅA‚±‚Ì–½—ß‚ğÀs‚µ‚½‚ ‚Æ‚ÉŒvZ‚ªI—¹‚µ‚Ä‚¢‚é‚í‚¯‚Å‚Í‚ ‚è‚Ü‚¹‚ñBƒ^ƒXƒN‚ÌŠmÀ‚ÈI—¹‚É‚ÍHCLWaitTask‚ğg‚Á‚Ä‚­‚¾‚³‚¢B‚½‚¾‚µHCLWaitTask‚ğg‚í‚È‚­‚Ä‚àAHCLDoKernel‚ÌŒãHCLReadBuffer‚ÅŒvZŒ‹‰Ê‚Ìƒf[ƒ^‚ğ“Ç‚İo‚»‚¤‚Æ‚µ‚½ê‡AHCLReadBuffer‚ğÀs‚µ‚½“_‚Å•K‚¸HCLDoKernel‚Å‘—‚Á‚½ƒJ[ƒlƒ‹‚Ìˆ—‚ªI—¹‚·‚é‚æ‚¤‚Èd—l‚É‚È‚Á‚Ä‚¢‚éê‡‚à‚ ‚è‚Ü‚·(‹@í‚É‚æ‚é)B‚±‚Ìê‡HCLWaitTask‚ğg‚í‚È‚­‚Ä‚à•K‚¸ŒvZŒ‹‰Ê‚ªHCLReadBuffer‚Å“Ç‚İo‚¹‚é‚Æ‚¢‚¤‚±‚Æ‚Å‚·B
-­X–Ê“|‚Èd—l‚Å‚·‚ªAƒJ[ƒlƒ‹‚ğƒLƒ…[‚É“ü‚ê‚½Œã‚Í‚·‚®‚ÉŸ‚Ì–½—ß‚ÉˆÚ‚è‚Ü‚·‚Ì‚ÅACPU‚ª–³‘Ê‚ÈŠÔ‚ğ‘Ò‚Â‚±‚Æ‚Í‚È‚¢‚Æ‚¢‚¤ƒƒŠƒbƒg‚ª‚ ‚è‚Ü‚·B
 
 ¡ƒJ[ƒlƒ‹ƒ\[ƒX‚É‚Â‚¢‚Ä
 (1)
@@ -597,6 +626,13 @@ http://sssiii.seesaa.net/article/309874057.html
 
 %href
 HCLSetKernel
+HCLSetKrns
+HCLCall
+HCLDokrn1
+HCLDokrn1_sub
+HCLDokrn2
+HCLDokrn3
+
 ;--------
 
 %index
@@ -604,34 +640,32 @@ HCLDoKrn1
 ˆêŸŒ³‚ÅƒJ[ƒlƒ‹Às
 
 %prm
-int p1,int p2,int p3
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1,int p2,int p3
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
+int p4 : event_id,È—ª‰Â”\		[in]
 
 %inst
-work_dim‚ª1‚Ìê‡‚ÌHCLDoKernel‚Æ“¯‚¶‚Å‚·B
+“®ì‚Íwork_dim‚ª1‚Ìê‡‚ÌHCLDoKernel‚Æ“¯‚¶‚Å‚·B
 
 p3‚ª0‚Ìê‡AƒOƒ[ƒoƒ‹ƒ[ƒNƒAƒCƒeƒ€‚ğ‚Ç‚Ì‚æ‚¤‚Éƒ[ƒNƒOƒ‹[ƒv‚É•ªŠ„‚·‚é‚©‚Í OpenCL À‘•‚ªŒˆ’è‚µ‚Ü‚·B
+p4‚Íevent_id‚Å-1`65535‚Ì’l‚ğw’è‚Å‚«‚Ü‚·BÈ—ªƒfƒtƒHƒ‹ƒg‚Å‚Í-1‚Å‚·BÚ×‚ÍHCLDokernel‚ğQÆ‚­‚¾‚³‚¢B
 
 ¡‚±‚Ì–½—ß‚ğg‚¤‘O‚É
 LV3	HCLDoKrn1`3‚ğ—˜—p‚µ‚½OpenCL
 OpenCLiGPGPUj‚Ì‰Šú—‰ğ‚ğ•â•‚·‚é‚½‚ß‚ÉƒŒƒxƒ‹‚ğ‚R’iŠK‚É•ª‚¯‚Ä‚¨‚è‚Ü‚µ‚½‚ª
 HCLDoKrn1`3‚ÍLV3‚Æ‚È‚Á‚Ä‚¨‚è‚Ü‚·B
 
-‚±‚Ì’iŠK‚Å’Êí‚ÌOpenCL‚Æ“¯‚¶ƒŒƒxƒ‹‚Ìˆ—‚ğs‚¢‚Ü‚·B
-‚±‚Ì’iŠK‚Ü‚Å‚±‚ç‚ê‚½ê‡‚Í’Êí‚ÌƒTƒCƒg‚È‚Ç‚²Ql‚È‚ç‚ê‚é‚æ‚¤‚¨Šè‚¢’v‚µ‚Ü‚·B
-
-
 
 %href
 HCLDoKernel
-HCLSetDev
-HCLSetKernel
+HCLCall
 HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
-
+HCLSetKernel
+HCLSetKrns
 ;--------
 
 
@@ -642,10 +676,11 @@ HCLDoKrn1_sub
 ˆêŸŒ³‚ÅƒJ[ƒlƒ‹Às
 
 %prm
-int p1,int p2,int p3
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1,int p2,int p3
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
+int p4 : event_id,È—ª‰Â”\		[in]
 
 %inst
 
@@ -656,13 +691,14 @@ HCLDoKrn1‚Å‚Íglobal_work_size‚ªlocal_work_size‚ÅŠ„‚èØ‚ê‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñ‚Å‚µ‚½
 
 ‚±‚Ì–½—ß‚Å‚Í1‰ñ–Ú‚Élocal_work_size‚ÅŠ„‚èØ‚ê‚é•ª‚¾‚¯‚Ìglobal_work_size‚ğÀs‚µA2‰ñ–Ú‚É‚ ‚Ü‚è‚Ì’[”local_work_sizeglobal_work_size‚Æ‚µ‚ÄÀs‚µ‚Ü‚·B‚±‚Ì‚Æ‚«uget_global_id(0)v‚ª‘±‚«‚©‚çn‚Ü‚é‚æ‚¤‚É‚È‚Á‚Ä‚¢‚Ü‚·B
 ‚½‚¾‚µuget_group_id(0)v‚Ì’l‚Í0‚É‚È‚Á‚Ä‚µ‚Ü‚¢‚Ü‚·B
-
 p3‚É0‚Íw’è‚Å‚«‚Ü‚¹‚ñB
+p4‚Ìevent id‚ÍÈ—ªƒfƒtƒHƒ‹ƒg‚Å-1‚ÅA0`65535‚Ì’l‚ğw’è‚Å‚«‚Ü‚·‚ª‹L˜^‚³‚ê‚é‚Ì‚Íu’[”‚¶‚á‚È‚¢•û‚ÌƒJ[ƒlƒ‹v‚Ì‚İ‚Å‚·B
+
 
 %href
 HCLDoKernel
-HCLSetDev
 HCLSetKernel
+HCLSetKrns
 HCLDoKrn1
 HCLDoKrn2
 HCLDoKrn3
@@ -670,19 +706,18 @@ HCLDoKrn3
 ;--------
 
 
-
-
 %index
 HCLDoKrn2
 ƒjŸŒ³‚ÅƒJ[ƒlƒ‹Às
 
 %prm
-int p1,int p2,int p3,int p4,int p5
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1,int p2,int p3,int p4,int p5
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : global_work_size.0		[in]
 int p3 : global_work_size.1		[in]
 int p4 : local_work_size.0		[in]
 int p5 : local_work_size.1		[in]
+int p6 : event_id,È—ª‰Â”\		[in]
 %inst
 work_dim‚ª2‚Ìê‡‚ÌHCLDoKernel‚Æ“¯‚¶‚Å‚·B
 
@@ -690,8 +725,8 @@ p4‚ª0‚Ìê‡AƒOƒ[ƒoƒ‹ƒ[ƒNƒAƒCƒeƒ€‚ğ‚Ç‚Ì‚æ‚¤‚Éƒ[ƒNƒOƒ‹[ƒv‚É•ªŠ„‚·‚é‚©‚Í Op
 
 %href
 HCLDoKernel
-HCLSetDev
 HCLSetKernel
+HCLSetKrns
 HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn3
@@ -703,14 +738,15 @@ HCLDoKrn3
 OŸŒ³‚ÅƒJ[ƒlƒ‹Às
 
 %prm
-int p1,int p2,int p3,int p4,int p5,int p6,int p7
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1,int p2,int p3,int p4,int p5,int p6,int p7
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 int p2 : global_work_size.0		[in]
 int p3 : global_work_size.1		[in]
 int p4 : global_work_size.2		[in]
 int p5 : local_work_size.0		[in]
 int p6 : local_work_size.1		[in]
 int p7 : local_work_size.2		[in]
+int p8 : event_id,È—ª‰Â”\		[in]
 
 %inst
 work_dim‚ª3‚Ìê‡‚ÌHCLDoKernel‚Æ“¯‚¶‚Å‚·B
@@ -719,8 +755,8 @@ p5‚ª0‚Ìê‡AƒOƒ[ƒoƒ‹ƒ[ƒNƒAƒCƒeƒ€‚ğ‚Ç‚Ì‚æ‚¤‚Éƒ[ƒNƒOƒ‹[ƒv‚É•ªŠ„‚·‚é‚©‚Í Op
 
 %href
 HCLDoKernel
-HCLSetDev
 HCLSetKernel
+HCLSetKrns
 HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn2
@@ -728,40 +764,145 @@ HCLDoKrn2
 ;--------
 
 %index
-HCLWaitTask
-ƒ^ƒXƒN‘Ò‚¿
+HCLFinish
+OpenCLƒRƒ}ƒ“ƒh‘Ò‚¿
 
 %prm
 
 %inst
 
+“¯‚¶ƒRƒ}ƒ“ƒhƒLƒ…[“à‚É“ü‚ê‚ç‚ê‚½OpenCLƒRƒ}ƒ“ƒh‚ÌÀs‚ª‚·‚×‚ÄI‚í‚é‚Ü‚Å‘Ò‚¿‚Ü‚·B
+‚±‚±‚ÅŒ¾‚¤OpenCLƒRƒ}ƒ“ƒh‚Æ‚Í
 HCLDoKernel
 HCLDoKrn1
-HCLDoKrn2
-HCLDoKrn3
-HCLCopyBuffer
-HCLWriteBuffer(ƒuƒƒbƒLƒ“ƒOƒ‚[ƒhoff‚Ìê‡)
-HCLReadBuffer(ƒuƒƒbƒLƒ“ƒOƒ‚[ƒhoff‚Ìê‡)
-‚Ì–½—ß‚É‚ÄƒLƒ…[‚É‚½‚Ü‚Á‚½ƒ^ƒXƒN‚ª‘S‚ÄI‚í‚é‚Ü‚ÅACPU‚ÍŸ‚Ì–½—ß‚ÉˆÚ‚è‚Ü‚¹‚ñB
-
-
-%href
-HCLDoKernel
-HCLDoKrn1
+HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+‚Ì–½—ß‚Å”­s‚µ‚½‚à‚Ì‚É‚È‚è‚Ü‚·B
+
+%href
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn1_sub
+HCLDoKrn2
+HCLDoKrn3
+HCLCopyBuffer
+HCLWriteBuffer
+HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+HCLFlush
 ;--------
 
+%index
+HCLFlush
+OpenCLƒRƒ}ƒ“ƒh‚ğ”­s
+
+%prm
+
+%inst
+
+HCLSetDevice‚Åw’è‚µ‚Ä‚¢‚éƒfƒoƒCƒX‚Ì‚·‚×‚Ä‚ÌƒRƒ}ƒ“ƒhƒLƒ…[‚É“ü‚ê‚ç‚ê‚½‘S‚Ä‚ÌOpenCLƒRƒ}ƒ“ƒh‚ğ”­s‚µ‚Ü‚·B
+
+‚±‚±‚ÅŒ¾‚¤OpenCLƒRƒ}ƒ“ƒh‚Æ‚Í
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn1_sub
+HCLDoKrn2
+HCLDoKrn3
+HCLCopyBuffer
+HCLWriteBuffer
+HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+‚Ì–½—ß‚Å”­s‚µ‚½‚à‚Ì‚É‚È‚è‚Ü‚·B
+
+%href
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn1_sub
+HCLDoKrn2
+HCLDoKrn3
+HCLCopyBuffer
+HCLWriteBuffer
+HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+HCLFinish
+;--------
+
+%index
+HCLSetCommandQueue
+ƒRƒ}ƒ“ƒhƒLƒ…[”Ô†‚ğƒZƒbƒg
+
+%prm
+
+%inst
+
+HCLSetDevice‚Åw’è‚µ‚Ä‚¢‚éƒfƒoƒCƒX‚Ì‚¤‚¿Ag‚¦‚éƒRƒ}ƒ“ƒhƒLƒ…[‚Í0`3‚Ü‚Å‚ ‚è‚Ü‚·B
+ƒfƒtƒHƒ‹ƒg‚Å‚Í0‚Å‚·B
+‰º‹L–½—ß‚Íw’è‚µ‚½ƒRƒ}ƒ“ƒhƒLƒ…[‚ÉOpenCLƒRƒ}ƒ“ƒh‚Æ‚µ‚Ä“ü‚èÀs‚³‚ê‚Ü‚·B
+
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn1_sub
+HCLDoKrn2
+HCLDoKrn3
+HCLCopyBuffer
+HCLWriteBuffer
+HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+
+“¯‚¶ƒfƒoƒCƒX‚Å‚àˆá‚¤ƒRƒ}ƒ“ƒhƒLƒ…[‚É“ü‚ê‚ç‚ê‚½OpenCLƒRƒ}ƒ“ƒh‚ÍA‡•s“¯‚ÅÀs‚³‚ê‚Ü‚·B
+—á‚¦‚Î“¯‚¶ƒƒ‚ƒŠ‚Éƒf[ƒ^‚ğ‘‚«‚ŞƒJ[ƒlƒ‹‚ğ•ÊX‚ÌƒRƒ}ƒ“ƒhƒLƒ…[‚É‚¢‚ê‚ÄÀs‚·‚é‚ÆAƒJ[ƒlƒ‹‚ª“¯‚ÉÀs‚³‚ê‚é‰Â”\«‚ª‚ ‚èAƒƒ‚ƒŠ‚É‚Í‚»‚ê‚¼‚ê‚ÌƒJ[ƒlƒ‹‚ª‘‚«‚ñ‚¾’l‚ª¬İ‚µ‚Ä‚¢‚é‰Â”\«‚ª‚ ‚è‚Ü‚·B
+•¡G‚Å•s•Ö‚È‚æ‚¤‚Év‚¢‚Ü‚·‚ªAOpenCLƒRƒ}ƒ“ƒh‚ÌƒI[ƒo[ƒ‰ƒbƒvÀs‚ª‰Â”\‚É‚È‚èAg‚¢•û‚É‚æ‚Á‚Ä‚Í‘¬“x–Ê‚Å—L—˜‚É‚È‚è‚Ü‚·B
+
+%href
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn1_sub
+HCLDoKrn2
+HCLDoKrn3
+HCLCopyBuffer
+HCLWriteBuffer
+HCLReadBuffer
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+HCLFillBuffer_dp
+HCLFlush
+HCLFinish
+HCLGetSettingCommandQueue
+_ExHCLSetCommandQueueMax
+_ExHCLSetCommandQueueProperties
+;--------
+
+%index
+HCLGetSettingCommandQueue()
+ƒZƒbƒg‚µ‚Ä‚¢‚éƒRƒ}ƒ“ƒhƒLƒ…[”Ô†‚ğæ“¾
+
+%prm
+
+%inst
+HCLSetCommandQueue‚ÅƒZƒbƒg‚µ‚½”Ô†‚ğ•Ô‚µ‚Ü‚·B
+;--------
 %index
 HCLReleaseKernel
 ƒJ[ƒlƒ‹”jŠü
 
 %prm
-int p1
-int p1 : ƒJ[ƒlƒ‹id			[in]
+int64 p1
+int64 p1 : ƒJ[ƒlƒ‹id			[in]
 
 %inst
 
@@ -776,12 +917,12 @@ HCLReleaseProgram
 ƒvƒƒOƒ‰ƒ€”jŠü
 
 %prm
-int p1
-int p1 : ƒvƒƒOƒ‰ƒ€id			[in]
+int64 p1
+int64 p1 : ƒvƒƒOƒ‰ƒ€id			[in]
 %inst
 
 “o˜^ƒRƒ“ƒpƒCƒ‹Ï‚İƒvƒƒOƒ‰ƒ€‚ğ”jŠü‚µ‚Ü‚·B
 
 %href
-HCLBuildProgram
+HCLCreateProgram
 ;--------

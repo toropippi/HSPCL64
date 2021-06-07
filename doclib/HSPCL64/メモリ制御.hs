@@ -4,22 +4,22 @@
 
 ;-------- header --------
 %dll
-HSPCL32.dll
+HSPCL64.dll
 
 %ver
-4.00
+1.0
 
 %date
-2014/09/04
+2021/06/07
 
 %author
-pippi
+toropippi
 
 %note
-hspcl32.as をインクルードしてください。
+hspcl64.as をインクルードしてください。
 
 %type
-GPGPU用プラグイン
+64bitランタイムGPGPU用プラグイン
 
 %group
 OpenCLメモリ制御
@@ -34,26 +34,37 @@ HCLCreateBuffer
 VRAM作成
 
 %prm
-var p1,int p2
-var p1 : CL_mem_object idが代入される	[OUT]
-int p2 : 確保するbyte数			[in]
+(int64 p1)
+int64 p1 : 確保するbyte数	[in]
 
 %inst
-HCLSetDevで指定されたグラフィックボードなどのデバイス上にメモリを確保します。
-主にGDDR5などのメモリのあるグラボ上に、指定したサイズのメモリが確保されることになります。
-反対はHCLReleaseMemObjectで解放です
+HCLSetDeviceで指定されたグラフィックボードなどのデバイス上にメモリを確保します。
+CL_mem_object idが返ります。
+これは64bit int型です。
+主にGDDR5,6などのメモリのあるグラボ上に、指定したサイズのメモリが確保されることになります。
+HCLReleaseBufferで解放することができます。
 
-
-以下の図でいう①のバッファを作成できる命令です
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
+このCL_mem_object idを解放前にロストすると、GPU側のメモリにアクセスできないことになり、メモリリークに近い状態になってしまいます。
+CL_mem_object idを変数で保持している場合上書きにはご注意下さい。
 
 
 %href
-HCLSetDev
-HCLReleaseMemObject
+HCLSetDevice
+HCLReleaseBuffer
+;--------
 
+%index
+HCLReleaseBuffer
+VRAM破棄
+
+%prm
+int p164
+int p164 : CL_mem_object id			[in]
+%inst
+デバイス上のメモリを解放します。
+
+%href
+HCLCreateBuffer
 ;--------
 
 %index
@@ -61,30 +72,27 @@ HCLWriteBuffer
 HSP配列情報をVRAMに書込
 
 %prm
-int p1,array p2,int p3,int p4,int p5,int p6
-int p1 : コピー先CL_mem_object id		[in]
+int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
+int64 p1 : コピー先CL_mem_object id		[in]
 array p2:コピー元配列変数		[in]
-int p3 : コピーサイズbyte		[in]
-int p4 : コピー先のオフセット		[in]
-int p5 : コピー元のオフセット		[in]
-int p6 : ブロッキングモードoff		[in]
+int64 p3 : コピーサイズbyte,省略可		[in]
+int64 p4 : コピー先のオフセット,省略可		[in]
+int64 p5 : コピー元のオフセット,省略可		[in]
+int p6 : ブロッキングモードoff,省略可		[in]
+int p7 : event_id,省略可		[in]
 
 %inst
-ホスト(CPU)からHCLSetDevで指定したデバイス(GPU)側にデータを転送します。
+ホスト(CPU)からHCLSetDeviceで指定したデバイス(GPU)側にデータを転送します。
+p3は省略時、コピー先とコピー元の配列のうち小さい方が採用されます。
+p4,p5は省略時0です。
+p3,p4,p5の単位はbyteです。
 p6のブロッキングモードは0を指定するとoffになり、転送が完了しないうちに次の命令に移ります。
-この場合転送完了まではHCLWaitTaskで待つことができます。
-p6は省略時デフォルトで1です。
-
-以下の図でいう①や②のバッファに対してデータを書込む命令です。
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
+p6は省略時デフォルトで1です。つまりブロッキングモードがonになっており、転送が終わるまでこの命令の実行が終わりません。
 
 
 %href
 HCLCreateBuffer
 HCLReadBuffer
-HCLWaitTask
 
 ;--------
 
@@ -93,35 +101,27 @@ HCLReadBuffer
 VRAMからHSP配列情報に読込
 
 %prm
-int p1,array p2,int p3,int p4,int p5,int p6
-int p1 : コピー元CL_mem_object id		[in]
-array p2:コピー先配列変数			[OUT]
-int p3 : コピーサイズbyte		[in]
-int p4 : コピー元のオフセット		[in]
-int p5 : コピー先のオフセット		[in]
-int p6 : ブロッキングモードoff		[in]
+int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
+int64 p1 : コピー元CL_mem_object id		[in]
+array p2:コピー先配列変数			[out]
+int64 p3 : コピーサイズbyte,省略可		[in]
+int64 p4 : コピー元のオフセット,省略可		[in]
+int64 p5 : コピー先のオフセット,省略可		[in]
+int p6 : ブロッキングモードoff,省略可		[in]
+int p7 : event_id,省略可		[in]
 
 %inst
-HCLSetDevで指定したデバイス(GPU)からホスト(CPU)側にデータを転送します。
+HCLSetDeviceで指定したデバイス(GPU)からホスト(CPU)側にデータを転送します。
+p3は省略時、コピー先とコピー元の配列のうち小さい方が採用されます。
+p4,p5は省略時0です。
+p3,p4,p5の単位はbyteです。
 p6のブロッキングモードは0を指定するとoffになり、転送が完了しないうちに次の命令に移ります。
-この場合転送完了まではHCLWaitTaskで待つことができます。
-p6は省略時デフォルトで1です。
+p6は省略時デフォルトで1です。つまりブロッキングモードがonになっており、転送が終わるまでこの命令の実行が終わりません。
 
-以下の図でいう①や②のバッファからデータを読み出す命令です。
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
-
-
-
-※注意
-HCLDoKernelでキューに送ったタスクがまだ計算中の時にHCLReadBuffer等でVRAMにアクセスするとHCLDoKernelで送ったタスクが完了する前にVRAM読み込みをしてしまう場合があります(機種による)。逆に、HCLReadBufferがHCLDoKernelのタスクを待ってくれている場合、この命令の処理時間がすごくかかっているようにみえる時がありますが、実際はタスク待ちがすごく長いだけです。一般的にCPUからVRAMへの読み込み、書き込み速度は通常片方向8GB/sec～16GB/secと高速です。
 
 %href
 HCLCreateBuffer
 HCLWriteBuffer
-HCLWaitTask
-
 
 ;--------
 
@@ -130,146 +130,154 @@ HCLCopyBuffer
 VRAM同士コピー
 
 %prm
-int p1,int p2,int p3,int p4,int p5,int p6]
-int p1 : コピー先CL_mem_object id		[in]
-int p2 : コピー元CL_mem_object id		[in]
-int p3 : コピーサイズbyte		[in]
-int p4 : コピー先のオフセット		[in]
-int p5 : コピー元のオフセット		[in]
-int p6 : ブロッキングモードoff		[in]
+int64 p1,int64 p2,int64 p3,int64 p4,int64 p5,int p6
+int64 p1 : コピー先CL_mem_object id		[in]
+int64 p2 : コピー元CL_mem_object id		[in]
+int64 p3 : コピーサイズbyte,省略可		[in]
+int64 p4 : コピー先のオフセット,省略可		[in]
+int64 p5 : コピー元のオフセット,省略可		[in]
+int p6 : event_id,省略可		[in]
 
 %inst
-HCLSetDevで指定したデバイス上のメモリ間でコピーをします。
-p6のブロッキングモードは0を指定するとoffになり、転送が完了しないうちに次の命令に移ります。
-転送完了まではHCLWaitTaskで待つことができます。
-p6はデフォルトで1です。
-
-
-以下の図でいう①、②、④、⑤へ相互方向へデータコピーが可能な命令です。
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
+HCLSetDeviceで指定したデバイス上のメモリ間でコピーをします。
+p3は省略時、コピー先とコピー元の配列のうち小さい方が採用されます。
+p4,p5は省略時0です。
+p3,p4,p5の単位はbyteです。
 
 
 %href
 HCLCreateBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLWaitTask
 
 ;--------
-
 %index
-HCLReleaseMemObject
-VRAM破棄
+HCLCreateBufferFrom
+VRAM作成(HSP配列変数から)
 
 %prm
-int p1
-int p1 : CL_mem_object id			[in]
+(array p1)
+array p1 : HSP側の配列変数		[in]
+
 %inst
-デバイス上のメモリを解放します。
-
-
-以下の図でいう①の解放です。②の解放はHGLReleaseBufferを使って下さい。
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
+dim命令などで確保したHSPの配列変数を、そのままコピーしてVRAMの作成をします。
+CL_mem_object idが返ります。
+これは64bit int型です。
 
 %href
 HCLCreateBuffer
 ;--------
 
 %index
-HCLCreateFromGLBuffer
-VRAM作成(OpenGL連携)
+HCLWriteBuffer_NonBlocking
+HSP配列情報をVRAMに書込、強制ノンブロッキングモード
 
 %prm
-var p1,int p2
-var p1 : CL_mem_object idが代入される	[OUT]
-int p2 : GL_mem_object vbo		[in]
+int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
+int64 p1 : コピー先CL_mem_object id		[in]
+array p2:コピー元配列変数		[in]
+int64 p3 : コピーサイズbyte,省略可		[in]
+int64 p4 : コピー先のオフセット,省略可		[in]
+int64 p5 : コピー元のオフセット,省略可		[in]
+int p6 : ブロッキングモードoff,省略可		[in]
+int p7 : event_id,省略可		[in]
 
 %inst
-vboは「glGenBuffers」命令で作成したvboなどを指定してください。
-OpenCLで計算した座標にOpenGLで点(プリミティブ)を描画したい時などに使います。
 
-この命令は以下の図でいう②の生成HGLCreateBufferの中で使用されています。
-なのでHGLCreateBufferを使う場合は、HCLCreateFromGLBufferは必要ありません。
-html{
-<img src="./doclib/HSPCL32/thumbs/mem.png">
-}html
+ホスト(CPU)からHCLSetDeviceで指定したデバイス(GPU)側にデータを転送します。
+
+■HCLWriteBufferとの違い
+HCLWriteBufferのノンブロッキングモード指定はNVIDIA GPUでは無効なようで、必ずブロッキングがonになってしまいます。
+転送が終わるまで待たされるのがどうしても困る場合、このHCLWriteBuffer_NonBlocking命令を使用してください。
+プラグイン内部では
+std::thread
+で別スレッドを立ち上げ、その中でclEnqueueWriteBufferを実行しています。
+このとき、別スレッドがいつどのタイミングで実行されるかはわからないことに注意してください。
+
+例えばHCLWriteBuffer_NonBlockingの転送が終わるまで待ちたい場合HCLFinishを実行しても、clEnqueueWriteBuffer自体の実行がまだの可能性もあります。
+その場合転送が終わる前にHCLFinishの実行が完了してしまうということが起こります。
+
+そのためにHCLGet_NonBlocking_Statusという命令があり、これが0になっていれば確実にHCLWriteBuffer_NonBlockingの処理が終わっていることが保証されます。
 
 
 %href
-HCLEnqueueAcquireGLObjects
-HCLEnqueueReleaseGLObjects
+HCLWriteBuffer
+HCLReadBuffer_NonBlocking
+HCLGet_NonBlocking_Status
 ;--------
 
 %index
-HCLEnqueueAcquireGLObjects
-vboバッファをロック
+HCLReadBuffer_NonBlocking
+VRAMからHSP配列情報に読込、強制ノンブロッキングモード
 
 %prm
-int p1
-int p1 : vboと関連付けたCL_mem_object	[in]
+int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
+int64 p1 : コピー元CL_mem_object id		[in]
+array p2:コピー先配列変数			[out]
+int64 p3 : コピーサイズbyte,省略可		[in]
+int64 p4 : コピー元のオフセット,省略可		[in]
+int64 p5 : コピー先のオフセット,省略可		[in]
+int p6 : ブロッキングモードoff,省略可		[in]
+int p7 : event_id,省略可		[in]
 
 %inst
-vboをopenclで扱うためにvboバッファをロックします。
-vboを扱うカーネルの前にはかならず実行してください。
-またこれを呼んだ後HCLEnqueueReleaseGLObjectsを必ず実行してロックを解除してください
+
+HCLSetDeviceで指定したデバイス(GPU)からホスト(CPU)側にデータを転送します。
+
+■HCLReadBufferとの違い
+HCLReadBufferのノンブロッキングモード指定はNVIDIA GPUでは無効なようで、必ずブロッキングがonになってしまいます。
+転送が終わるまで待たされるのがどうしても困る場合、このHCLReadBuffer_NonBlocking命令を使用してください。
+プラグイン内部では
+std::thread
+で別スレッドを立ち上げ、その中でclEnqueueReadBufferを実行しています。
+このとき、別スレッドがいつどのタイミングで実行されるかはわからないことに注意してください。
+
+例えばHCLReadBuffer_NonBlockingの転送が終わるまで待ちたい場合HCLFinishを実行しても、clEnqueueReadBuffer自体の実行がまだの可能性もあります。
+その場合転送が終わる前にHCLFinishの実行が完了してしまうということが起こります。
+
+そのためにHCLGet_NonBlocking_Statusという命令があり、これが0になっていれば確実にHCLReadBuffer_NonBlockingの処理が終わっていることが保証されます。
 
 %href
-HCLEnqueueReleaseGLObjects
-
-
+HCLReadBuffer
+HCLWriteBuffer_NonBlocking
+HCLGet_NonBlocking_Status
 ;--------
 
+
 %index
-HCLEnqueueReleaseGLObjects
-vboバッファをロック解除
+HCLGet_NonBlocking_Status
+NonBlocking実行状況取得
 
 %prm
-int p1
-int p1 : vboと関連付けたCL_mem_object	[in]
+()
 
 %inst
-HCLEnqueueAcquireGLObjectsと対です
+
+HCLReadBuffer_NonBlockingとHCLWriteBuffer_NonBlockingの実行がどうなっているかを取得します。
+以降NonBlocking命令と言います。
+まずNonBlocking命令を呼んだあとはプラグイン内部のthread_start変数がインクリメントされます。
+その後NonBlocking命令内部でclEnqueueReadBuffer,clEnqueueWriteBufferが実行され、その行が終わった際にthread_start変数が1デクリメントされます。
+
+このHCLGet_NonBlocking_Status命令はthread_start変数の数値を取得する命令です。
+
+NonBlocking命令の実行完了判定に使うことができます。
+
+またNonBlocking命令でevent idを指定した場合、プラグイン内部のclEnqueueReadBuffer,clEnqueueWriteBufferの行を通りすぎないとevent自体取得できないため(エラーになる)、event取得可能判定にも使うことができます。
+
 %href
-HCLEnqueueAcquireGLObjects
-;--------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+HCLWriteBuffer_NonBlocking
+HCLReadBuffer_NonBlocking
 ;--------
 
 %index
-HCLReadIndex_i
-VRAMから1要素読み込み
+HCLReadIndex_i32
+VRAMからint型を1要素読み込み
 
 %prm
-(int p1,int p2)
+(int64 p1,int64 p2)
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
 
 %inst
 GPUのVRAMから直接1つの値をとりだし返します。
@@ -279,29 +287,50 @@ p2は読み出しインデックスを指定して下さい。
 
 VRAMの内容がint型4つの配列変数　(100,400,500,700)
 だった場合
-HCLReadIndex_i(memid,3)　は　700
+HCLReadIndex_i32(memid,3)　は　700
 を返します。
 
 %href
-HCLReadIndex_d
-HCLReadIndex_f
-HCLReadIndex_s
-
+HCLReadIndex_dp
+HCLReadIndex_i64
 ;--------
 
+%index
+HCLReadIndex_i64
+VRAMから64bit int型を1要素読み込み
 
+%prm
+(int64 p1,int64 p2)
+
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
+
+%inst
+GPUのVRAMから直接1つの値をとりだし返します。
+p1はCL mem obj id
+p2は読み出しインデックスを指定して下さい。
+ブロッキングモードはオン(転送完了まで待つ)です。
+
+VRAMの内容が64bit int型4つの配列変数　(10000000000,40000000000,50000000000,70000000000)
+だった場合
+HCLReadIndex_i64(memid,3)　は　70000000000
+を返します。
+
+%href
+HCLReadIndex_i32
+HCLReadIndex_dp
 
 ;--------
 
 %index
-HCLReadIndex_d
-VRAMから1要素読み込み
+HCLReadIndex_dp
+VRAMからdouble型を1要素読み込み
 
 %prm
-(int p1,int p2)
+(int64 p1,int64 p2)
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
 
 %inst
 GPUのVRAMから直接1つの値をとりだし返します。
@@ -315,106 +344,19 @@ HCLReadIndex_d(memid,3)　は　700.0
 を返します。
 
 %href
-HCLReadIndex_i
-HCLReadIndex_f
-HCLReadIndex_s
-
-;--------
-
-
-
+HCLReadIndex_i32
+HCLReadIndex_i64
 ;--------
 
 %index
-HCLReadIndex_f
-VRAMから1要素読み込み
-
-%prm
-(int p1,int p2)
-
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
-
-%inst
-GPUのVRAMから直接1つの値をとりだし返します。
-p1はCL mem obj id
-p2は読み出しインデックスを指定して下さい。
-ブロッキングモードはオン(転送完了まで待つ)です。
-
-VRAMの内容がfloat型4つの配列変数　(100.0,400.0,500.0,700.0)
-だった場合
-HCLReadIndex_f(memid,3)　は　700.0
-を返します。
-
-%href
-HCLReadIndex_d
-HCLReadIndex_i
-HCLReadIndex_s
-
-;--------
-
-
-
-;--------
-
-%index
-HCLReadIndex_s
-VRAMから1要素読み込み
-
-%prm
-(int p1,int p2)
-
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
-
-%inst
-GPUのVRAMから直接1つの値をとりだし返します。
-p1はCL mem obj id
-p2は読み出しインデックスを指定して下さい。
-ブロッキングモードはオン(転送完了まで待つ)です。
-
-VRAMの内容がchar型4つの配列変数　(10,40,50,7)
-だった場合
-HCLReadIndex_s(memid,3)　は　7
-を返します。
-char型なので範囲は0～255の範囲です。
-
-%href
-HCLReadIndex_d
-HCLReadIndex_f
-HCLReadIndex_i
-
-;--------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-;--------
-
-%index
-HCLWriteIndex_i
+HCLWriteIndex_i32
 VRAMに1要素書き込み
 
 %prm
-int p1,int p2,int p3
+int64 p1,int64 p2,int p3
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
 int p3 : 内容				[in]
 
 %inst
@@ -424,26 +366,43 @@ p1で指定したVRAM(CL mem obj id)の内容にp3値を書き込みます。
 
 ブロッキングモードはオン(転送完了まで待つ)です。
 
-
 %href
-HCLWriteIndex_d
-HCLWriteIndex_f
-HCLWriteIndex_s
-
-;--------
-
-
+HCLWriteIndex_i64
+HCLWriteIndex_dp
 ;--------
 
 %index
-HCLWriteIndex_d
+HCLWriteIndex_i64
 VRAMに1要素書き込み
 
 %prm
-int p1,int p2,double p3
+int64 p1,int64 p2,int64 p3
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
+int64 p3 : 内容				[in]
+
+%inst
+p1で指定したVRAM(CL mem obj id)の内容にp3値を書き込みます。
+書き込みインデックスはp2で指定します。
+このときVRAMは64bit int型の配列変数として考えます。
+
+ブロッキングモードはオン(転送完了まで待つ)です。
+
+%href
+HCLWriteIndex_i32
+HCLWriteIndex_dp
+;--------
+
+%index
+HCLWriteIndex_dp
+VRAMに1要素書き込み
+
+%prm
+int64 p1,int64 p2,double p3
+
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : 配列の要素(index)		[in]
 double p3:内容				[in]
 
 %inst
@@ -455,64 +414,145 @@ p1で指定したVRAM(CL mem obj id)の内容にp3値を書き込みます。
 
 
 %href
-HCLWriteIndex_i
-HCLWriteIndex_f
-HCLWriteIndex_s
-
-;--------
-
+HCLWriteIndex_i32
+HCLWriteIndex_i64
 ;--------
 
 %index
-HCLWriteIndex_f
-VRAMに1要素書き込み
+HCLFillBuffer_i32
+VRAMを指定の数値で埋める
 
 %prm
-int p1,int p2,float p3
+int64 p1,int p2,int64 p3,int64 p4,int p5
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
-float p3:内容				[in]
+int64 p1 : CL_mem_object id		[in]
+int p2 : pattern,省略可			[in]
+int64 p3 : offset,省略可		[in]
+int64 p4 : size,省略可		[in]
+int p5 : event_id			[in]
 
 %inst
-p1で指定したVRAM(CL mem obj id)の内容にp3値を書き込みます。
-書き込みインデックスはp2で指定します。
-このときVRAMはfloat型の配列変数として考えます。
+p1で指定したVRAM(CL mem obj id)にp2の値を4byteおきに書き込みます。
+p2は省略時0になります。
+書き込む先のindexと書き込むサイズはp3,p4で指定しますが、単位をbyteで指定することに注意してください。
+省略時p3=0,p4=メモリサイズ
+となります。
 
-ブロッキングモードはオン(転送完了まで待つ)です。
-
+この命令自体は実行が完了するまで待つ命令ではなく、OpenCLコマンドをキューに入れるだけであり、実際のカーネルの実行終了を待つにはeventを使うかHCLFinish等で待つことになります。
 
 %href
-HCLWriteIndex_d
-HCLWriteIndex_i
-HCLWriteIndex_s
-
+HCLFillBuffer_i64
+HCLFillBuffer_dp
 ;--------
+%index
+HCLFillBuffer_i64
+VRAMを指定の数値で埋める
 
+%prm
+int64 p1,int64 p2,int64 p3,int64 p4,int p5
+
+int64 p1 : CL_mem_object id		[in]
+int64 p2 : pattern,省略可			[in]
+int64 p3 : offset,省略可		[in]
+int64 p4 : size,省略可		[in]
+int p5 : event_id			[in]
+
+%inst
+p1で指定したVRAM(CL mem obj id)にp2の値を8byteおきに書き込みます。
+p2は省略時0になります。
+書き込む先のindexと書き込むサイズはp3,p4で指定しますが、単位をbyteで指定することに注意してください。
+省略時p3=0,p4=メモリサイズ
+となります。
+
+この命令自体は実行が完了するまで待つ命令ではなく、OpenCLコマンドをキューに入れるだけであり、実際のカーネルの実行終了を待つにはeventを使うかHCLFinish等で待つことになります。
+
+%href
+HCLFillBuffer_i32
+HCLFillBuffer_dp
 ;--------
 
 %index
-HCLWriteIndex_s
-VRAMに1要素書き込み
+HCLFillBuffer_dp
+VRAMを指定の数値で埋める
 
 %prm
-int p1,int p2,int p3
+int64 p1,double p2,int64 p3,int64 p4,int p5
 
-int p1 : CL_mem_object id		[in]
-int p2 : 配列の要素(index)		[in]
-int p3 : 内容(0～255)			[in]
+int64 p1 : CL_mem_object id		[in]
+double p2 : pattern,省略可			[in]
+int64 p3 : offset,省略可		[in]
+int64 p4 : size,省略可		[in]
+int p5 : event_id			[in]
 
 %inst
-p1で指定したVRAM(CL mem obj id)の内容にp3値を書き込みます。
-書き込みインデックスはp2で指定します。
-このときVRAMはchar型の配列変数として考えます。
+p1で指定したVRAM(CL mem obj id)にp2の値を8byteおきに書き込みます。
+p2は省略時0.0になります。
+書き込む先のindexと書き込むサイズはp3,p4で指定しますが、単位をbyteで指定することに注意してください。
+省略時p3=0,p4=メモリサイズ
+となります。
 
-ブロッキングモードはオン(転送完了まで待つ)です。
+この命令自体は実行が完了するまで待つ命令ではなく、OpenCLコマンドをキューに入れるだけであり、実際のカーネルの実行終了を待つにはeventを使うかHCLFinish等で待つことになります。
+
+%href
+HCLFillBuffer_i32
+HCLFillBuffer_i64
+;--------
+
+%index
+HCLdim_i32FromBuffer
+HSP配列変数確保しVRAMからコピー
+
+%prm
+array p1,int64 p2
+array p1 : HSP側の配列変数			[out]
+int64 p2 : コピー元CL_mem_object id		[in]
+
+%inst
+p1で指定した変数をint型配列変数として初期化し、内容をp2からコピーします。
+サイズは自動で決定されます。
+なおHSPの仕様上、確保できるサイズの上限は1GBまでです。
 
 
 %href
-HCLWriteIndex_d
-HCLWriteIndex_f
-HCLWriteIndex_i
-
+HCLdim_i64FromBuffer
+HCLdim_dpFromBuffer
 ;--------
+%index
+HCLdim_i64FromBuffer
+HSP配列変数確保しVRAMからコピー
+
+%prm
+array p1,int64 p2
+array p1 : HSP側の配列変数			[out]
+int64 p2 : コピー元CL_mem_object id		[in]
+
+%inst
+p1で指定した変数を64bit int型配列変数として初期化し、内容をp2からコピーします。
+サイズは自動で決定されます。
+なおHSPの仕様上、確保できるサイズの上限は1GBまでです。
+
+
+%href
+HCLdim_i32FromBuffer
+HCLdim_dpFromBuffer
+;--------
+%index
+HCLdim_dpFromBuffer
+HSP配列変数確保しVRAMからコピー
+
+%prm
+array p1,int64 p2
+array p1 : HSP側の配列変数			[out]
+int64 p2 : コピー元CL_mem_object id		[in]
+
+%inst
+p1で指定した変数をdouble型配列変数として初期化し、内容をp2からコピーします。
+サイズは自動で決定されます。
+なおHSPの仕様上、確保できるサイズの上限は1GBまでです。
+
+
+%href
+HCLdim_i64FromBuffer
+HCLdim_i32FromBuffer
+;--------
+
