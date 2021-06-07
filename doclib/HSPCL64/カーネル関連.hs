@@ -30,25 +30,26 @@ Win
 ;-------- ref --------
 
 %index
-HCLBuildProgram
+HCLCreateProgram
 ƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚Ìƒrƒ‹ƒh
 
 %prm
-str p1,var p2
+(str p1,str p2)
 str p1 : ƒJ[ƒlƒ‹ƒ\[ƒXƒtƒ@ƒCƒ‹–¼  [in]
-var p2 : ƒvƒƒOƒ‰ƒ€id‚ª‘ã“ü‚³‚ê‚é[OUT]
+var p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“  [in]
 
 %inst
+ƒvƒƒOƒ‰ƒ€id‚ª64bit intŒ^‚Å•Ô‚è‚Ü‚·B
 p1‚É‚Íƒ\[ƒX‚Ìƒtƒ@ƒCƒ‹–¼‚ð“ü‚ê‚Ä‰º‚³‚¢B
-p2‚ÍƒRƒ“ƒpƒCƒ‹‚³‚ê‚½ƒvƒƒOƒ‰ƒ€id‚ª‘ã“ü‚³‚ê‚Ü‚·B
+p2‚É‚Íƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“‚ð“ü‚ê‚Ä‚­‚¾‚³‚¢B
+—áF"-D SCALE=111"
 
 ƒRƒ“ƒpƒCƒ‹‚³‚ê‚½OpenCLƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚ÍA‚»‚ÌƒfƒoƒCƒXã‚Å‚µ‚©Žg‚¦‚Ü‚¹‚ñB
-‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ðŽÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ðHCLSetDev‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ðŒÄ‚ñ‚Å‰º‚³‚¢B
-
+‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ðŽÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ðHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ðŽÀs‚µ‚Ä‰º‚³‚¢B
 
 %href
 HCLCreateProgramWithSource
-HCLSetDev
+HCLSetDevice
 HCLCreateKernel
 HCLReleaseProgram
 
@@ -59,23 +60,23 @@ HCLCreateProgramWithSource
 ƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚Ìƒrƒ‹ƒh
 
 %prm
-str p1,int p2,var p3
+(str p1,str p2)
 str p1 : ƒJ[ƒlƒ‹ƒ\[ƒX•¶Žš—ñ  [in]
-int p2 : ƒJ[ƒlƒ‹ƒ\[ƒX•¶Žš—ñƒTƒCƒY  [in]
-var p3 : ƒvƒƒOƒ‰ƒ€id‚ª‘ã“ü‚³‚ê‚é[OUT]
+str p2 : ƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“  [in]
 
 %inst
+ƒvƒƒOƒ‰ƒ€id‚ª64bit intŒ^‚Å•Ô‚è‚Ü‚·B
 p1‚É‚Íƒ\[ƒX‚Ìƒf[ƒ^‚ð“ü‚ê‚Ä‰º‚³‚¢B
-p2‚É‚Íƒ\[ƒX‚Ì‘å‚«‚³‚ð“ü‚ê‚Ä‚­‚¾‚³‚¢B
-p3‚É‚ÍƒRƒ“ƒpƒCƒ‹‚³‚ê‚½ƒvƒƒOƒ‰ƒ€id‚ª‘ã“ü‚³‚ê‚Ü‚·B
+p2‚É‚Íƒrƒ‹ƒhƒIƒvƒVƒ‡ƒ“‚ð“ü‚ê‚Ä‚­‚¾‚³‚¢B
+—áF"-D SCALE=111"
 
 ƒRƒ“ƒpƒCƒ‹‚³‚ê‚½OpenCLƒJ[ƒlƒ‹ƒvƒƒOƒ‰ƒ€‚ÍA‚»‚ÌƒfƒoƒCƒXã‚Å‚µ‚©Žg‚¦‚Ü‚¹‚ñB
-‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ðŽÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ðHCLSetDev‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ðŒÄ‚ñ‚Å‰º‚³‚¢B
+‚Q‚ÂˆÈã‚ÌƒfƒoƒCƒXã‚Å“¯‚¶ƒJ[ƒlƒ‹‚ðŽÀs‚µ‚½‚¢‚Æ‚«A‚»‚ê‚¼‚ê‚ÌƒfƒoƒCƒXid‚ðHCLSetDevice‚ÅƒZƒbƒg‚µ‚È‚¨‚µ‚ÄHCLBuildProgram‚ðŽÀs‚µ‚Ä‰º‚³‚¢B
 
 
 %href
-HCLBuildProgram
-HCLSetDev
+HCLCreateProgram
+HCLSetDevice
 HCLCreateKernel
 HCLReleaseProgram
 
@@ -86,27 +87,22 @@ HCLCreateKernel
 ƒJ[ƒlƒ‹ì¬
 
 %prm
-int p1,str p2,var p3
+(int p1,str p2)
 int p1 : ƒvƒƒOƒ‰ƒ€id          [in]
 str p2 : ƒJ[ƒlƒ‹ŠÖ”–¼        [in]
-var p3 : ƒJ[ƒlƒ‹id‚ª‘ã“ü‚³‚ê‚é[OUT]
 
 %inst
-ƒJ[ƒlƒ‹‚Æ‚¢‚¤AOpenCL‚ÌŠÖ”‚ðŽÀs‚·‚é‚P’PˆÊ‚ð“o˜^‚µ‚Ü‚·B
-
+ƒJ[ƒlƒ‹id‚ª64bit intŒ^‚Å•Ô‚è‚Ü‚·B
 
 p2‚Íp1ƒJ[ƒlƒ‹ƒ\[ƒX“à‚É‚ ‚éu__kernel v‚©‚çŽn‚Ü‚éŠÖ”–¼‚ðu__kernel v‚æ‚èŒã‚Ì•¶Žš—ñ‚ÅŽw’è‚µ‚Ü‚·B
-—á‚¦‚Îp1ƒ\[ƒX“à‚Éu__kernel void vector_add(__global float *A) {v‚Æ‚¢‚¤s‚ª‚ ‚ê‚Îp2‚Í "vector_add" ‚ðŽw’è‚µ‚Ü‚·B
-p3‚É‚ÍƒJ[ƒlƒ‹id‚ªo—Í‚³‚ê‚Ü‚·B
+—á‚¦‚Îp1ƒ\[ƒX“à‚Éu__kernel void vector_add(__global float *A) {}v‚Æ‚¢‚¤s‚ª‚ ‚ê‚Îp2‚Í "vector_add" ‚ðŽw’è‚µ‚Ü‚·B
 ˆÈ~A•Ï”‚ÌƒZƒbƒg‚âŒvŽZ‚Í‚±‚ÌƒJ[ƒlƒ‹id‚Æ‚¢‚¤Œ`‚ÅŠÇ—AŽÀs‚Å‚«‚Ü‚·B
 
-
-
 %href
-HCLBuildProgram
-HCLCreateProgramWithSource
-HCLSetDev
+HCLSetDevice
 HCLReleaseKernel
+HCLSetKernel
+HCLSetKrns
 
 ;--------
 
@@ -126,16 +122,15 @@ int p4 : ƒ[ƒJƒ‹ƒƒ‚ƒŠƒtƒ‰ƒO		[in]
 HCLDoKernel‚ÅŒvŽZ‚·‚é‘O‚É‚±‚ê‚ÅƒJ[ƒlƒ‹‚Ìˆø”‚ð—\‚ßƒZƒbƒg‚µ‚Ä‚¨‚©‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñB
 
 
-—á‚¦‚ÎƒJ[ƒlƒ‹‘¤‚Ìƒ\[ƒX‚ªu__kernel void vector_add(__global float *hairetu,float teisu) {v‚Æ‚¢‚¤‚à‚Ì‚È‚ç
+—á‚¦‚ÎƒJ[ƒlƒ‹‘¤‚Ìƒ\[ƒX‚ªu__kernel void vector_add(__global int *array1,int arg2) {}v‚Æ‚¢‚¤‚à‚Ì‚È‚ç
 HCLSetKernel p1,0,mem_object_A	//(©HCLCreateBuffer‚Åì¬‚µ‚½mem_object id)	;”z—ñ
-HCLSetKernel p1,1,float(5.0)	//’è”
+HCLSetKernel p1,1,5	//ˆø”2
 ‚Æ2‰ñ‚É“n‚èŽw’è‚µ‚Ü‚·B
 
 p2‚ÍAvector_add‚Ìˆø”‚Ìˆê”Ô¶‚ð0‚Æ‚µ‚½”Ô†‚Æ‚µ‚Äl‚¦‚Ü‚·B
 
 ‚P‰ñƒZƒbƒg‚·‚ê‚ÎŽŸƒZƒbƒg‚µ’¼‚·‚Ü‚Å“¯‚¶’l‚ªŽc‚è‚Ü‚·B
-p3‚É‚Í•¶Žš—ñŒ^•Ï”AintŒ^•Ï”AfloatŒ^•Ï”AdoubleŒ^•Ï”‚ªŽw’è‚Å‚«A‚Ü‚½mem_object id‚àŽw’è‰Â”\‚Å‚·B
-
+p3‚É‚Í64bit intŒ^A32bit intŒ^A•¶Žš—ñŒ^•Ï”AdoubleŒ^•Ï”‚ªŽw’è‚Å‚«‚Ü‚·B
 
 p4‚ð0ˆÈŠO‚É‚·‚é‚ÆA‚»‚Ìˆø”‚Íƒ[ƒJƒ‹ƒƒ‚ƒŠi‹¤—Lƒƒ‚ƒŠj‚Æ‚µ‚Ä“o˜^‚³‚ê‚Ü‚·Bƒ[ƒJƒ‹ƒƒ‚ƒŠ‚ÍƒOƒ[ƒoƒ‹ƒƒ‚ƒŠ‚æ‚è—e—Ê‚ª­‚È‚¢•ª‚‘¬‚ÉƒAƒNƒZƒX‚ª‰Â”\‚È‘ž“ÇŽæ‰Â”\ƒƒ‚ƒŠ‚Å‚·B
 ˆê‚Â‚Ìƒ[ƒNƒOƒ‹[ƒv“à‚Å‚µ‚©’l‚ð•ÛŽ‚Å‚«‚Ü‚¹‚ñB‰Šú’l‚ÍÝ’è•s‰Â‚Å0‚Ü‚½‚Í•s’è‚Å‚·B
@@ -147,7 +142,7 @@ p4‚ª0ˆÈŠO‚Ì‚Æ‚«Ap4‚É‚ÍŠm•Û‚µ‚½‚¢ƒ[ƒJƒ‹ƒƒ‚ƒŠƒTƒCƒY(byte)‚ðint‚ÅŽw’è‚µ‚Ä‰º‚³‚¢
 
 —á
 ƒJ[ƒlƒ‹ƒR[ƒh
-__kernel void vector_add(__global double *A, __global double *B, __local double block[] , int bekii, int n) {
+__kernel void vector_add(__global double *A, __global double *B, __local double block[] , int b, int n) {
 	block[0]=1;//‹¤—Lƒƒ‚ƒŠ‚Ì0”Ô–Ú‚É1‚ð‘ã“ü
 EEEEE
 
@@ -161,8 +156,35 @@ HCLSetKernel p1,4,1024
 
 
 %href
-HCLSetDev
+HCLSetDevice
 HCLCreateKernel
+HCLSetKrns
+HCLDoKernel
+HCLDoKrn1
+HCLDoKrn2
+HCLDoKrn3
+
+;--------
+
+%index
+HCLSetKrns
+ƒJ[ƒlƒ‹ƒZƒbƒg
+
+%prm
+int p1,int p2,,,,,
+int p1 : ƒJ[ƒlƒ‹id			[in]
+int p2ˆÈ~ : ˆø”‚É“n‚·ŽÀ‘Ì(’è”‚âmem_object)	[in]
+
+%inst
+ƒJ[ƒlƒ‹‚Ìˆø”‚ð‚Ü‚Æ‚ß‚ÄŽw’è‚µ‚Ü‚·B
+
+HCLSetKernel‚Ìuˆø”‚Ì‡”Ôp(x)‚ÌŽw’èv‚ª0‚È‚çp2,1‚È‚çp3‚É‚ ‚½‚è‚Ü‚·B
+ƒ[ƒJƒ‹ƒƒ‚ƒŠ‚ÌƒTƒCƒYŽw’è‚Í‚Å‚«‚Ü‚¹‚ñB
+
+%href
+HCLSetDevice
+HCLCreateKernel
+HCLSetKernel
 HCLDoKernel
 HCLDoKrn1
 HCLDoKrn2
@@ -175,27 +197,26 @@ HCLCall
 ƒJ[ƒlƒ‹•¶Žš—ñŽÀs
 
 %prm
-str p1,int p2,array p3,array p4,array p5,array p6,array p7,array p8,array p9
+str p1,int p2,int p3,p4,p5,p6,,,,,
 str p1 : ƒJ[ƒlƒ‹•¶Žš—ñ			[in]
-int p2 :ƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY(1ŽŸŒ³•À—ñˆ—”)[in]
-array p3:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p4:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p5:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p6:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p7:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p8:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
-array p9:ƒJ[ƒlƒ‹‚É“n‚·ˆø”		[in]
+int p2 :ƒOƒ[ƒoƒ‹ƒTƒCƒY(1ŽŸŒ³•À—ñˆ—”)	[in]
+int p3 :ƒ[ƒJƒ‹ƒTƒCƒY(1ŽŸŒ³•À—ñˆ—”)	[in]
+p4ˆÈ~ :ˆø”‚É“n‚·ŽÀ‘Ì(array‚âvar int‚È‚Ç‚Ì”’l)	[in,out]
 %inst
 
-HCLBuildProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer“™‚ð‚¹‚¸ƒJ[ƒlƒ‹‚ðˆê‹C‚ÉŽÀs‚µ‚Ä‚µ‚Ü‚¢‚Ü‚·B
-p2‚É‚ÍƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒYiŽÀs‚µ‚½‚¢•À—ñˆ—”j
-p3ˆÈ~‚ÍƒJ[ƒlƒ‹‚É“n‚·ˆø”‚ðBHSP‘¤‚ÅŠm•Û‚µ‚½”z—ñ•Ï”‚ðŽw’è‚µ‚Ä‚­‚¾‚³‚¢B
-p3`p9‚Íˆø”‚ÌÈ—ª‚ª‚Å‚«‚È‚¢‚Ì‚ÅAÈ—ª‚µ‚½‚¢‚Æ‚±‚ÍuNULLv‚ðƒZƒbƒg‚µ‚Ä‚­‚¾‚³‚¢B
+HCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer“™‚ð‚¹‚¸ƒJ[ƒlƒ‹‚ðˆê‹C‚ÉŽÀs‚µ‚Ä‚µ‚Ü‚·B
+p1‚Íƒ\[ƒXƒR[ƒh‚Ì•¶Žš—ñ
+p2‚É‚ÍƒOƒ[ƒoƒ‹ƒTƒCƒYiŽÀs‚µ‚½‚¢•À—ñˆ—”j
+p3‚É‚Íƒ[ƒJƒ‹ƒTƒCƒY
+p4ˆÈ~‚ÍƒJ[ƒlƒ‹‚É“n‚·ˆø”‚ðŽw’è‚µ‚Ä‰º‚³‚¢B
 
-“à•”‚ÅHCLBuildProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer,HCLWriteBuffer,HCLReadBuffer,HCLReleaseKernel,HCLReleaseProgram,HCLReleaseMemObject,varsize‚ðŽg—p‚µ‚Ä‚¢‚Ü‚·B
+p4ˆÈ~‚Ìˆø”‚Ì”‚ÆOpenCLƒJ[ƒlƒ‹“à‚Ìˆø”‚Ì”‚ª‡‚í‚È‚¢‚ÆƒGƒ‰[‚ª”­¶‚µ‚Ü‚·B
+—á‚¦‚ÎOpenCL‚Å”z—ñ‚É’l‚ð‘‚«ž‚Þˆ—‚ð‚·‚é‚ÆAp4ˆÈ~‚ÉŽw’è‚µ‚½HSP”z—ñ•Ï”‚ÉŒ‹‰Ê‚ª‘‚«ž‚Ü‚ê‚Ü‚·B
+
+“à•”‚ÅHCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer,HCLWriteBuffer,HCLReadBuffer,HCLReleaseKernel,HCLReleaseProgram,HCLReleaseBuffer‚ðŽg—p‚µ‚Ä‚¢‚Ü‚·B
 ‚±‚Ì–½—ß‚ÅŠm•Û‚µ‚½VRAM“™‚ÍA‚±‚Ì–½—ß‚ªI‚í‚é‚Ü‚Å‚É•K‚¸”jŠü‚³‚ê‚Ü‚·B
 HCLDoKernel‚Æˆá‚¢Aƒ^ƒXƒN‚ªŠ®—¹‚·‚é‚Ü‚ÅŽŸ‚Ì–½—ß‚É‚¤‚Â‚è‚Ü‚¹‚ñB
-
+ƒI[ƒo[ƒwƒbƒh‚à‘å‚«‚¢‚Ì‚ÅA‘¬“x‚ª‹‚ß‚ç‚ê‚éê‡‚É‚ÍŒü‚«‚Ü‚¹‚ñB
 
 ¡‚±‚Ì–½—ß‚ðŽg‚¤‘O‚É
 ‚±‚Ì–½—ß‚ÍOpenCL‚Ì“ü–å—p‚Æ‚µ‚ÄA‚Ü‚½ŠÈˆÕ‚ÉOpenCL‚ð—˜—p‚Å‚«‚é‚±‚Æ‚ð–Ú“I‚Éì¬‚µ‚½–½—ß‚Å‚·B
@@ -205,17 +226,13 @@ HCLDoKernel‚Æˆá‚¢Aƒ^ƒXƒN‚ªŠ®—¹‚·‚é‚Ü‚ÅŽŸ‚Ì–½—ß‚É‚¤‚Â‚è‚Ü‚¹‚ñB
 ‚±‚Ì–½—ß‚ð—˜—p‚·‚é‚½‚ß‚É‚Í
 
 1.OpenCL—p‚Ì–½—ßƒ\[ƒX‚ð•ÊŒÂ—pˆÓ‚·‚éBiŠÈˆÕ‚ÈCŒ¾Œê‚É‚Ä•\‹Lj
-2.ˆ—‘ÎÛ‚ÌHSP‚Ì”z—ñ•Ï”‚ð—pˆÓ‚·‚éB
+2.ˆ—‘ÎÛ‚ÌHSP‚Ì”z—ñ•Ï”“™‚ð—pˆÓ‚·‚éB
 3.HCLCallŽÀsŒãAHCLCall‚Ìˆø”‚Æ‚µ‚Ä—pˆÓ‚µ‚½•Ï”‚ªOpenCL‚É‚æ‚Á‚Äˆ—‚³‚ê‚½Œ`‚Å’l‚ª•Ô‚éB
-
-OpenCL‚ÌƒJ[ƒlƒ‹ŠÖ”‚Íretrun‚Æ‚¢‚¤Œ`‚ÅHSP‚É’l‚ð‹A‚·Ž–‚Í‚µ‚Ü‚¹‚ñB
-’¼Ú•Ï”‚ð‰î‚µ‚Ä’l‚ð•Ô‚µ‚Ü‚·B‚»‚Ì“_‚É’ˆÓ‚µ‚Ä‰º‚³‚¢B
 
 Šµ‚ê‚Ä‚«‚½‚çHCLDoKernelAHCLDoKrn1,2,3‚Ö‚ÆƒXƒeƒbƒvƒAƒbƒv‚µ‚Ä‚­‚¾‚³‚¢B
 
 ¡Žg—p’ˆÓ
-‚±‚Ì–½—ß‚ðŽg‚Á‚Ä‚à‚ ‚é’ö“x‚‘¬‚ÉŒvŽZ‚ðs‚¤‚±‚Æ‚ª‚Å‚«‚Ü‚·‚ªA“¯‚¶ƒ\[ƒX‚Å‰½“x‚àŒJ‚è•Ô‚µŽg‚¤‚à‚Ì‚Å‚Í‚ ‚è‚Ü‚¹‚ñBŽv‚í‚ÊƒGƒ‰[‚ÌŒ´ˆö‚É‚È‚è‚Ü‚·B
-
+‚±‚Ì–½—ß‚ðŽg‚Á‚Ä‚à‚ ‚é’ö“x‚‘¬‚ÉŒvŽZ‚ðs‚¤‚±‚Æ‚ª‚Å‚«‚Ü‚·‚ªA“¯‚¶ƒ\[ƒX‚Å‰½“x‚àŒJ‚è•Ô‚µŽg‚¤‚à‚Ì‚Å‚Í‚ ‚è‚Ü‚¹‚ñBã‹L‚Ì‚æ‚¤ƒI[ƒo[ƒwƒbƒh‚ª‘å‚«‚¢‚©‚ç‚Å‚·B
 
 
 %href
@@ -267,34 +284,32 @@ OpenCLiGPGPUj‚ÌŽå‚È–ðŠ„‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iƒOƒ‰ƒ{‘¤j‚Ìˆ—‚Ì‹´“n
 iLV‚Q’†‚­‚ç‚¢ŠÈ’P‚Éˆµ‚¦‚éj
 HCLCall‚Å‚ÍŽ©“®“I‚Éˆ—‚µ‚Ä‚¢‚½uHSP‚Å—pˆÓ‚µ‚½”z—ñ•Ï”‚ðVRAM“™‚ÉˆÚ‚·ˆ—vuƒXƒŒƒbƒh‚ÌŽŸŒ³v‚ð
 Ž©‚çÝ’è‚µ‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB
-‚µ‚©‚µÝ’è‚Å‚«‚é•”•ª‚ª­‚È‚¢HCLCall‚Æ”äŠr‚µ‚Äˆ—‚Ì‚‘¬‰»‚ðs‚¤Ž–‚ª‰Â”\‚É‚È‚è‚Ü‚·B
-
+‚µ‚©‚µÝ’è‚Å‚«‚é•”•ª‚ª­‚È‚¢HCLCall‚Æ”äŠr‚µ‚Äˆ—‚Ì‚‘¬‰»‚âŽ©—R“x‚Ì‚‚¢‚±‚Æ‚ª‰Â”\‚É‚È‚è‚Ü‚·B
 
 
 HSPƒ†[ƒU[‚Æ‚µ‚ÄHCLDoKerneliOpneCLƒvƒ‰ƒOƒCƒ“j‚ð—˜—p‚·‚éŽžA—‰ð‚Ìã‚ÅçT‚«‚â‚·‚¢“_‚ðƒŠƒXƒgƒAƒbƒv‚µ‚Ü‚µ‚½B
 ‚»‚Ì‚½‚ß‚ÉOpenCL‚ð—˜—p‚·‚éã‚Å‚Ì“Æ“Á‚Èˆ—‚ðà–¾‚µ‚Ü‚·B
 
 	1.OpenCL—p‚Ì–½—ßƒ\[ƒX‚ð•ÊŒÂ—pˆÓ‚·‚é•K—v‚ª‚ ‚éBiŠÈˆÕ‚ÈCŒ¾Œê‚É‚Ä•\‹Lj
-	‚»‚µ‚Ä‚»‚Ìƒ\[ƒX‚ðHSPã‚ÅŒÅ—L‚Ì–½—ßiHCLBuildProgramj‚Å“Ç‚Ýž‚ÝB
+	‚»‚µ‚Ä‚»‚Ìƒ\[ƒX‚ðHSPã‚ÅŒÅ—L‚Ì–½—ßiHCLCreateProgramj‚Å“Ç‚Ýž‚ÝB
 
 	2.‚»‚Ìƒ\[ƒX‚ÌŠÖ”‚ðuƒJ[ƒlƒ‹v‚ÆŒ¾‚í‚ê‚é–½—ß’PˆÊ‚ðHSPã‚ÅŒÅ—L‚Ì–½—ßiHCLCreateKernelj‚Åì¬‚·‚éB
 
 
-	3.ƒJ[ƒlƒ‹ŠÖ”‚Ö‚Ìˆø”‚ðƒZƒbƒg‚·‚éÛA‚»‚Ìˆø”‚Í@CL_mem_object id‚Æ‚¢‚¤ŒÅ—L‚ÌƒIƒuƒWƒFƒNƒgŒ`Ž®‚Å‚ ‚é•K—v‚ª‚ ‚éB
+	3.ƒJ[ƒlƒ‹ŠÖ”‚Ö‚Ìˆø”‚ðƒZƒbƒg‚·‚éÛA‚»‚Ìˆø”‚Í@CL_mem_object id‚Æ‚¢‚¤ŒÅ—L‚ÌƒIƒuƒWƒFƒNƒgŒ`Ž®‚Å‚ ‚é•K—v‚ª‚ ‚éBCL_mem_object@id‚Í64bit intŒ^‚Ì”’l‚Å‚ ‚éB
 	‚»‚ÌƒIƒuƒWƒFƒNƒg‚ð—pˆÓ‚·‚é‚É‚ÍHSPã‚ÅŒÅ—L‚Ì–½—ßHCLCreateBuffer‚É‚Äì¬‚·‚éB
-	‚Ü‚½‚»‚ÌƒIƒuƒWƒFƒNƒg‚ÉHSPã‚Å—pˆÓ‚µ‚½•Ï”‚ð“ü‚êž‚Ý‚½‚¢Žž‚ÍHSPã‚ÅŒÅ—L‚Ì–½—ßHCLWriteBuffer‚É‚Ä“ü‚êž‚ÞB
+	‚Ü‚½‚»‚ÌƒIƒuƒWƒFƒNƒg‚ÉHSPã‚Å—pˆÓ‚µ‚½”z—ñ‚ð“ü‚êž‚Ý‚½‚¢Žž‚ÍHSPã‚ÅŒÅ—L‚Ì–½—ßHCLWriteBuffer‚É‚Ä“ü‚êž‚ÞB
 @
 	4.æ‚Ù‚ÇƒJ[ƒlƒ‹ŠÖ”‚É“ü‚êž‚Þ‚½‚ß‚Ìˆø”‚ðŒÅ—L‚ÌƒIƒuƒWƒFƒNƒgŒ`Ž®‚É‚Ä—pˆÓ‚µ‚½B
-	‚»‚Ìˆø”‚ðƒJ[ƒlƒ‹ŠÖ”‚Éˆø”‚ðƒZƒbƒg‚·‚é‚Æ‚«ŒÅ—L‚Ì–½—ßiHCLSetKernelj‚ðŽg—p‚µ‚È‚¯‚ê‚Î‚È‚ç‚È‚¢B 
-	i‚Ü‚½‚»‚Ìˆø”‚ÍƒJ[ƒlƒ‹‚ÌŠÖ”‚Ìˆø”‚ª‚R‚Â‚ ‚Á‚½‚Æ‚µ‚Ä‚àˆê‚Â‚Ã‚Â‚µ‚©ƒZƒbƒg‚Å‚«‚È‚¢Bj
+	‚»‚Ìˆø”‚ðƒJ[ƒlƒ‹ŠÖ”‚Éˆø”‚ðƒZƒbƒg‚·‚é‚Æ‚«ŒÅ—L‚Ì–½—ßiHCLSetKernel‚âHCLSetKrnsj‚ðŽg—p‚µ‚È‚¯‚ê‚Î‚È‚ç‚È‚¢B 
 
 	5.‚»‚µ‚Äˆø”‚ðƒZƒbƒg‚µ‚½ƒJ[ƒlƒ‹‚ðŒÅ—L‚Ì–½—ßiHCLDoKernelj‚ÅŽÀsB
 
-	6.‚»‚µ‚Ä‚»‚ÌŒ‹‰Ê‚ðŽQÆ‚·‚éŽž‚ÍHSPã‚ÌŒÅ—L‚Ì–½—ßiHCLReadBufferj‚Åˆø”‚ðŽQÆ‚·‚éB
+	6.‚»‚µ‚Ä‚»‚ÌŒ‹‰Ê‚ðŽQÆ‚·‚éŽž‚ÍHSPã‚ÌŒÅ—L‚Ì–½—ßiHCLReadBufferj‚Åƒf[ƒ^‚ð–ß‚µ‚Ä‚±‚È‚¯‚ê‚Î‚È‚ç‚È‚¢B
 
-‚±‚Ì‚æ‚¤‚Èˆ—‚ª•K—v‚Æ‚È‚é‚Ì‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iƒOƒ‰ƒ{‘¤j‚Ìˆ—/ƒƒ‚ƒŠŠÇ—‚ª•ÊŒÂ‚Æ‚È‚Á‚Ä‚¢‚é‚©‚ç‚Å‚·B
+‚±‚Ì‚æ‚¤‚Èˆ—‚ª•K—v‚Æ‚È‚é‚Ì‚ÍƒzƒXƒg‘¤iCPU‘¤j‚ÆƒfƒoƒCƒX‘¤iGPU‘¤j‚Ìˆ—/ƒƒ‚ƒŠŠÇ—‚ª•ÊŒÂ‚Æ‚È‚Á‚Ä‚¢‚é‚©‚ç‚Å‚·B
 ‚»‚ÌŠÔ‚Ì‹´“n‚µ‚ðs‚¤‚Ì‚ªOpneCL‚Å‚ ‚èA‚»‚Ì‚½‚ß‚É“Æ“Á‚Èˆ—‚ª•K—v‚È‚Á‚Ä‚¨‚è‚Ü‚·B
-
+‚È‚¨•Ö‹XãGPU‘¤‚Æ‘‚¢‚Ä‚¢‚Ü‚·‚ªAOpenCLƒfƒoƒCƒX‚ªIntel CPU‚âAMD CPU‚Ìê‡‚à‚ ‚è‚¦‚Ü‚·B‚»‚Ìê‡‚Å‚àƒƒ‚ƒŠŠÇ—‚ª•ÊŒÂ‚Å‚ ‚é‚±‚Æ‚Í•Ï‚í‚è‚È‚¢‚Å‚·B¦‚Â‚Ü‚èSVM‚ÍŽg‚¦‚È‚¢(ver1.0Žž“_)
 
 
 
@@ -321,87 +336,106 @@ NDRange ƒTƒCƒY Gyglobal_work_size[1]ƒOƒ[ƒoƒ‹ƒ[ƒNƒAƒCƒeƒ€y‚ÌƒTƒCƒY‚±‚Ì
 Ô˜g“à‚Ì‰©F‚¢‚Æ‚±‚ë(ƒOƒ‹[ƒv“à)‚Å‹¤—Lƒƒ‚ƒŠ‚ªŽg‚¦‚Ü‚·B
 uVRAMv‚Æu‹¤—Lƒƒ‚ƒŠv‚Íˆá‚¢‚Ü‚·B
 
-VRAMƒrƒfƒIƒƒ‚ƒŠ[ƒfƒoƒCƒXƒƒ‚ƒŠ[ƒOƒ[ƒoƒ‹ƒƒ‚ƒŠ[GDDR5iƒAƒNƒZƒXˆê”Ô’x‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å__global‚ÅŽw’è‚µ‚½•Ï”
+VRAMƒrƒfƒIƒƒ‚ƒŠ[ƒfƒoƒCƒXƒƒ‚ƒŠ[ƒOƒ[ƒoƒ‹ƒƒ‚ƒŠ[GDDR6iƒAƒNƒZƒXˆê”Ô’x‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å__global‚ÅŽw’è‚µ‚½•Ï”
 ‹¤—Lƒƒ‚ƒŠ[‚PŽŸƒLƒƒƒbƒVƒ…ƒ[ƒJƒ‹ƒƒ‚ƒŠ[i­‚µ‘‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å__local‚ÅŽw’è‚µ‚½•Ï”
 ƒvƒ‰ƒCƒx[ƒgƒƒ‚ƒŠ[ƒŒƒWƒXƒ^iˆê”Ô‘‚¢jƒJ[ƒlƒ‹ƒ\[ƒX‚Å‰½‚àŽw’è‚µ‚È‚©‚Á‚½Žž‚Ì•Ï”(uint ic@‚Æ‚©‚Í‚±‚ê‚ð‚³‚µ‚Ä‚¢‚é)
 
-ƒvƒƒOƒ‰ƒ}‚ÍOpenCL‚Åƒf[ƒ^•À—ñˆ—‚ðs‚¤‚½‚ß‚ÉƒCƒ“ƒfƒNƒX‹óŠÔ‚ÌŽŸŒ³”Aƒ[ƒNƒAƒCƒeƒ€‚Ì‘”Aƒ[ƒNƒOƒ‹[ƒvƒTƒCƒY‚ðŽw’è‚·‚é‚±‚Æ‚ÅƒCƒ“ƒfƒNƒX‹óŠÔ‚ð’è‹`‚µ‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB
+ƒvƒƒOƒ‰ƒ}‚ÍOpenCL‚Åƒf[ƒ^•À—ñˆ—‚ðs‚¤‚½‚ß‚ÉƒCƒ“ƒfƒNƒX‹óŠÔ‚ÌŽŸŒ³”Aƒ[ƒNƒTƒCƒY‚Ì‘”Aƒ[ƒJƒ‹ƒTƒCƒY‚ðŽw’è‚·‚é‚±‚Æ‚ÅƒCƒ“ƒfƒNƒX‹óŠÔ‚ð’è‹`‚µ‚È‚¯‚ê‚Î‚È‚è‚Ü‚¹‚ñB
 
 
-¡ƒCƒ“ƒfƒNƒX‹óŠÔ‚É‚¨‚¯‚éŒvŽZ‚Æƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚É‚Â‚¢‚Ä
-‚Ü‚¸‚Í‚¶‚ß‚ÉAƒJ[ƒlƒ‹‚Íˆê‚Â‚ÌŒvŽZ‚Ì—¬‚ê‚ð‹L‚µ‚½‚à‚Ì‚Å‚·B
-ˆê‚Â‚ÌƒXƒŒƒbƒh‚Åˆê‚Â‚ÌƒJ[ƒlƒ‹‚ðŽÀs‚µ‚Ü‚·B
-‰½ŒÂ‚ÌƒXƒŒƒbƒh‚ðˆ—‚µ‚½‚¢‚©‚ðƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚Â‚Ü‚èp3‚ÅŽw’è‚µ‚Ü‚·B
-‚±‚±‚ÅƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚ð10000‚Æ‚µ‚Ü‚·B
-ƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚Í‘å‚«‚È” ‚ÅA‚»‚ê‚ð‹æØ‚éŽdØ‚è‚ª‚ ‚é‚Æ‚µ‚Ü‚·B
-ŽdØ‚è‚Å‹æØ‚ç‚ê‚½•”‰®‚ÌA‚»‚Ì‘å‚«‚³‚ðƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ÆŒÄ‚Ñ‚Ü‚µ‚å‚¤B
-¡‚Íƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Íu“KØ‚È’lv‚¾‚Æ‚µ‚Ü‚·B
+¡global_work_size‚ÌŽw’è
+•À—ñ”‚ðŽw’è‚·‚é‚à‚Ì‚¾‚ÆŽv‚Á‚Ä‚­‚¾‚³‚¢B
+100—v‘f‚Ì”z—ñ‚ª‚ ‚Á‚Ä1ƒXƒŒƒbƒh‚ª1‚Â‚Ì—v‘f‚ÉƒAƒNƒZƒX‚·‚é‚æ‚¤‚Èˆ—‚Ìê‡A1ŽŸŒ³100•À—ñ‚Å“®‚©‚·‚Ì‚ÅAglobal_work_size[0]‚Í100‚Æ‚µ‚Ü‚·B
 
-‚³‚Ä‚Ü‚¸4ƒRƒA‚ÌCPU‚ðƒCƒ[ƒW‚µ‚Ä‚Ý‚Ü‚µ‚å‚¤B
-¡‰¼‚É1ƒRƒA‚ª“¯Žž‚É4ƒXƒŒƒbƒhŽÀs‚Å‚«‚½‚Æ‚·‚é‚Æ‚±‚ÌCPU‚Í1‰ñ‚É16ƒXƒŒƒbƒhŽÀs‚Å‚«‚é‚±‚Æ‚É‚È‚è‚Ü‚·B
-‚»‚µ‚ÄÅ‰‚Ì16ƒXƒŒƒbƒh‚ª•À—ñˆ—‚³‚êŽc‚è‚Ì9984ƒXƒŒƒbƒh‚ª‘Ò‚Á‚Ä‚¢‚éó‘Ô‚É‚È‚è‚Ü‚·BiŠÈ’P‚É‚µ‚Ä‚¢‚é‚¾‚¯‚ÅŽÀÛ‚Í‚¿‚å‚Á‚Æˆá‚¢‚Ü‚·‚ªEEj
-ƒXƒŒƒbƒh‚ªƒJ[ƒlƒ‹ˆ—‚ðŠ®—¹‚·‚ê‚ÎA‚Ü‚½ŽŸ‚ÌƒXƒŒƒbƒh‚Ö‚Æ‚¤‚Â‚Á‚Ä‚¢‚«‚Ü‚·B
-‚±‚ê‚ª625(=16/10000)‰ñŒJ‚è•Ô‚³‚êA‚±‚Ìƒ^ƒXƒN‚ªI—¹‚Æ‚È‚è‚Ü‚·B
-‚±‚Ì‚½‚ßAŠeƒXƒŒƒbƒh‚Í‚»‚ê‚¼‚êƒoƒ‰ƒoƒ‰‚Ìƒ^ƒCƒ~ƒ“ƒO‚ÅŒvŽZ‚³‚êŽn‚ßAI‚í‚è‚Ìƒ^ƒCƒ~ƒ“ƒO‚àˆá‚¤‚Ì‚ÅAƒXƒŒƒbƒh“¯Žm‚Åƒf[ƒ^’ÊM‚·‚é‚±‚Æ‚Í‚Å‚«‚È‚¢‚Í‚¸‚Å‚·B
-100”Ô–Ú‚ÌƒXƒŒƒbƒh‚ÌŒvŽZŒ‹‰Ê‚ð1”Ô–Ú‚ÌƒXƒŒƒbƒh‚ÅŽg‚¢‚½‚¢‚ÆŒ¾‚Á‚Ä‚à–³—‚È‚Ì‚Å‚·B
-‹t‚É1”Ô–Ú‚ÌƒXƒŒƒbƒh‚ÌŒvŽZŒ‹‰Ê‚ð100”Ô–Ú‚ªŽg‚¢‚½‚¢‚Æ‚¢‚¤‚Ì‚à–³—‚Å‚·B‚È‚º‚È‚ç•K‚¸1”Ô–Ú‚ÌƒXƒŒƒbƒh‚©‚ç‡”Ô‚ÉŒvŽZ‚ðŽn‚ß‚Ä‚­‚ê‚é‚Æ‚¢‚¤‚à‚Ì‚Å‚Í‚È‚¢‚©‚ç‚Å‚·B
-‚Æ‚±‚ë‚ªp4‚Ìƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ð‚¤‚Ü‚­Ý’è‚·‚é‚±‚Æ‚ÅAƒXƒŒƒbƒh“¯Žm‚Ì’ÊM‚ª‰Â”\‚É‚È‚éê‡‚ª‚ ‚è‚Ü‚·B
-‚±‚±‚Åƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ð100‚Æ‚µ‚Ü‚·B
-¡‚±‚±‚É10000‚Ìƒ[ƒNƒTƒCƒY‚Ì‚Æ‚Ä‚à‘å‚«‚È” ‚ª‚ ‚Á‚½‚Ì‚Å‚·‚ªA‚»‚±‚ð100ŒÂ‚Ì•”‰®‚É•ªŠ„‚µ‚Ü‚µ‚½B
-‚à‚¿‚ë‚ñˆê‚Â‚Ì•”‰®‚Ì’†‚É‚ÍƒJ[ƒlƒ‹‚Æ‚¢‚¤ƒAƒCƒeƒ€‚ª100ŒÂ‘¶Ý‚µ‚Ü‚·B
-CPU‚ÍA‚±‚Ì•”‰®’PˆÊ‚Åˆ—‚·‚é‚±‚Æ‚à‚Å‚«‚Ü‚·B‚Æ‚¢‚¤‚©ŽÀ‚Í‚PƒRƒA‚Í‚P•”‰®’PˆÊ‚Åˆ—‚µ‚Ü‚·B
-‚PƒRƒA‚ªˆê•”‰®•ª‚ÌƒJ[ƒlƒ‹‚ðŽÀs‚µ‚æ‚¤‚Æ‚·‚é‚Æ‚«ACPU‚Í‚PƒRƒA‚Ì’†‚É100ƒXƒŒƒbƒh—§‚Ä‚Ü‚·B
-‚à‚¿‚ë‚ñŒvŽZ‘¬“x‚Íã‚Ì4ƒXƒŒƒbƒh‚ÌŽž‚æ‚è25•ª‚Ì1‚É—Ž‚¿‚é‚©‚à‚µ‚ê‚Ü‚¹‚ñB
-‚»‚µ‚Ä‚±‚Ì‚Æ‚«100ŒÂ‚ÌƒXƒŒƒbƒh‚Í•K‚¸‘«•À‚Ý‚ð‚»‚ë‚¦‚Ü‚·B‚»‚¤‚¢‚¤‚à‚Ì‚È‚Ì‚Å‚·B
-‚±‚±‚É—˜“_‚ª‚ ‚è‚Ü‚·B
-•”‰®‚Ì’†‚Í•K‚¸“¯Žž‚Éˆ—‚³‚ê‚Ä‚¢‚é‚Ì‚ÅA1”Ô–Ú‚ÌƒXƒŒƒbƒh‚Æ100”Ô–Ú‚ÌƒXƒŒƒbƒh‚ª‹¤—Lƒƒ‚ƒŠ‚ð‰î‚µ‚Äƒf[ƒ^‚ð’ÊM‚·‚é‚±‚Æ‚ª‚Å‚«‚é‚Ì‚Å‚·B
-•K‚¸“¯Žž‚É‚Æ‚¢‚¤‚Ì‚ÍA100ƒXƒŒƒbƒh‚·‚×‚Ä‚ªƒ\[ƒXƒR[ƒh‚Ì“¯‚¶s‚ðŽÀs‚µ‚Ä‚¢‚é‚ÆŒ¾‚Á‚½‚æ‚¤‚ÈŠ´‚¶‚Å‚·B
-‚±‚±‚Ü‚Å“¯Šú‚µ‚Ä‚¢‚ê‚ÎA•”‰®‚Ì’†‚É‚ ‚é100ŒÂ‚ÌƒXƒŒƒbƒh‘S‚Ä‚ª“¯‚¶‚ ‚éƒf[ƒ^‚ð‹¤—L‚·‚é‚±‚Æ‚ª‚Å‚«‚é‚Ì‚à”[“¾‚Å‚·B
+‰æ‘œ‚Ì‚æ‚¤‚Èƒf[ƒ^‚Éˆ—‚ðŽ{‚·ê‡‚ÍA2ŽŸŒ³‚Å256*256•À—ñ‚È‚Ç‚Æ‚¢‚¤‚±‚Æ‚à‚Å‚«‚Ü‚·B
 
-‚³‚Ä‚±‚±‚ÅA‚ ‚éˆ—‚É‚æ‚è100ŒÂ’†1ŒÂ‚¾‚¯‚ª‚·‚²‚¢ˆ—‚ÉŽžŠÔ‚ª‚©‚©‚Á‚Ä‚µ‚Ü‚Á‚½‚Æ‚µ‚Ü‚·B
-‚·‚é‚Æ100ƒXƒŒƒbƒh‚Í•K‚¸‘«•À‚Ý‚ð‚»‚ë‚¦‚Ä‚¢‚é‚Ì‚ÅŽc‚è99ŒÂ‚ÌƒXƒŒƒbƒh‚Í‘Ò‚¿‚Ú‚¤‚¯‚ð‹ò‚ç‚¢‚Ü‚·B
-–{—ˆ‚PƒRƒA4ƒXƒŒƒbƒh‚Ü‚ÅŽÀs‚Å‚«‚é‚Ì‚É1ƒXƒŒƒbƒh‚µ‚©ŒvŽZ‚Å‚«‚Ä‚¢‚È‚¢‚±‚Æ‚É‚È‚è‚Ü‚·B
-‚±‚ê‚Í‚PƒRƒA‚Ì‹@”\‚Ì3/4‚ª‹ó‰ñ‚è‚µ‚Ä‚¢‚éó‘Ô‚È‚Ì‚Å‚©‚È‚è–³‘Ê‚Å‚ ‚é‚ÆŒ¾‚¦‚Ü‚·B
-‚±‚ê‚ªŒ‡“_‚Å‚·B
-‚±‚Ì1ƒXƒŒƒbƒh‚Ìˆ—‚ªI‚í‚ê‚ÎAŽc‚è‚Ì99ƒXƒŒƒbƒh‚àI—¹‚µ‚ÄACPUƒRƒA‚ÍŽŸ‚Ì•”‰®‚ðˆ—‚µŽn‚ß‚Ü‚·B
+¡local_work_size‚ÌŽw’è
+æ‚Ù‚Ç‚Ìglobal_work_size‚ð‚Ç‚Ì‚æ‚¤‚É•ªŠ„‚·‚é‚©A‚Æ‚¢‚¤‚Ì‚ª’¼ŠÏ“I‚Èà–¾‚©‚ÆŽv‚¢‚Ü‚·B
+‚Â‚Ü‚èŠ„‚èØ‚ê‚ê‚Î‰½‚Å‚à‚¢‚¢‚í‚¯‚Å‚·‚ªAŒvŽZ‘¬“x‚É’¼Œ‹‚·‚é‚Ì‚Åd—v‚È€–Ú‚Å‚·B
 
-ƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ð‘å‚«‚­‚µ‚·‚¬‚½ê‡‚ÌŒ‡“_‚ÍAˆê‚Â‚ÌƒXƒŒƒbƒh‚ª‘«‚ðˆø‚Á’£‚é‚ÆŽc‚è‚ÌƒXƒŒƒbƒh‚ª‘Ò‚½‚È‚¢‚Æ‚¢‚¯‚È‚­‚È‚é‚±‚Æ‚Å‚·B
-‚µ‚©‚µ‹¤—Lƒƒ‚ƒŠ‚ðŽg‚í‚È‚¢‚©‚ç‚ÆŒ¾‚Á‚Äƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ð1‚É‚·‚é‚ÆA‚PƒRƒA‚ª“¯Žž‚Éˆ—‚Å‚«‚é‚Ì‚ªˆê•”‰®‚¾‚¯‚È‚Ì‚Å
-ˆê•”‰®ˆ—‚·‚é‚Ì‚É‚PƒXƒŒƒbƒh—§‚Ä‚ÄA‚â‚Á‚Ï‚è3/4‚ª–³‘Ê‚Æ‚È‚Á‚Ä‚µ‚Ü‚¢‚Ü‚·B
-‚±‚Ìê‡ˆê”Ô‚¢‚¢ƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Ìu“KØ‚È’lv‚Í4‚Æ‚È‚è‚Ü‚·B
+Œ‹˜_‚©‚çŒ¾‚¤‚Æ64,128,256‚Ì‚Ç‚ê‚©‚ðŽw’è‚·‚ê‚ÎŠO‚ê‚Í‚ ‚è‚Ü‚¹‚ñB
+global_work_size‚ª”¼’[‚È”‚Åã‹L‚Ì”‚ÅŠ„‚èØ‚ê‚È‚¢ê‡‚ÍAglobal_work_size‚ð‘‚â‚µ‚Ä‚Å‚àŠ„‚èØ‚ê‚é”Žš‚É‚µ‚½‚Ù‚¤‚ª—Ç‚¢‚Å‚·B
 
-GPU‚Ìê‡‚Í‚Ç‚¤‚Å‚µ‚å‚¤B
-AMD HD7970 ‚Ìê‡AGCN‚Æ‚¢‚¤‰‰ŽZŠí(ƒRƒA)‚ª32ŒÂ‚ ‚è‚Ü‚·B
-ˆê‚Â‚ÌGCN‚Í64ƒXƒŒƒbƒh‚Ü‚Å“¯Žž‚Éˆ—‚Å‚«‚é‚Ì‚Å‚±‚Ìê‡ˆê”Ô‚¢‚¢ƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Í64‚Æ‚È‚è‚Ü‚·B
-ƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Í64‚ðŽw’è‚µ‚½ŽžA32ŒÂ‚ÌƒRƒA‚ªŠeX‚Ì64ŒÂ‚ÌƒXƒŒƒbƒh‚ðˆ—‚µŽn‚ß‚é‚Ì‚ÅA“¯Žž‚É2048ŒÂ‚Ì•À—ñˆ—‚ª‰Â”\‚Æ‚¢‚¤‚±‚Æ‚É‚È‚è‚Ü‚·B
-‚¿‚È‚Ý‚Éˆê•”‚ÌnVidia‚ÌƒOƒ‰ƒ{‚Í1‚Â‚ÌƒRƒA‚ ‚½‚è192ƒXƒŒƒbƒh“¯Žžˆ—‚Å‚«‚é‚à‚Ì‚à‚ ‚é‚æ‚¤‚Å‚·B
+EÚ×à–¾
+global_work_size‚ª1024‚Ålocal_work_size‚ð64‚É‚µ‚½‚Æ‚µ‚Ü‚·B
+•ªŠ„‚µ‚½Œã‚Ì1ƒOƒ‹[ƒv(=1‚Â‚Ìƒ[ƒNƒOƒ‹[ƒv)‚Í64‚ÌƒXƒŒƒbƒh‚ðŽ‚Á‚Ä‚¢‚éó‘Ô‚Å‚·B1024/64=16‚È‚Ì‚Å16ƒOƒ‹[ƒv‘¶Ý‚µ‚Ü‚·B
+‚»‚µ‚Ä1ƒOƒ‹[ƒv‚ÍˆÈ‰º‚Ì‹@”\‚ªŽg‚¦‚Ü‚·B
 
-‚Â‚Ü‚èƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚É‚ÍA‰‰ŽZƒRƒA‚ð‹ó‰ñ‚è‚³‚¹‚È‚¢‚½‚ß‚Ì“KØ‚ÈƒXƒŒƒbƒh”‚ðŽw’è‚µ‚È‚¢‚ÆA‚‘¬ˆ—‚ª‚Å‚«‚È‚¢‚æ‚Æ‚¢‚¤‚±‚Æ‚Å‚·B
+    E‹¤—Lƒƒ‚ƒŠ‚ª‚ ‚ê‚ÎA‹¤—Lƒƒ‚ƒŠ‚ð‹¤—L‚Å‚«‚éB
+
+‚±‚Ì‹@”\‚Ì‚½‚ß‚ÉA“¯‚¶ƒOƒ‹[ƒv‚É‘®‚·‚éƒXƒŒƒbƒh‚Í•K‚¸“¯ˆê‚ÌCU(SM)‚ÅŽÀs‚³‚ê‚Ü‚·B
+ˆê”Ê“I‚ÉNVIDIA‚ÌGPU‚¾‚Æ1SM‚ ‚½‚è64,128,192‚ÌCUDA Core‚ª‚ ‚èAAMD‚ÌGPU‚¾‚Æ1CU‚ ‚½‚è64‚ÌPE‚ª‚ ‚èA‚»‚ÌCUDA core‚âPE‚ªˆ—‚ðs‚È‚¢‚Ü‚·B
+
+NVIDIA‚ÌTuringƒA[ƒLƒeƒNƒ`ƒƒ‚Å‚¢‚¤‚Æ1SM‚ ‚½‚è64CUDA Core‚ ‚èA‚±‚ê‚ª16+16+16+16‚Æ•ª‚©‚ê‚Ä‚¢‚Ü‚·B
+‚±‚Ì1~16CUDA core‚ª1‚Â‚ÌWarp(*1)‚ð2cycle‚©‚¯‚Äˆ—‚µ‚Ü‚·B
+*1:Warp‚Æ‚Í32ƒXƒŒƒbƒh‚Ì‚Ü‚Æ‚Ü‚è‚Ì‚±‚Æ
+
+1ƒOƒ‹[ƒv=64ƒXƒŒƒbƒh‚È‚Ì‚ÅA2‚Â‚ÌWarp‚É‚¨‚³‚Ü‚è‚Ü‚·B
+‘S•”‚Å16ƒOƒ‹[ƒv‚ ‚é‚Ì‚Å‘S•”‚ÅWarp‚ª32‚ ‚é‚±‚Æ‚É‚È‚è‚Ü‚·BWarp”Ô†0`31‚ªŠ„‚èU‚ç‚ê‚Ä‚¢‚é‚Æ‚µ‚Ü‚·B
+
+‚Ü‚½‚±‚±‚Å‚Í1SM“à‚Å16ƒOƒ‹[ƒv=32Warp‘S•”‚ªŽÀs‚³‚ê‚é‚Æ‚µ‚ÄA‚ ‚éFMA(c=a*b+c)‚ð1‚ÂŽÀs‚·‚é‚Æ‚·‚é‚Æ
+æ‚Ù‚Ç‚Ì‡@16+‡A16+‡B16+‡C16‚ÌCUDA Core‚ª
+1,2cycle–Ú
+‡@:Warp0
+‡A:Warp1
+‡B:Warp2
+‡C:Warp3
+
+3,4cycle–Ú
+‡@:Warp4
+‡A:Warp5
+‡B:Warp6
+‡C:Warp7
+
+5,6cycle–Ú
+‡@:Warp8
+‡A:Warp9
+‡B:Warp10
+‡C:Warp11
+
+7,8cycle–Ú
+‡@:Warp12
+‡A:Warp13
+‡B:Warp14
+‡C:Warp15
+
+9,10cycle–Ú
+‡@:Warp16
+‡A:Warp17
+‡B:Warp18
+‡C:Warp19
+
+11,12cycle–Ú
+‡@:Warp20
+‡A:Warp21
+‡B:Warp22
+‡C:Warp23
+
+13,14cycle–Ú
+‡@:Warp24
+‡A:Warp25
+‡B:Warp26
+‡C:Warp27
+
+15,16cycle–Ú
+‡@:Warp28
+‡A:Warp29
+‡B:Warp30
+‡C:Warp31
 
 
+‚±‚Ì‚æ‚¤‚ÉŽÀs‚³‚êA1024ŒÂ‚ÌFMA‚ªŽÀs‚Å‚«‚½‚±‚Æ‚É‚È‚è‚Ü‚·B
 
+ŽÀÛ‚ÍSM”‚ª70‚ ‚Á‚½‚è‚Å‚à‚Á‚Æ˜b‚Í•¡ŽG‚È‚Ì‚Å‚·‚ªA‚±‚Ì‚æ‚¤‚È—¬‚ê‚Å‚ ‚é‚±‚Æ‚ÍCUDA‚Å‚àCompute Shader‚Å‚à•Ï‚í‚è‚Ü‚¹‚ñB
+AMD GPU‚ÌGCNƒA[ƒLƒeƒNƒ`ƒƒ‚¾‚Æ1CU=16PE+16PE+16PE+16PE‚Å16PE‚ª4cycle‚Å1wavefront(64thread)‚ðŽÀs‚µ‚Ü‚·B
 
-¡ˆø”Ú×à–¾
+‚È‚Ì‚ÅAlocal_work_size‚ª32‚ÅŠ„‚èØ‚ê‚È‚¯‚ê‚ÎWarp‚É‚¤‚Ü‚­‚¨‚³‚Ü‚ç‚È‚¢‚Ì‚Å‹ó‰ñ‚è‚·‚éCore‚ª‚Å‚Ä‚«‚Ä‚µ‚Ü‚¢AŒvŽZ‚ª”ñŒø—¦‚É‚È‚Á‚Ä‚µ‚Ü‚¢‚Ü‚·B
+AMD GPU‚Ì‚±‚Æ‚àl‚¦‚é‚Æ64‚ÅŠ„‚èØ‚ê‚é‚±‚Æ‚ª•K—v‚É‚È‚è‚Ü‚·B
 
-p2‚Íwork_dim‚ÆŒ¾‚¢Aglobal_work_size‚âlocal_work_size‚ÌŽŸŒ³‚ðÝ’è‚µ‚Ü‚·B1`3‚ðŽw’è‚Å‚«‚Ü‚·B
-1‚È‚çƒJ[ƒlƒ‹ƒ\[ƒX‚Åget_global_id(0)‚ªŽg‚¦‚Ü‚·B
-2‚È‚çƒJ[ƒlƒ‹ƒ\[ƒX‚Åget_global_id(0),get_global_id(1)‚ªŽg‚¦‚Ü‚·B
-3‚È‚çƒJ[ƒlƒ‹ƒ\[ƒX‚Åget_global_id(0),get_global_id(1),get_global_id(2)‚ªŽg‚¦‚Ü‚·B
-get_global_id‚ÍƒXƒŒƒbƒh”Ô†‚ð–ß‚µ‚Ü‚·B‚QŽŸŒ³ƒXƒŒƒbƒh‚È‚çget_global_id(0)‚Íx•ûŒü‚ÌƒXƒŒƒbƒh”Ô†Aget_global_id(1)‚Íy•ûŒü‚ÌƒXƒŒƒbƒh”Ô†‚ð–ß‚µ‚Ü‚·B
+‚È‚Ì‚Å–`“ª‚É‘‚¢‚½64,128,256‚ª—Ç‚¢‚Æ‚¢‚¤Œ‹˜_‚É‚È‚èA512,1024‚Íˆê•”‚ÌGPU‚ÅƒGƒ‰[‚ªo‚é‚Ì‚Å‚»‚±‚Ü‚Å‘å‚«‚¢”‚ÍŽw’è‚µ‚È‚¢‚Ù‚¤‚ª–³“ïA‚Æ‚¢‚¤l‚¦‚É‚È‚è‚Ü‚·B
+‚ ‚­‚Ü‚ÅŽ„‚Ìl‚¦‚È‚Ì‚ÅA“š‚¦‚Í‚È‚¢‚à‚Ì‚¾‚Æ‚ÍŽv‚¢‚Ü‚·B‹†‹É“I‚É‚Ílocal_work_size‚ð‘Sƒpƒ^[ƒ“ŽŽ‚µ‚ÄÅ‘¬‚Ì‚ðÌ—p‚·‚é‚Ì‚ª—Ç‚¢‚Å‚·B
 
-p3‚É‚ÍAƒJ[ƒlƒ‹‚ð‰½ŒÂŽÀs‚µ‚½‚¢‚©”‚ðŽw’è‚µ‚Ü‚·BŽÀsŽž‚É‚±‚Ì”‚Ì•ª‚¾‚¯ƒ[ƒNƒAƒCƒeƒ€‚ª¶¬‚³‚ê‚Ü‚·B
-‚±‚ê‚Íp2‚Ìwork_dim‚ÅŽw’è‚µ‚½’l‚ª2ˆÈã‚Ìê‡Ap3‚Í”z—ñ•Ï”‚ÅŽw’è‚µ‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñ(—v‘f”work_dimŒÂ‚Ì)
-p4‚Íƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚ÆŒ¾‚¢A1`256(ƒfƒoƒCƒX‚É‚æ‚é)‚ðŽw’è‚Å‚«‚Ü‚·B‚±‚±‚àp2‚Ìwork_dim‚ÅŽw’è‚µ‚½’l‚ª2ˆÈã‚Ìê‡A”z—ñ•Ï”‚ÅŽw’è‚µ‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñ(—v‘f”work_dimŒÂ‚Ì)
-‚»‚µ‚Äp3‚ÌŠe—v‘f‚Íp4‚ÌŠe—v‘f‚ÅŠ„‚èØ‚ê‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñB
-‚Ü‚½p4‚ÌŠe—v‘f‚Ì‘S•”‚ÌÏ‚ªHCLGetDeviceInfo_i(CL_DEVICE_MAX_WORK_GROUP_SIZE,0)‚Å“¾‚ç‚ê‚½”‚ð’´‚¦‚éê‡ƒGƒ‰[‚É‚È‚è‚Ü‚·B‚½‚¢‚Ä‚¢256‚©1024‚­‚ç‚¢‚Å‚·B
-
-‚³‚«‚Ù‚Ç‚Ìà–¾’Ê‚èAp4‚Í1‚ðŽw’è‚·‚é‚Æ”ñŒø—¦‚É‚È‚Á‚Ä‚µ‚Ü‚¤‚±‚Æ‚ª‘½‚¢‚Å‚·B‚Æ‚­‚ÉGPU‚Å‚ÍŒ°’˜‚Å‚·B
-CPU‚Å‚ÍASIMD‚ðƒtƒ‹‚ÉŽg‚¢‚±‚È‚·‚½‚ß‚Ép4‚Ì’l‚ð1‚æ‚è4‚â8‚É‚µ‚½‚Ù‚¤‚ª—Ç‚¢ê‡‚à‚ ‚è‚Ü‚·‚ª‘½•ª‚ ‚Ü‚èŠÖŒW‚È‚­AƒJ[ƒlƒ‹ƒ\[ƒX“à‚Éufloat4v‚âufloat32v‚ðŽg‚Á‚½ŒvŽZ‚ð“ü‚ê‚½‚Ù‚¤‚ªSIMD‚ðƒtƒ‹‚ÉŽg‚¦‚é‚Å‚µ‚å‚¤B
-p4‚É‘å‚«‚¢’l‚ðÝ’è‚µ‚Ä‚à‘¬“x“I‚É•s—˜‚É‚È‚é‚±‚Æ‚ÍŠî–{“I‚É‚Í‚ ‚è‚Ü‚¹‚ñ‚ªAŠeX‚ÌŠÂ‹«‚ÅŠm‚©‚ß‚È‚ª‚ç’²ß‚µ‚Ä‰º‚³‚¢B
-
-
-
-
+¡NDrange
 ˆÈ‰º‚Éƒ[ƒNƒOƒ‹[ƒv‚âƒOƒ[ƒoƒ‹id‚È‚Ç‚Ì—pŒê‚âŽg‚¢•û‚Ì‰ðà‚ðÚ‚¹‚Ü‚·B
 
 —á
@@ -457,16 +491,13 @@ get_num_groups(1)‚Í1
 ˆÈ‰ºA24ƒXƒŒƒbƒh‚ÌŠe’l‚Ì}
 
 html{
-<img src="./doclib/HSPCL32/thumbs/d2.png">
+<img src="./doclib/HSPCL64/thumbs/d2.png">
 }html
 
 
 ¡Žg—p’ˆÓ
-i‚Pj
-HCLCreateBuffer‚Åì¬‚µ‚½VRAM‚Ì”ÍˆÍŠO‚ÉƒJ[ƒlƒ‹ƒ\[ƒX‘¤‚ÅƒAƒNƒZƒX‚µ‚æ‚¤‚Æ‚µ‚½ŽžAƒtƒŠ[ƒY‚Ü‚½‚Íƒuƒ‹[ƒXƒNƒŠ[ƒ“‚É‚È‚éŒ»Û‚ªŠm”F‚³‚ê‚Ä‚¢‚Ü‚·B
-
-i‚Qj
-ˆê•”‚ÌNVidia‚ÌƒOƒ‰ƒ{‚Å‚ÍAƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚Íƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Å®œ‚Å‚«‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñB
+(1)
+ˆê•”‚ÌGPU‚Å‚ÍAƒOƒ[ƒoƒ‹ƒ[ƒNƒTƒCƒY‚Íƒ[ƒJƒ‹ƒ[ƒNƒTƒCƒY‚Å®œ‚Å‚«‚È‚¯‚ê‚Î‚¢‚¯‚Ü‚¹‚ñB
 dim globalsize,3
 dim localsize,3
 globalsize=2048,2048,7
@@ -475,33 +506,13 @@ localsize=8,8,4
 uglobal_work_size‚ªlocal_work_size ‚Å®œ‚Å‚«‚È‚¢A‚Ü‚½‚Ílocal_work_size[0]*local_work_size[1]*local_work_size[2]‚ªAˆê‚Â‚Ìƒ[ƒNƒOƒ‹[ƒv“à‚Ìƒ[ƒNƒAƒCƒeƒ€”‚ÌÅ‘å’l‚ð’´‚¦‚½v
 ‚Æ‚¢‚¤ƒƒbƒZ[ƒW‚ªo‚Ü‚·B
 
-i‚Rj
-‚‘¬‰»‚É‚Â‚¢‚Ä
-uHCLDoKernelv‚ÍƒGƒ‰[ƒ`ƒFƒbƒNˆ—‹@”\‚â“à•”‚Åwork_dim•ªŠòˆ—‚ª‚Â‚¢‚Ä‚¢‚é‚½‚ßAƒI[ƒo[ƒwƒbƒh‚ª‹C‚É‚È‚é•û‚ÍuHCLDoKrn1vuHCLDoKrn2vuHCLDoKrn3v‚Å
-ƒGƒ‰[ƒ`ƒFƒbƒN‚È‚µ‚Ì“¯ˆ—‚ªs‚È‚¦‚Ü‚·B‚±‚ê‚Å‚Å‚«‚é‚‘¬‰»‚Æ‚¢‚Á‚Ä‚à”ñí‚ÉŒy”÷‚È‚à‚Ì‚Å‚·B–ˆ•bƒJ[ƒlƒ‹ŽÀs–½—ß‚ð1000‰ñŒÄ‚Ño‚·ƒŒƒxƒ‹‚Å·‚ªŒ©‚¦‚Ä‚«‚Ü‚·B
-(2014/10/8 ˆê•”‚ÌƒGƒ‰[ƒ`ƒFƒbƒN‚ðuHCLDoKrn1vuHCLDoKrn2vuHCLDoKrn3v‚É’Ç‰Á‚µ‚½‚Ì‚Å­‚µˆÀ‘S«‚ª‚‚Ü‚è‚Ü‚µ‚½B)
 
-i‚Sj
+(2)
 ‚±‚Ì–½—ß‚ÍƒJ[ƒlƒ‹‚ðŽÀs‚·‚é‚í‚¯‚Å‚Í‚È‚­ƒJ[ƒlƒ‹‚ðƒLƒ…[‚É“ü‚ê‚é‚¾‚¯‚È‚Ì‚ÅA‚±‚Ì–½—ß‚ðŽÀs‚µ‚½‚ ‚Æ‚ÉŒvŽZ‚ªI—¹‚µ‚Ä‚¢‚é‚í‚¯‚Å‚Í‚ ‚è‚Ü‚¹‚ñBƒ^ƒXƒN‚ÌŠmŽÀ‚ÈI—¹‚É‚ÍHCLWaitTask‚ðŽg‚Á‚Ä‚­‚¾‚³‚¢B‚½‚¾‚µHCLWaitTask‚ðŽg‚í‚È‚­‚Ä‚àAHCLDoKernel‚ÌŒãHCLReadBuffer‚ÅŒvŽZŒ‹‰Ê‚Ìƒf[ƒ^‚ð“Ç‚Ýo‚»‚¤‚Æ‚µ‚½ê‡AHCLReadBuffer‚ðŽÀs‚µ‚½Žž“_‚Å•K‚¸HCLDoKernel‚Å‘—‚Á‚½ƒJ[ƒlƒ‹‚Ìˆ—‚ªI—¹‚·‚é‚æ‚¤‚ÈŽd—l‚É‚È‚Á‚Ä‚¢‚éê‡‚à‚ ‚è‚Ü‚·(‹@Ží‚É‚æ‚é)B‚±‚Ìê‡HCLWaitTask‚ðŽg‚í‚È‚­‚Ä‚à•K‚¸ŒvŽZŒ‹‰Ê‚ªHCLReadBuffer‚Å“Ç‚Ýo‚¹‚é‚Æ‚¢‚¤‚±‚Æ‚Å‚·B
 ­X–Ê“|‚ÈŽd—l‚Å‚·‚ªAƒJ[ƒlƒ‹‚ðƒLƒ…[‚É“ü‚ê‚½Œã‚Í‚·‚®‚ÉŽŸ‚Ì–½—ß‚ÉˆÚ‚è‚Ü‚·‚Ì‚ÅACPU‚ª–³‘Ê‚ÈŽžŠÔ‚ð‘Ò‚Â‚±‚Æ‚Í‚È‚¢‚Æ‚¢‚¤ƒƒŠƒbƒg‚ª‚ ‚è‚Ü‚·B
 
 ¡ƒJ[ƒlƒ‹ƒ\[ƒX‚É‚Â‚¢‚Ä
-i‚Pj
-’è”‚Íuconstv‚æ‚èudefinev‚ðŽg‚Á‚½‚Ù‚¤‚ª‚¢‚¢‚Å‚·B
-
-i‚Qj
-uclampvŠÖ”‚ÍŒÃ‚¢ƒOƒ‰ƒ{‚Å‚ÍƒRƒ“ƒpƒCƒ‹ƒGƒ‰[‚É‚È‚è‚Ü‚·B
-
-i‚Rj
-umad24v‚âumul24vŠÖ”‚Å‚ÍAˆø”‚ÌŒ^‚ð•K‚¸‘µ‚¦‚Ä‰º‚³‚¢BƒfƒoƒCƒX‚É‚æ‚Á‚Ä‚ÍƒRƒ“ƒpƒCƒ‹‚ª’Ê‚Á‚½‚è’Ê‚ç‚È‚©‚Á‚½‚è‚µ‚ÄƒoƒO‚ÌŒ´ˆö‚Æ‚È‚è‚Ü‚·B
-
-i‚Sj
-for()•¶‚ðŽg‚¤‚Æ‚«AƒRƒ“ƒpƒCƒ‰‚ªƒ‹[ƒv“WŠJ‚·‚éê‡‚ª‚ ‚è‚Ü‚·Bƒ‹[ƒv‰ñ”‚ª‚ ‚Ü‚è‚É‘½‚¢ê‡A–½—ßƒR[ƒh‚ÅƒLƒƒƒbƒVƒ…‚ªˆ³”—‚³‚ê³‚µ‚¢ŒvŽZ‚ª‚Å‚«‚È‚¢‚±‚Æ‚ª‚ ‚è‚Ü‚·B
-
-i‚Tj
-Žg—p’ˆÓ‚Å‚àà–¾‚µ‚Ü‚µ‚½‚ªƒƒ‚ƒŠƒAƒNƒZƒXˆá”½‚É\•ª’ˆÓ‚µ‚Ä‰º‚³‚¢Bƒuƒ‹[ƒXƒNƒŠ[ƒ“‚É‚È‚è‚Ü‚·B
-
-i‚Uj
+(1)
 Žg‚¦‚é‘ã•\“I‚È‰‰ŽZŽq
 =	‘ã“ü
 !=	ðŒ•¶
@@ -523,8 +534,8 @@ for()•¶‚ðŽg‚¤‚Æ‚«AƒRƒ“ƒpƒCƒ‰‚ªƒ‹[ƒv“WŠJ‚·‚éê‡‚ª‚ ‚è‚Ü‚·Bƒ‹[ƒv‰ñ”‚ª‚ ‚Ü‚è‚
 *var	var‚ªƒ|ƒCƒ“ƒ^‚Å‚ ‚é‚±‚Æ‚ª‘O’ñBu*varv‚Ívar‚ÌŽw‚·ƒ|ƒCƒ“ƒ^ˆÊ’u‚Ì•Ï”BŽg‚¢ƒhƒRƒ‚Æ‚µ‚Ä‚ÍŠÖ”‚Ìo—Í’l‚ÌéŒ¾‚È‚Ç
 ->	ŠÔÚƒƒ“ƒoŽQÆ‰‰ŽZŽq
 
-i‚Vj
-Žg‚¦‚é‘ã•\“I‚È•Ï”Œ^
+(2)
+Žg‚¦‚é‘ã•\“I‚ÈŒ^
 u‚Íunsigned‚ÌˆÓ–¡
 1bit•Ï”
 Ebool 0`1
@@ -543,7 +554,7 @@ u‚Íunsigned‚ÌˆÓ–¡
 Eulong 0`–ñ1800‹ž
 Elong -–ñ900‹ž`+–ñ900‹ž
 
-i‚Wj
+(3)
 Œ^•ÏŠ·
 uint a;
 uchar b=1;
@@ -555,33 +566,19 @@ float ftmp;
 int i0=123;
 ftmp=(float)i0;//ftmp‚É‚Í123.0000‚ª‘ã“ü‚³‚ê‚é
 
-i‚Xj
+(4)
 ŠÖ”
 u__global v‚ÍVRAMã‚Ì•Ï”‚ðŽg‚¤‚Æ‚¢‚¤ˆÓ–¡
 u__localv‚Íƒ[ƒJƒ‹ƒƒ‚ƒŠã‚Ì•Ï”‚ðŽg‚¤‚Æ‚¢‚¤ˆÓ–¡
 
-i‚P‚Oj
+(5)
 Žg‚¦‚éŠÖ”A–½—ßA‰‰ŽZŽq‚È‚ÇÚ×‚É’m‚è‚½‚¢•û‚Í
 https://www.khronos.org/files/opencl-quick-reference-card.pdf
 ‚Ö
 
-i‚P‚Pj
-doubleŒ^‚Í•W€‚ÅƒTƒ|[ƒg‚µ‚Ä‚¢‚Ü‚¹‚ñB
-Žg‚¢‚½‚¢ê‡‚ÍƒJ[ƒlƒ‹ƒ\[ƒX‚Ìæ“ª‚É
-
-#ifdef cl_khr_fp64
-  #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif defined(cl_amd_fp64)
-  #pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#else
-  #error Double precision floating point not supported by OpenCL implementation.
-#endif
-
-‚ð‚¢‚ê‚Ä‚­‚¾‚³‚¢B
-
 
 ¡ÅŒã‚É
-‚±‚ê‚¾‚¯‚Å‚Í‚Ü‚¾à–¾•s‘«‚ÅA—‰ð‚ª“ï‚µ‚¢‚ÆŽv‚¢‚Ü‚·‚ªA–{ƒvƒ‰ƒOƒCƒ“•t‘®‚ÌƒTƒ“ƒvƒ‹‚ÌƒRƒƒ“ƒg‚âAƒhƒLƒ…ƒƒ“ƒg‚à“Ç‚ñ‚Å‚¢‚½‚¾‚¯‚½‚ç‚È‚ÆŽv‚¢‚Ü‚·B
+‚±‚ê‚¾‚¯‚Å‚Í‚Ü‚¾—‰ð‚Å‚«‚È‚¢‚©‚ÆŽv‚¢‚Ü‚·‚ªA–{ƒvƒ‰ƒOƒCƒ“•t‘®‚ÌƒTƒ“ƒvƒ‹‚ÌƒRƒƒ“ƒg‚âAƒhƒLƒ…ƒƒ“ƒg‚à“Ç‚ñ‚Å‚¢‚½‚¾‚¯‚½‚ç‚È‚ÆŽv‚¢‚Ü‚·B
 ‚»‚µ‚ÄOpenCL‚Ì‘S–e‚ð—‰ð‚·‚é‚Ì‚É­‚µ‚Å‚à–ð‚É—§‚Ä‚Î‚¢‚¢‚ÆŽv‚¢ŽQl‚Æ‚È‚éƒŠƒ“ƒN‚ðÚ‚¹‚Ä‚¨‚«‚Ü‚·B
 
 http://seesaawiki.jp/w/mikk_ni3_92/d/OpenCL
