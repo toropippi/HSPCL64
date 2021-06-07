@@ -1,9 +1,8 @@
 ■使用方法
 １解凍してできた「doclib」や「sample」などをまるごとHSP3インストールフォルダに入れて下さい。
-２HSPスクリプトエディタで#include "hspcl32.as"でHSPからOpenCLを扱えるようになります。
-３実際に使うにはHCLiniで初期化します。
-４他用意するものは、プログラム内で読み込むためのOpenCLのコードが書かれたテキストファイル。(拡張子はなんでもいい)
-
+２HSPスクリプトエディタで#include "hspcl64.as"でHSPからOpenCLを扱えるようになります。
+３実際に使うにはHCLinitで初期化します。
+４他用意するものは、プログラム内で読み込むためのOpenCLのコードが書かれたテキストファイル。(拡張子はなんでもいいが一般的には.cl)
 
 条件としてはOpenCLが動く環境でないといけない。
 グラフィックボードがオンボードの場合特にSandy Bridge以前のコアでは、基本的に動作しない。ただCPUがintel CPUでcore iなどでは
@@ -12,17 +11,3 @@ http://software.intel.com/en-us/vcsource/tools/opencl-sdk
 「OpenCL for intel HD・・・」
 をインストールすれば、OpenCLがintel CPU上のみで動く可能性がある。
 オンボードでない場合は基本的にグラボのドライバが最新であれば動作する。
-
-
-
-CPU、GPUがdouble型をサポートしていれば、OpenCLカーネルコードの先頭に
-
-#ifdef cl_khr_fp64
-  #pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif defined(cl_amd_fp64)
-  #pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#else
-  #error Double precision floating point not supported by OpenCL implementation.
-#endif
-
-をコピーペーストすれば、double型が使えるようになる。
