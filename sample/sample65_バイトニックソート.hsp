@@ -41,4 +41,3 @@
 		mes "key="+HCLReadIndex_i32(memA,cnt*2+0)+"\tindex="+HCLReadIndex_i32(memA,cnt*2+1)+""
 		loop
 	
-	end

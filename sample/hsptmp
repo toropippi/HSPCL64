@@ -1,202 +1,50 @@
-//GPUの計算はライフゲームの計算とmemvrmの計算
-//GPU→CPUでmemvrmから読み込むため、ライフゲームの計算とGPU(memvrm)→CPUがオーバーラップできるはずである
+//そもそもOpenCLデバイスがあるかどうかをこのサンプルで確認できます。
+//列挙されたのは全部使えます。HCLSetDevice xで指定することで任意のデバイスで計算できるようになります。
 #include "HSPCL64.as"
+
 	HCLinit
-#const WX 512
-#const WY 512
-
-	HCLSetDevice 1
-	prg=HCLCreateProgram("LifeGame.cl","-D WX="+WX+" -D WY="+WY+"")
-	krnGameMain=HCLCreateKernel(prg,"GameMain")
-	krnCellView=HCLCreateKernel(prg,"CellView")
-
-	//メモリ初期化、カーネル設定
-	memA=HCLCreateBuffer(WX*WY*4)
-	memB=HCLCreateBuffer(WX*WY*4)
-	memvrm=HCLCreateBuffer(WX*WY*3)
-	HCLFillBuffer_i32 memA,0
-	HCLFillBuffer_i32 memB,0
-
-	gosub*重量級宇宙船
-	gosub*ダイハード
-	gosub*どんぐり
-
-	screen 1,640,480
-	screen 0,WX,WY
-	mref vrm,66
-
-
-	HCLSetCommandQueue 0
-	//ライフゲーム計算
-	HCLSetKrns krnGameMain,memA,memB
-	HCLDokrn1 krnGameMain,WX*WY,64
-
-	event_id=0
-*main
-	//画像変換計算
-	HCLSetKrns krnCellView,memB,memvrm
-	HCLDokrn1 krnCellView,WX*WY,64,event_id
-	event_id++
-
-	//GPU→CPU
-	HCLSetCommandQueue 1
-	HCLSetWaitEvent event_id-1//さっきのmemB→memvrmが終わらないと読み込んでほしくない
-	HCLReadBuffer memvrm,vrm,,,,0,event_id
-	lastReadBufferEventid=event_id
-	event_id++
-
-	HCLSetCommandQueue 0
-	//ライフゲーム計算、これをGPU→CPUの転送中に行いたい
-	tmp=memA//swap3行
-	memA=memB//swap3行
-	memB=tmp//swap3行
-	HCLSetKrns krnGameMain,memB,memA
-	HCLDokrn1 krnGameMain,WX*WY,64,event_id
-	event_id++
-
-	repeat -1//転送が終了したらループを抜ける
-		await 0
-		if HCLGetEventStatus(lastReadBufferEventid)==0:break
+	if HCLGetDeviceCount()==0:dialog "対応ビデオカードがありません。終了します",1:end
+	
+	repeat HCLGetDeviceCount()
+		screen cnt,1280,840
+		HCLSetDevice cnt
+		mes "デバイスid								"+HCLGetSettingDevice()
+		mes "プラットフォーム名							"+HCLGetDeviceInfo_s(CL_PLATFORM_NAME);プラットフォームid取得
+		mes "プラットフォームベンダー名						"+HCLGetDeviceInfo_s(CL_PLATFORM_VERSION);プラットフォームベンダー
+		mes "デバイス名								"+HCLGetDeviceInfo_s(CL_DEVICE_NAME);デバイス名取得
+		mes "デバイスベンダー名							"+HCLGetDeviceInfo_s(CL_DEVICE_VENDOR);ベンダー名取得
+		mes "タイプ 2(CPU) 4(GPU)							"+HCLGetDeviceInfo_i(CL_DEVICE_TYPE,0);2ならCPU,4ならGPU
+		mes "OpenCLソフトウェアドライバのバージョン					"+HCLGetDeviceInfo_s(CL_DRIVER_VERSION)
+		mes "デバイスがサポートするOpenCLプロファイルの名称				"+HCLGetDeviceInfo_s(CL_DEVICE_PROFILE)
+		mes "デバイスがサポートするOpenCLのバージョン				"+HCLGetDeviceInfo_s(CL_DEVICE_VERSION)
+		mes "デバイスに対応するコンパイラがサポートする OpenCL C 言語 のバージョン	"+HCLGetDeviceInfo_s(CL_DEVICE_OPENCL_C_VERSION)
+		mes "並列演算コアの数							"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_COMPUTE_UNITS,0);
+		mes "周波数(MHz)								"+HCLGetDeviceInfo_i(CL_DEVICE_MAX_CLOCK_FREQUENCY,0);
+		mes "演算デバイスのアドレス空間のサイズbit					"+HCLGetDeviceInfo_i(CL_DEVICE_ADDRESS_BITS,0);
+		mes "確保可能最大メモリbyte							"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_MEM_ALLOC_SIZE,0);
+		mes "グループごとのワークアイテム数のそれぞれの次元についての最大値		"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,0)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,1)+","+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_WORK_ITEM_SIZES,2);
+		mes "グローバルメモリのキャッシュのタイプ 1(read only) 2(read&write)		"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_TYPE,0);
+		mes "グローバルメモリのキャッシュラインのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHELINE_SIZE)
+		mes "グローバルメモリのキャッシュのサイズbyte				"+HCLGetDeviceInfo_i(CL_DEVICE_GLOBAL_MEM_CACHE_SIZE)
+		mes "グローバルメモリのサイズbyte						"+HCLGetDeviceInfo_i64(CL_DEVICE_GLOBAL_MEM_SIZE,0)
+		mes "グローバルメモリの確保可能最大サイズbyte				"+HCLGetDeviceInfo_i64(CL_DEVICE_MAX_MEM_ALLOC_SIZE,0)
+		mes "専用のローカルメモリが用意されている 1有り 2無し			"+HCLGetDeviceInfo_i(CL_DEVICE_LOCAL_MEM_TYPE,0);
+		mes "ローカルメモリ領域のサイズbyte						"+HCLGetDeviceInfo_i(CL_DEVICE_LOCAL_MEM_SIZE,0);
+		mes "コマンドキュー特性 1(アウトオブオーダー有効) 2(プロファイリング有効)	"+HCLGetDeviceInfo_i(CL_DEVICE_QUEUE_PROPERTIES,0);
+		mes "メモリエラー訂正機能が実装されている					"+HCLGetDeviceInfo_i(CL_DEVICE_ERROR_CORRECTION_SUPPORT)
+		mes "ホストとデバイスが統一されたメモリサブシステムをもつ			"+HCLGetDeviceInfo_i(CL_DEVICE_HOST_UNIFIED_MEMORY)
+		mes "ベクトル内に格納できるスカラ要素の数(CHAR)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR)
+		mes "ベクトル内に格納できるスカラ要素の数(SHORT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT)
+		mes "ベクトル内に格納できるスカラ要素の数(INT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_INT)
+		mes "ベクトル内に格納できるスカラ要素の数(LONG)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG)
+		mes "ベクトル内に格納できるスカラ要素の数(FLOAT)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT)
+		mes "ベクトル内に格納できるスカラ要素の数(DOUBLE)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE)
+		mes "ベクトル内に格納できるスカラ要素の数(HALF)				"+HCLGetDeviceInfo_i(CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF)
+		mes "デバイスがサポートする拡張機能	"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
+		sdim k,65536
+		k="デバイスがサポートする拡張機能\n"+HCLGetDeviceInfo_s(CL_DEVICE_EXTENSIONS)
+		pos 0,630
+		mesbox k,1200,200,5
 	loop
-	redraw 1//描画
-	
-	if ((count\1024>1020)&(event_id>6)){
-		count=0
-		gsel 1
-		color 255,255,255:boxf:color 0,0,0
-		ViewEvents4 event_id-1
-		gsel 0
-	}
-	
-	gosub*fpsview
-	count++
 
-	if count==30:bmpsave "aaa.bmp"
-	
-	if event_id>=8:event_id=0
-	goto*main
-
-*fpsview
-	flm++
-	if ms!gettime(6):ms=gettime(6):fps=flm:flm=0
-	pos 0,0:color 255,55,55:mes "fps="+fps+""
-	return
-
-*重量級宇宙船
-	//重量級宇宙船をセット
-	idx=WX/2*WY+WX/2
-	HCLWriteIndex_i32 memA,idx+3,1
-	HCLWriteIndex_i32 memA,idx+4,1
-	HCLWriteIndex_i32 memA,idx+WX+1,1
-	HCLWriteIndex_i32 memA,idx+WX+6,1
-	HCLWriteIndex_i32 memA,idx+WX*2,1
-	HCLWriteIndex_i32 memA,idx+WX*3,1
-	HCLWriteIndex_i32 memA,idx+WX*3+6,1
-	HCLWriteIndex_i32 memA,idx+WX*4+0,1
-	HCLWriteIndex_i32 memA,idx+WX*4+1,1
-	HCLWriteIndex_i32 memA,idx+WX*4+2,1
-	HCLWriteIndex_i32 memA,idx+WX*4+3,1
-	HCLWriteIndex_i32 memA,idx+WX*4+4,1
-	HCLWriteIndex_i32 memA,idx+WX*4+5,1
-	return
-	
-*どんぐり
-	//どんぐりをセット
-	idx=WX/7*WY+WX*2/3
-	HCLWriteIndex_i32 memA,idx+1,1
-	HCLWriteIndex_i32 memA,idx+WX+3,1
-	HCLWriteIndex_i32 memA,idx+WX*2,1
-	HCLWriteIndex_i32 memA,idx+WX*2+1,1
-	HCLWriteIndex_i32 memA,idx+WX*2+4,1
-	HCLWriteIndex_i32 memA,idx+WX*2+5,1
-	HCLWriteIndex_i32 memA,idx+WX*2+6,1
-	return
-
-*ダイハード
-	idx=WX/2*WY+WX+WX/2-30
-	HCLWriteIndex_i32 memA,idx+6,1
-	HCLWriteIndex_i32 memA,idx+WX,1
-	HCLWriteIndex_i32 memA,idx+WX+1,1
-	HCLWriteIndex_i32 memA,idx+WX*2+1,1
-	HCLWriteIndex_i32 memA,idx+WX*2+5,1
-	HCLWriteIndex_i32 memA,idx+WX*2+6,1
-	HCLWriteIndex_i32 memA,idx+WX*2+7,1
-	return
-
-
-
-
-
-
-
-
-
-
-
-#module
-
-#deffunc ViewEvents4 int event_num
-	if event_num<=0:return
-	//まずはすべての計算時間を取得
-	dim_i64 kinfo,event_num
-	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
-	dim cmdq_no,event_num
-	offset=int64("9223372036854775807")
-		repeat event_num
-		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
-		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
-		cmdq_no.cnt=HCLGetEventLogs(cnt,3)//3は何番のcommand queで実行されたか取得
-		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
-		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
-		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
-		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt=HCLGetKernelName(HCLGetEventLogs(cnt,1))
-		offset=MIN64(offset,start_time.cnt)
-		loop
-
-	scalex=int64("-9223372036854775808")
-		repeat event_num
-		start_time.cnt-=offset
-		end_time.cnt-=offset
-		scalex=MAX64(scalex,end_time.cnt)
-		loop
-
-	//計算時間をグラフで表示
-	//軸
-	line 30,30,30,450
-	line 30,30,27,35
-	line 30,30,33,35
-	pos 0,240
-	font msgothic,12
-	mes "Queue\n番号"
-
-	line 30,450,620,450
-	line 620,450,615,447
-	line 620,450,615,453
-	pos 270,460
-	mes "時間(μs)"
-		repeat 9
-		line 30+cnt*580/8,450,30+cnt*580/8,445
-		pos 30+cnt*580/8,450
-		mes scalex*cnt/8000
-		loop
-
-	//実行単位で表示していく
-		repeat event_num
-			hsvcolor rnd(192),200,200
-			//まず実行時間を表示
-			lx=start_time.cnt*580/scalex+30
-			rx=end_time.cnt*580/scalex+30
-			yy=270-int(cmdq_no.cnt)*50
-			boxf int(lx),yy,int(rx),yy+30
-			
-			//文字表示
-			color 0,0,0
-			pos int(lx),yy-10
-			mes kinfos.cnt
-		loop
-	return
-
-
-#global
+	stop
