@@ -35,8 +35,8 @@ HCLCreateProgram
 
 %prm
 (str p1,str p2)
-str p1 : カーネルソースファイル名  [in]
-str p2 : ビルドオプション,省略可能  [in]
+str p1 : カーネルソースファイル名 	[in]
+str p2 : ビルドオプション,省略可能	[in]
 
 %inst
 プログラムidが64bit int型で返ります。
@@ -61,8 +61,8 @@ HCLCreateProgramWithSource
 
 %prm
 (str p1,str p2)
-str p1 : カーネルソース文字列  [in]
-str p2 : ビルドオプション,省略可能  [in]
+str p1 : カーネルソース文字列		[in]
+str p2 : ビルドオプション,省略可能	[in]
 
 %inst
 プログラムidが64bit int型で返ります。
@@ -87,8 +87,8 @@ HCLCreateKernel
 
 %prm
 (int64 p1,str p2)
-int64 p1 : プログラムid          [in]
-str p2 : カーネル関数名        [in]
+int64 p1 : プログラムid		[in]
+str p2 : カーネル関数名		[in]
 
 %inst
 カーネルidが64bit int型で返ります。
@@ -175,7 +175,7 @@ HCLSetKrns
 
 %prm
 int64 p1,p2,,,,,
-int64 p1 : カーネルid			[in]
+int64 p1 : カーネルid				[in]
 p2以降 : 引数に渡す実体(定数やmem_object)	[in]
 
 %inst
@@ -223,18 +223,18 @@ HCLCall
 
 %prm
 str p1,int p2,int p3,p4,p5,p6,,,,,
-str p1 : カーネル文字列			[in]
-int p2 :グローバルサイズ(1次元並列処理数)	[in]
-int p3 :ローカルサイズ(1次元並列処理数)	[in]
-p4以降 :引数に渡す実体(arrayやvar intなどの数値)	[in,out]
+str p1:カーネル文字列				[in]
+int p2:グローバルサイズ(1次元並列処理数)	[in]
+int p3:ローカルサイズ(1次元並列処理数)		[in]
+p4以降:引数に渡す実体(arrayやvar intなどの数値)	[in,out]
 %inst
 
 HCLCreateProgram,HCLCreateKernel,HCLSetKernel,HCLCreateBuffer等をせずカーネルを実行して結果を得ます。
 例えばOpenCLで配列に値を書き込む処理を書いて実行すると、p4以降に指定したHSP配列変数に結果が書き込まれます。
-p1はソースコードの文字列
+p1にはソースコードの文字列
 p2にはグローバルサイズ（実行したい並列処理数）
 p3にはローカルサイズ
-p4以降はカーネルに渡す引数を指定して下さい。
+p4以降にはカーネルに渡す引数を指定して下さい。
 
 p4以降の引数の数とOpenCLカーネル内の引数の数が合わないとエラーになります。
 
@@ -640,7 +640,7 @@ HCLDoKrn1
 一次元でカーネル実行
 
 %prm
-int64 p1,int p2,int p3
+int64 p1,int p2,int p3,int p4
 int64 p1 : カーネルid			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
@@ -676,7 +676,7 @@ HCLDoKrn1_sub
 一次元でカーネル実行
 
 %prm
-int64 p1,int p2,int p3
+int64 p1,int p2,int p3,int p4
 int64 p1 : カーネルid			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
@@ -845,6 +845,8 @@ HCLSetCommandQueue
 コマンドキュー番号をセット
 
 %prm
+int p1
+int p1 : コマンドキュー番号	[in]
 
 %inst
 
@@ -888,10 +890,11 @@ _ExHCLSetCommandQueueProperties
 ;--------
 
 %index
-HCLGetSettingCommandQueue()
+HCLGetSettingCommandQueue
 セットしているコマンドキュー番号を取得
 
 %prm
+()
 
 %inst
 HCLSetCommandQueueでセットした番号を返します。

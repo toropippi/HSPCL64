@@ -58,8 +58,8 @@ HCLReleaseBuffer
 VRAM破棄
 
 %prm
-int p164
-int p164 : CL_mem_object id			[in]
+int64 p1
+int64 p1 : CL_mem_object id			[in]
 %inst
 デバイス上のメモリを解放します。
 
@@ -74,12 +74,12 @@ HSP配列情報をVRAMに書込
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
 int64 p1 : コピー先CL_mem_object id		[in]
-array p2:コピー元配列変数		[in]
+array p2:コピー元配列変数			[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
 int64 p5 : コピー元のオフセット,省略可		[in]
 int p6 : ブロッキングモードoff,省略可		[in]
-int p7 : event_id,省略可		[in]
+int p7 : event_id,省略可			[in]
 
 %inst
 ホスト(CPU)からHCLSetDeviceで指定したデバイス(GPU)側にデータを転送します。
@@ -108,7 +108,7 @@ int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー元のオフセット,省略可		[in]
 int64 p5 : コピー先のオフセット,省略可		[in]
 int p6 : ブロッキングモードoff,省略可		[in]
-int p7 : event_id,省略可		[in]
+int p7 : event_id,省略可			[in]
 
 %inst
 HCLSetDeviceで指定したデバイス(GPU)からホスト(CPU)側にデータを転送します。
@@ -136,7 +136,7 @@ int64 p2 : コピー元CL_mem_object id		[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
 int64 p5 : コピー元のオフセット,省略可		[in]
-int p6 : event_id,省略可		[in]
+int p6 : event_id,省略可			[in]
 
 %inst
 HCLSetDeviceで指定したデバイス上のメモリ間でコピーをします。
@@ -175,12 +175,12 @@ HSP配列情報をVRAMに書込、強制ノンブロッキングモード
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
 int64 p1 : コピー先CL_mem_object id		[in]
-array p2:コピー元配列変数		[in]
+array p2:コピー元配列変数			[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
 int64 p5 : コピー元のオフセット,省略可		[in]
 int p6 : ブロッキングモードoff,省略可		[in]
-int p7 : event_id,省略可		[in]
+int p7 : event_id,省略可			[in]
 
 %inst
 
@@ -218,7 +218,7 @@ int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー元のオフセット,省略可		[in]
 int64 p5 : コピー先のオフセット,省略可		[in]
 int p6 : ブロッキングモードoff,省略可		[in]
-int p7 : event_id,省略可		[in]
+int p7 : event_id,省略可			[in]
 
 %inst
 
@@ -253,15 +253,15 @@ NonBlocking実行状況取得
 
 %inst
 
-HCLReadBuffer_NonBlockingとHCLWriteBuffer_NonBlockingの実行がどうなっているかを取得します。
-以降NonBlocking命令と言います。
-まずNonBlocking命令を呼んだあとはプラグイン内部のthread_start変数がインクリメントされます。
-その後NonBlocking命令内部でclEnqueueReadBuffer,clEnqueueWriteBufferが実行され、その行が終わった際にthread_start変数が1デクリメントされます。
+HCLReadBuffer_NonBlockingとHCLWriteBuffer_NonBlockingの実行状況がどうなっているかを取得します。
+以降この2つをNonBlocking命令と言います。
+まずNonBlocking命令を呼び出したあとはプラグイン内部のthread_start変数がインクリメントされます。
+その後別スレッドが立ち上がり、NonBlocking命令内部でclEnqueueReadBuffer,clEnqueueWriteBufferが実行され、その命令を通り過ぎた後にthread_start変数がデクリメントされます。
+ここでclEnqueueReadBuffer,clEnqueueWriteBuffer自体は転送をキューに入れるだけの命令であることに注意が必要で、(ブロッキングモードoff)かつ(NVIDIAのGPUでない)場合に転送が終わる前にthread_startがデクリメントされていることもあることを考慮してください。
 
-このHCLGet_NonBlocking_Status命令はthread_start変数の数値を取得する命令です。
+このHCLGet_NonBlocking_Status命令はthread_startの数値を取得する命令です。
 
-NonBlocking命令の実行完了判定に使うことができます。
-
+NVIDIA GPUの場合、NonBlocking命令によるデータ転送完了判定に使うことができます。
 またNonBlocking命令でevent idを指定した場合、プラグイン内部のclEnqueueReadBuffer,clEnqueueWriteBufferの行を通りすぎないとevent自体取得できないため(エラーになる)、event取得可能判定にも使うことができます。
 
 %href
@@ -429,7 +429,7 @@ int64 p1 : CL_mem_object id		[in]
 int p2 : pattern,省略可			[in]
 int64 p3 : offset,省略可		[in]
 int64 p4 : size,省略可		[in]
-int p5 : event_id			[in]
+int p5 : event_id,省略可		[in]
 
 %inst
 p1で指定したVRAM(CL mem obj id)にp2の値を4byteおきに書き込みます。
@@ -452,10 +452,10 @@ VRAMを指定の数値で埋める
 int64 p1,int64 p2,int64 p3,int64 p4,int p5
 
 int64 p1 : CL_mem_object id		[in]
-int64 p2 : pattern,省略可			[in]
+int64 p2 : pattern,省略可		[in]
 int64 p3 : offset,省略可		[in]
-int64 p4 : size,省略可		[in]
-int p5 : event_id			[in]
+int64 p4 : size,省略可			[in]
+int p5 : event_id,省略可		[in]
 
 %inst
 p1で指定したVRAM(CL mem obj id)にp2の値を8byteおきに書き込みます。
@@ -479,10 +479,10 @@ VRAMを指定の数値で埋める
 int64 p1,double p2,int64 p3,int64 p4,int p5
 
 int64 p1 : CL_mem_object id		[in]
-double p2 : pattern,省略可			[in]
+double p2 : pattern,省略可		[in]
 int64 p3 : offset,省略可		[in]
-int64 p4 : size,省略可		[in]
-int p5 : event_id			[in]
+int64 p4 : size,省略可			[in]
+int p5 : event_id,省略可		[in]
 
 %inst
 p1で指定したVRAM(CL mem obj id)にp2の値を8byteおきに書き込みます。

@@ -107,8 +107,8 @@ event情報取得
 
 %prm
 (int p1.int p2)
-int p1 ： event id [in]
-int p2 ： parameter [in]
+int p1 ： event id	[in]
+int p2 ： parameter	[in]
 
 %inst
 p1にevent idを指定してp2で0～7のパラメーターを指定することで下記情報を取得できます。
@@ -144,7 +144,7 @@ p1にevent idを指定してp2で0～7のパラメーターを指定することで下記情報を取得できま
 
 1:kernel_idかコピーサイズ
 そのeventがCL_COMMAND_NDRANGE_KERNELならkernel_idが、
-CL_COMMAND_WRITE_BUFFERやCL_COMMAND_Read_BUFFERやCL_COMMAND_FILL_BUFFERやCL_COMMAND_COPY_BUFFERならコピーサイズが返ります。
+CL_COMMAND_WRITE_BUFFERやCL_COMMAND_Read_BUFFERやCL_COMMAND_FILL_BUFFERやCL_COMMAND_COPY_BUFFERならコピーサイズがbyteで返ります。
 
 2:そのeventを実行したdevice 番号
 
@@ -254,15 +254,15 @@ UserEventに状態をセット
 
 %prm
 int p1,int p2
-int p1 ： user event id [in]
-int p2 ： parameter [in]
+int p1 ： user event id		[in]
+int p2 ： parameter		[in]
 
 %inst
 p1で指定したUserEventにp2をセットします。
 p2は基本的にCL_COMPLETE(*)を指定します。
 
 (*)
-#define global CL_COMPLETE                                 0x0
+#define global CL_COMPLETE    0x0
 
 それ以外の値をセットする場合は下記参照下さい。
 https://www.khronos.org/registry/OpenCL/sdk/2.2/docs/man/html/clSetUserEventStatus.html
