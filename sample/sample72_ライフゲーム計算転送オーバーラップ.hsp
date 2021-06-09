@@ -136,10 +136,10 @@
 #deffunc ViewEvents4 int event_num
 	if event_num<=0:return
 	//‚Ü‚¸‚Í‚·‚×‚Ä‚ÌŒvZŠÔ‚ğæ“¾
-	dim_i64 kinfo,event_num
+	dim64 kinfo,event_num
 	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
 	dim cmdq_no,event_num
 	offset=int64("9223372036854775807")
 		repeat event_num

@@ -1,3 +1,7 @@
+//こちらはinoviaさんの作成したHSPint64のサンプルそのままです。
+//最新版はこちらをhttps://github.com/inovia/HSPInt64
+//HSPCL64を作るためにint64の機能がどうしても必要であり、下記命令を拝借させて頂いております。
+
 #include "HSPCL64.as"
 #define MB_ICONINFORMATION $40
 #define MB_OK 0

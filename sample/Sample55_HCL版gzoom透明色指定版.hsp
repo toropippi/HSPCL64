@@ -16,21 +16,6 @@
 	//ƒQ[ƒ€‰æ–Ê‚È‚Ç‚ğ‘z’è
 	wx1=432
 	wy1=348
-	screen 1,wx1,wy1
-	title "HCLgzoom_gmode4"
-		repeat wx1/4
-		cntx=cnt
-			repeat wy1/4
-			hsvcolor rnd(192),64,250
-			boxf cntx*4,cnt*4,cntx*4+4,cnt*4+4
-			loop
-		loop
-
-	HCLgzoom_gmode4 0,1,255,255,255//0¨1‚ÉŠg‘åk¬B“§–¾F‚Í(255,255,255)
-	gsel 1
-	redraw 1
-
-
 	//grotate‚¾‚Æ‚Ç‚¤‚È‚é‚©
 	screen 2,wx1,wy1
 	title "grotate"
@@ -46,6 +31,23 @@
 	gmode 4,wx0,wy0,255
 	pos wx1/2,wy1/2
 	grotate 0,0,0,0,wx1,wy1
+
+	//HCLgzoom‚¾‚Æ‚Ç‚¤‚È‚é‚©
+	screen 1,wx1,wy1
+	title "HCLgzoom_gmode4"
+		repeat wx1/4
+		cntx=cnt
+			repeat wy1/4
+			hsvcolor rnd(192),64,250
+			boxf cntx*4,cnt*4,cntx*4+4,cnt*4+4
+			loop
+		loop
+
+	HCLgzoom_gmode4 0,1,255,255,255//0¨1‚ÉŠg‘åk¬B“§–¾F‚Í(255,255,255)
+	gsel 1
+	redraw 1
+
+
 	stop
 
 

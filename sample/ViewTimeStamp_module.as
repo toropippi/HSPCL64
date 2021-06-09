@@ -57,10 +57,10 @@ __kernel void vecAdd(__global int* a,__global int* b,__global int* c)
 #deffunc ViewEvents1 int event_num
 	if event_num<=0:return
 	//‚Ü‚¸‚Í‚·‚×‚Ä‚ÌŒvŽZŽžŠÔ‚ðŽæ“¾
-	dim_i64 kinfo,event_num
+	dim64 kinfo,event_num
 	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
 		repeat event_num
 		start_time.cnt=HCLGetEventLogs(cnt,6)//6‚ÍCL_PROFILING_COMMAND_START‚Ìtime
 		end_time.cnt=HCLGetEventLogs(cnt,7)//7‚ÍCL_PROFILING_COMMAND_END‚Ìtime
@@ -118,12 +118,12 @@ __kernel void vecAdd(__global int* a,__global int* b,__global int* c)
 #deffunc ViewEvents2 int event_num
 	if event_num<=0:return
 	//‚Ü‚¸‚Í‚·‚×‚Ä‚ÌŒvŽZŽžŠÔ‚ðŽæ“¾
-	dim_i64 kinfo,event_num
+	dim64 kinfo,event_num
 	sdim kinfos,128,event_num
-	dim_i64 qued_time,event_num
-	dim_i64 subd_time,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
+	dim64 qued_time,event_num
+	dim64 subd_time,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
 		repeat event_num
 		qued_time.cnt=HCLGetEventLogs(cnt,4)//4‚ÍCL_PROFILING_COMMAND_QUEUED‚Ìtime
 		subd_time.cnt=HCLGetEventLogs(cnt,5)//5‚ÍCL_PROFILING_COMMAND_SUBMIT‚Ìtime
@@ -195,10 +195,10 @@ __kernel void vecAdd(__global int* a,__global int* b,__global int* c)
 #deffunc ViewEvents3 int event_num
 	if event_num<=0:return
 	//‚Ü‚¸‚Í‚·‚×‚Ä‚ÌŒvŽZŽžŠÔ‚ðŽæ“¾
-	dim_i64 kinfo,event_num
+	dim64 kinfo,event_num
 	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
 	dim cmdq_no,event_num
 	offset=int64("9223372036854775807")
 		repeat event_num

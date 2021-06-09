@@ -12,7 +12,7 @@
 
 #cmd HCLinit $50
 
-#cmd dim_i64 $51
+#cmd dim64 $51
 
 #cmd HCLSetDevice $53
 #cmd HCLGetDeviceCount $54

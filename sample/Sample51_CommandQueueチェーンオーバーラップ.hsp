@@ -17,8 +17,8 @@
 	prg=HCLCreateProgram("SinDiv.cl")
 	krn=HCLCreateKernel(prg,"SinDiv")
 
-	dim_i64 clmem_A,stepnum
-	dim_i64 clmem_B,stepnum
+	dim64 clmem_A,stepnum
+	dim64 clmem_B,stepnum
 		repeat stepnum
 		clmem_A.cnt=HCLCreateBuffer(n*4)
 		clmem_B.cnt=HCLCreateBuffer(n*4)
@@ -57,10 +57,10 @@
 
 *view1
 	//‚Ü‚¸‚Í‚·‚×‚Ä‚ÌŒvŽZŽžŠÔ‚ðŽæ“¾
-	dim_i64 kinfo,event_num
+	dim64 kinfo,event_num
 	sdim kinfos,128,event_num
-	dim_i64 start_time,event_num
-	dim_i64 end_time,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
 	dim cmdq_no,event_num
 		repeat event_num
 		start_time.cnt=HCLGetEventLogs(cnt,6)//6‚ÍCL_PROFILING_COMMAND_START‚Ìtime

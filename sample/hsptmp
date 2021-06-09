@@ -1,0 +1,42 @@
+//HCLなんちゃらで使う変数は大抵64bit変数です。
+//ポインタのサイズが64bitなので、どうしてもHSPで64bit型が扱えるようにする必要があります。
+//例えばHCLCreateBufferで作成したclmemの変数は64bit型になっています。
+#include "HSPCL64.as"
+
+	//HCLinit
+	//従来の32bit整数型
+	mes "int32"
+	dim test,2
+	test.0=int("2100000000")
+	test.1=int("2200000000")
+	mes "\"2100000000\" = "+test.0
+	mes "\"2200000000\" = "+test.1
+
+	//64bit整数型
+	mes 
+	mes "int64"
+	dim64 test,2
+	test.0=int64("2100000000")
+	test.1=int64("2200000000")
+	mes "\"2100000000\" = "+test.0
+	mes "\"2200000000\" = "+test.1
+	mes
+
+
+	//64bit整数での四則演算
+	test.0=int64("3141592653589793")
+	test.1=int64("238462643383279502")
+	mes "test.0 = "+test.0
+	mes "test.1 = "+test.1
+	
+	and_=test.0&test.1
+	or_=test.0|test.1
+
+	mes "and      "+and_
+	mes "or       "+or_
+	test.1<<=5
+	mes "bitシフト "+test.1
+	mes "剰余 "+test.1\test.0	
+	mes 
+	mes "「test」の配列変数のサイズ(byte) = "+varsize(test)
+	stop
