@@ -13,9 +13,9 @@
 【     HP      】http://toropippi.web.fc2.com/  
 --------------------------------------------------------------------------  
   
-|サンプル実行画面|サンプル実行画面|サンプル実行画面|サンプル実行画面|
-|---|---|---|---||![sample73](https://user-images.githubusercontent.com/44022497/121392033-f733c600-c989-11eb-95ba-ec36d5a29dd8.jpg)|![Sample50_result_simpleOverlap](https://user-images.githubusercontent.com/44022497/121392041-f8fd8980-c989-11eb-9a99-cd376b9306b7.png)|![sample70](https://user-images.githubusercontent.com/44022497/121392264-319d6300-c98a-11eb-95a4-5228bc492bb1.png)|![sample62](https://user-images.githubusercontent.com/44022497/121392331-3d892500-c98a-11eb-9770-768e0e3f1c16.png)|
-|![sample73](https://user-images.githubusercontent.com/44022497/121392033-f733c600-c989-11eb-95ba-ec36d5a29dd8.jpg)|![Sample50_result_simpleOverlap](https://user-images.githubusercontent.com/44022497/121392041-f8fd8980-c989-11eb-9a99-cd376b9306b7.png)|![sample70](https://user-images.githubusercontent.com/44022497/121392264-319d6300-c98a-11eb-95a4-5228bc492bb1.png)|![sample62](https://user-images.githubusercontent.com/44022497/121392331-3d892500-c98a-11eb-9770-768e0e3f1c16.png)|
+|サンプル実行画面|サンプル実行画面|サンプル実行画面|
+|---|---|---||![sample73](https://user-images.githubusercontent.com/44022497/121392033-f733c600-c989-11eb-95ba-ec36d5a29dd8.jpg)|![Sample50_result_simpleOverlap](https://user-images.githubusercontent.com/44022497/121392041-f8fd8980-c989-11eb-9a99-cd376b9306b7.png)|![sample70](https://user-images.githubusercontent.com/44022497/121392264-319d6300-c98a-11eb-95a4-5228bc492bb1.png)|
+|![sample62](https://user-images.githubusercontent.com/44022497/121392331-3d892500-c98a-11eb-9770-768e0e3f1c16.png)|![sample57](https://user-images.githubusercontent.com/44022497/121392532-72957780-c98a-11eb-996e-af459b149cf9.png)|![sample26](https://user-images.githubusercontent.com/44022497/121392616-850fb100-c98a-11eb-81b2-63df8efe6564.png)|||||
 ## ■使用方法  
 １、「HSPCL64.dll」をHSPインストールフォルダ「C:\hsp35」ないしは「C:\Program Files (x86)\hsp35」か「C:\Program Files\hsp35」へコピーして下さい。  
 ２、「hspcl64.as」をHSPインストールフォルダの「common」フォルダの中へ入れて下さい。  
