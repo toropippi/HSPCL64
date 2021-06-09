@@ -36,7 +36,7 @@ HCLCreateProgram
 %prm
 (str p1,str p2)
 str p1 : カーネルソースファイル名 	[in]
-str p2 : ビルドオプション,省略可能	[in]
+str p2 : ビルドオプション,省略可	[in]
 
 %inst
 プログラムidが64bit int型で返ります。
@@ -62,7 +62,7 @@ HCLCreateProgramWithSource
 %prm
 (str p1,str p2)
 str p1 : カーネルソース文字列		[in]
-str p2 : ビルドオプション,省略可能	[in]
+str p2 : ビルドオプション,省略可	[in]
 
 %inst
 プログラムidが64bit int型で返ります。
@@ -110,11 +110,11 @@ HCLSetKernel
 カーネルセット
 
 %prm
-(int64 p1,int p2,p3,int p4)
+int64 p1,int p2,p3,int p4
 int64 p1 : カーネルid			[in]
 int p2 : 引数の順番p(x)の指定		[in]
     p3 : 引数に渡す実体(定数やmem_object)[in]
-int p4 : ローカルメモリフラグ		[in]
+int p4 : ローカルメモリフラグ,省略可	[in]
 %inst
 カーネルの引数一つ一つにデータを渡します。
 
@@ -275,7 +275,7 @@ int64 p1 : カーネルid			[in]
 int p2 : work_dim(1～3)			[in]
 array p3 : global_work_size		[in]
 array p4 : local_work_size		[in]
-int p5 : event_id,省略可能		[in]
+int p5 : event_id,省略可		[in]
 %inst
 
 p1には実行したいカーネルid
@@ -644,7 +644,7 @@ int64 p1,int p2,int p3,int p4
 int64 p1 : カーネルid			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
-int p4 : event_id,省略可能		[in]
+int p4 : event_id,省略可		[in]
 
 %inst
 動作はwork_dimが1の場合のHCLDoKernelと同じです。
@@ -680,7 +680,7 @@ int64 p1,int p2,int p3,int p4
 int64 p1 : カーネルid			[in]
 int p2 : global_work_size		[in]
 int p3 : local_work_size		[in]
-int p4 : event_id,省略可能		[in]
+int p4 : event_id,省略可		[in]
 
 %inst
 
@@ -717,7 +717,7 @@ int p2 : global_work_size.0		[in]
 int p3 : global_work_size.1		[in]
 int p4 : local_work_size.0		[in]
 int p5 : local_work_size.1		[in]
-int p6 : event_id,省略可能		[in]
+int p6 : event_id,省略可		[in]
 %inst
 work_dimが2の場合のHCLDoKernelと同じです。
 
@@ -746,7 +746,7 @@ int p4 : global_work_size.2		[in]
 int p5 : local_work_size.0		[in]
 int p6 : local_work_size.1		[in]
 int p7 : local_work_size.2		[in]
-int p8 : event_id,省略可能		[in]
+int p8 : event_id,省略可		[in]
 
 %inst
 work_dimが3の場合のHCLDoKernelと同じです。

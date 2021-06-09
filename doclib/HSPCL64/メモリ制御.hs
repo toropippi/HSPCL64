@@ -428,7 +428,7 @@ int64 p1,int p2,int64 p3,int64 p4,int p5
 int64 p1 : CL_mem_object id		[in]
 int p2 : pattern,È—ª‰Â			[in]
 int64 p3 : offset,È—ª‰Â		[in]
-int64 p4 : size,È—ª‰Â		[in]
+int64 p4 : size,È—ª‰Â			[in]
 int p5 : event_id,È—ª‰Â		[in]
 
 %inst

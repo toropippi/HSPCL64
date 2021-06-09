@@ -75,6 +75,8 @@ int p1	デバイスid [in]
 %inst
 
 カーネル命令やカーネル登録、メモリ確保を実行するデバイスを指定します。
+HCLSetDeviceで指定できる番号は0～HCLGetDeviceCount()-1の範囲となります。
+
 以下の命令は設定したデバイスのみに実行されます。
 
 HCLGetSettingDevice
