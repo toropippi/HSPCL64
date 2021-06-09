@@ -1,42 +1,142 @@
-//HCLなんちゃらで使う変数は大抵64bit変数です。
-//ポインタのサイズが64bitなので、どうしてもHSPで64bit型が扱えるようにする必要があります。
-//例えばHCLCreateBufferで作成したclmemの変数は64bit型になっています。
-#include "HSPCL64.as"
-
-	//HCLinit
-	//従来の32bit整数型
-	mes "int32"
-	dim test,2
-	test.0=int("2100000000")
-	test.1=int("2200000000")
-	mes "\"2100000000\" = "+test.0
-	mes "\"2200000000\" = "+test.1
-
-	//64bit整数型
-	mes 
-	mes "int64"
-	dim64 test,2
-	test.0=int64("2100000000")
-	test.1=int64("2200000000")
-	mes "\"2100000000\" = "+test.0
-	mes "\"2200000000\" = "+test.1
-	mes
-
-
-	//64bit整数での四則演算
-	test.0=int64("3141592653589793")
-	test.1=int64("238462643383279502")
-	mes "test.0 = "+test.0
-	mes "test.1 = "+test.1
+#include "hspcl64.as"
+	win_x=640
+	win_y=480
+	screen 0,win_x,win_y
+	mref vrm,66
+	ddim m,4,4
+	m.0.0=1.0:m.1.1=1.0:m.2.2=1.0:m.3.3=1.0
+	ddim movexyz,3
 	
-	and_=test.0&test.1
-	or_=test.0|test.1
+	HCLinit
+	HCLSetDevice 0
 
-	mes "and      "+and_
-	mes "or       "+or_
-	test.1<<=5
-	mes "bitシフト "+test.1
-	mes "剰余 "+test.1\test.0	
-	mes 
-	mes "「test」の配列変数のサイズ(byte) = "+varsize(test)
-	stop
+	ray=HCLCreateBuffer(4*4*win_x*win_y)
+	rpos=HCLCreateBuffer(4*4*win_x*win_y)
+	tlen=HCLCreateBuffer(4*win_x*win_y)
+	buf=HCLCreateBuffer(3*win_x*win_y)
+
+	prgid=HCLCreateProgram("raycode.cl","-D WX="+win_x+" -D WY="+win_y+"")
+	krnfirststep=HCLCreateKernel(prgid,"firststep")
+	krnmain=HCLCreateKernel(prgid,"mainloop")
+	krnren=HCLCreateKernel(prgid,"renderling")
+	
+	HCLSetKernel krnfirststep,0,ray
+	HCLSetKrns krnmain,rpos,ray,tlen
+	HCLSetKrns krnren,buf,rpos,ray,tlen
+
+		repeat -1
+			repeat 16
+			HCLSetKernel krnfirststep,1+cnt,DoubleToFloat(m.(cnt\4).(cnt/4))
+			loop
+			repeat 3
+			HCLSetKernel krnmain,3+cnt,DoubleToFloat(movexyz.cnt)
+			loop
+		HCLFillBuffer_i32 tlen,DoubleToFloat(0.0)
+		HCLDoKrn1_sub krnfirststep,win_x*win_y,64
+		HCLDoKrn1_sub krnmain,win_x*win_y,64
+		HCLDoKrn1_sub krnren,win_x*win_y,64
+		HCLReadBuffer buf,vrm
+		await 16
+		redraw 1
+		gosub*fpsview
+		gosub*KeyAndRnd
+		loop
+
+
+
+*fpsview
+	flm++
+	if ms!gettime(6):ms=gettime(6):fps=flm:flm=0
+	pos 0,0:color 0,255,0:mes "fps="+fps+""
+	return
+
+//キー入力移動 and ランダム回転
+*KeyAndRnd
+	count++
+	rndval=(count/100)*13489689146857+1348960
+	rndval=abs(rndval)
+	rndval\=16777216
+	xr=rndval\256-128
+	rndval/=256
+	yr=rndval\256-128
+	rndval/=256
+	zr=rndval-128
+
+	rspd=0.0001
+	ddim m_dmy,4,4
+	//x回転
+	ddim radmat44,4,4
+	radmat44.0.0=1.0
+	radmat44.3.3=1.0
+	radmat44.1.1=cos(rspd*xr)
+	radmat44.2.1=-sin(rspd*xr)
+	radmat44.1.2=sin(rspd*xr)
+	radmat44.2.2=cos(rspd*xr)
+	mulmm m,radmat44,m_dmy
+	
+	//y回転
+	ddim radmat44,4,4
+	radmat44.1.1=1.0
+	radmat44.3.3=1.0
+	radmat44.0.0=cos(rspd*yr)
+	radmat44.2.0=sin(rspd*yr)
+	radmat44.0.2=-sin(rspd*yr)
+	radmat44.2.2=cos(rspd*yr)
+	mulmm m_dmy,radmat44,m
+	
+	//z回転
+	ddim radmat44,4,4
+	radmat44.2.2=1.0
+	radmat44.3.3=1.0
+	radmat44.0.0=cos(rspd*zr)
+	radmat44.1.0=-sin(rspd*zr)
+	radmat44.0.1=sin(rspd*zr)
+	radmat44.1.1=cos(rspd*zr)
+	mulmm m,radmat44,m_dmy
+	memcpy m,m_dmy,4*4*8
+
+	
+	//移動
+	getkey key,'W'
+	if key:movexyz.2+=0.11
+	getkey key,'S'
+	if key:movexyz.2-=0.11
+	
+	getkey key,'D'
+	if key:movexyz.0+=0.11
+	getkey key,'A'
+	if key:movexyz.0-=0.11
+
+	getkey key,38
+	if key:movexyz.1-=0.21
+	getkey key,40
+	if key:movexyz.1+=0.11
+	movexyz.1+=0.05
+	return
+
+#module
+//aが4*4,bが4*4,cが4*4
+#deffunc mulmm array a,array b,array c
+	repeat 4
+	ccnt=cnt
+		repeat 4
+		cccnt=cnt
+		c.cccnt.ccnt=0.0
+			repeat 4
+			c.cccnt.ccnt+=a.cnt.ccnt*b.cccnt.cnt
+			loop
+		loop
+	loop
+	return
+
+//aが4*4,bが4,cが4
+#deffunc mulmv array a,array b,array c
+	repeat 4
+	ccnt=cnt
+	c.ccnt=0.0
+		repeat 4
+		c.ccnt+=a.cnt.ccnt*b.cnt
+		loop
+	loop
+	return
+#global
