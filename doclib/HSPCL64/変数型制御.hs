@@ -22,7 +22,7 @@ hspcl64.as をインクルードしてください。
 64bitランタイムGPGPU用プラグイン
 
 %group
-OpenCLメモリ制御
+OpenCL変数型制御
 
 %port
 Win
