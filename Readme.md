@@ -33,17 +33,17 @@
 ### HSPCL64
   ここで公開しているものです。  
   HSPCL32Nの64bit版です。  
-  HSPCL32Nと比較し、GPU上で確保できるメモリサイズ2GBまでの制約がなくなりました。  
-  ほかOpenCL関連の機能が沢山ありサンプルも5,60近く用意してます。  
+  HSPCL32Nと比較し、GPU上で確保できるメモリサイズ4GBまでの制約がなくなりました。  
+  ほかOpenCL関連の機能が沢山ありサンプルも70近く用意してます。  
   
 ### HSPCL32 ver2.0(HSPコンテスト2013) → HSPCL32Nへ改名  
   HSPCL32 ver2.0はOpenCL機能しかないプラグインです。  
   https://github.com/toropippi/HSPCL32N  
-  ほぼ同じですが違いは以下の点です。  
+  youdaiさんによる修正を反映し下記点が更新されました。  
   ・cliniの返り値の cldevcount が stat へ変更  
   ・fdim が clfdim へ変更  
   ・float() が clfloat() へ変更  
-  こちらは主にyoudaiさんによる修正を反映したものです。  
+  その後HSPCL64から命令を逆輸入して、互換性を保ちつつHSPCL64とほぼ同じような形で使えるようになりました。  
   今後さらに更新を続ける予定です。  
   
 ### HSPCL32 ver4.02  

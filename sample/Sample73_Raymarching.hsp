@@ -1,4 +1,4 @@
-#include "hspcl64.as"
+#include "HSPCL64.as"
 	win_x=640
 	win_y=480
 	screen 0,win_x,win_y
