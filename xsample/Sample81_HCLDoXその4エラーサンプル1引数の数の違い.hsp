@@ -1,0 +1,28 @@
+#include "HSPCL64a.as"
+	HCLinit
+
+	n=256//配列サイズ 256*4byte
+	dim host_a,n
+	dim host_b,n
+	dim host_c,n
+	
+		repeat n
+		host_a.cnt=rnd(100)
+		host_b.cnt=rnd(100)
+		loop
+	
+	clmem_a=HCLCreateBufferFrom(host_a)
+	clmem_b=HCLCreateBufferFrom(host_b)
+	clmem_c=HCLCreateBufferFrom(host_c)
+
+	HCLDoXi "C[i]=A[i]+B[i]+a;",clmem_a,clmem_b,clmem_c//HSP側で指定している引数が1個足りない！
+
+		repeat 30
+		aa=HCLReadIndex_i32(clmem_a,cnt)
+		bb=HCLReadIndex_i32(clmem_b,cnt)
+		cc=HCLReadIndex_i32(clmem_c,cnt)
+
+		mes ""+aa+" + "+bb+" + 10 = "+cc+" (正解"+(aa+bb+10)+")"
+		loop
+	
+	stop

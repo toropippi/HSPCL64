@@ -15,19 +15,12 @@
 		loop
 	
 	matC=HCLCreateBuffer(2*2*4)
-	//HCLBLAS_Set2DShape matC,2,2// CÇÕåvéZÇ≈é©ìÆìIÇ…shapeÇ™ãÅÇ‹ÇÈÇÃÇ≈é¿ÇÕÇ±ÇÍÇÕÇ¢ÇÁÇ»Ç¢
+	HCLBLAS_Set2DShape matC,2,2
 
 	//Ç±ÇÍÇ≈A,B,CÇÃèâä˙ê›íËäÆóπ
 
 	//sgemmåvéZ
-	HCLBLAS_sgemm matC,matA,matB,0,1,0 // C=A.T*B
-	HCLBLAS_sgemm matC,matA,matB,0,0,1 // C=A*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,0,0 // C.T=A*B
-	HCLBLAS_sgemm matC,matA,matB,0,1,1 // C=A.T*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,0,1 // C.T=A*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,1,0 // C.T=A.T*B
-	HCLBLAS_sgemm matC,matA,matB,1,1,1 // C.T=A.T*B.T
-	HCLBLAS_sgemm matC,matA,matB,0,0,0 // C=A*B
+	HCLBLAS_sgemm matC,matA,matB,0,0,0
 	//Ç®ÇÌÇË
 
 

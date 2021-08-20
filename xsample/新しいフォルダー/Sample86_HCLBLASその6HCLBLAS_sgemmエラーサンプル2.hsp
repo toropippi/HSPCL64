@@ -1,0 +1,30 @@
+//C=A*B
+//の行列積のエラーサンプル
+//raw colがあっててもメモリ確保サイズがあってないといけない
+#include "HSPCL64a.as"
+	HCLinit
+	HCLSetDevice 0
+	matA=HCLCreateBuffer(10*1000*4)
+	HCLBLAS_Set2DShape matA,10,1000
+	
+	matB=HCLCreateBuffer(10*1000*4)
+	HCLBLAS_Set2DShape matB,1000,10
+	
+	matC=HCLCreateBuffer(10*10*4)
+
+	//sgemm計算
+	HCLBLAS_sgemm matC,matA,matB,0,0,0
+	mes "C=A*B完了"
+	mes "Cの大きさbyte="+HCLGetSize(matC)
+	mes "C.raw="+HCLBLAS_Get2DShape(matC,0)
+	mes "C.col="+HCLBLAS_Get2DShape(matC,1)
+
+	wait 100
+	
+	//sgemm計算 C=A.T*B.Tなので1000*1000要素ないといけないが・・・
+	HCLBLAS_sgemm matC,matA,matB,0,1,1
+	mes "C=A.T*B.T完了"
+	
+	mes "Cの大きさbyte="+HCLGetSize(matC)
+	mes "C.raw="+HCLBLAS_Get2DShape(matC,0)
+	mes "C.col="+HCLBLAS_Get2DShape(matC,1)

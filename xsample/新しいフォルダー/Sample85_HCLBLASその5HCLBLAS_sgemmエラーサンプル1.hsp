@@ -1,0 +1,16 @@
+//C=A*B
+//の行列積のエラーサンプル
+//raw colが合わないといけない
+#include "HSPCL64a.as"
+	HCLinit
+	matA=HCLCreateBuffer(10*100*4)
+	HCLBLAS_Set2DShape matA,10,100
+	
+	matB=HCLCreateBuffer(10*100*4)
+	HCLBLAS_Set2DShape matB,10,100
+	
+	matC=HCLCreateBuffer(10*10*4)
+
+	//sgemm計算
+	HCLBLAS_sgemm matC,matA,matB,0,0,0
+	//HCLBLAS_sgemm matC,matA,matB,0,1,1 //こっちでもエラー

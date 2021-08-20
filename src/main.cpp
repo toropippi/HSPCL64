@@ -300,8 +300,7 @@ void MyReleaseBuffer(cl_mem m)
 }
 
 
-//GEMM用関数。転置先bufferも指定
-void MySgemmTrans2(cl_mem m, cl_mem tm)
+void sgemminit()
 {
 	if (SGEMMkernel[clsetdev * 4] == NULL)
 	{
@@ -309,17 +308,23 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 		char* p0 = "SGEMM_a";
 		char* p1 = "SGEMM_k";
 		char* p2 = "SGEMM_small";
-		char* p3 = "SGEMM_Trans";
+		char* p3 = "Trans";
 		SGEMMkernel[clsetdev * 4] = clCreateKernel(clp, p0, NULL);
 		SGEMMkernel[clsetdev * 4 + 1] = clCreateKernel(clp, p1, NULL);
 		SGEMMkernel[clsetdev * 4 + 2] = clCreateKernel(clp, p2, NULL);
 		SGEMMkernel[clsetdev * 4 + 3] = clCreateKernel(clp, p3, NULL);
 	}
+}
+
+//GEMM用関数。転置先bufferも指定
+void MySgemmTrans2(cl_mem m, cl_mem tm)
+{
+	sgemminit();
 
 	auto itr = memmap.find(m);
 	if (itr == memmap.end())
 	{
-		MessageBox(NULL, "そのmem idは解放おそらく存在しません", "警告", 0);
+		MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
 	}
 	ShapeHP sh = memmap[m];
 
@@ -362,6 +367,7 @@ cl_mem MySgemmTrans1(cl_mem m)
 	MySgemmTrans2(m, tm);
 	return tm;
 }
+
 
 ////////////自作関数ここまで
 
@@ -793,8 +799,16 @@ static void *reffunc( int *type_res, int cmd )
 	{
 		//引数1 buffer
 		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
-		//引数1 buffer
-		//cl_mem AT = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		//転置前エラーチェック
+		ShapeHP sha = memmap[A];
+		if (sha.raw * sha.col * 4 != GetMemSize(A))
+		{
+			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+
 		ref_int64val = (INT64)MySgemmTrans1(A);
 		break;
 	}
@@ -2365,18 +2379,7 @@ static int cmdfunc(int cmd)
 
 	case 0x97://HCLBLAS_sgemm
 	{
-		if (SGEMMkernel[clsetdev * 4] == NULL)
-		{
-			cl_program clp = WithSource_func(context[clsetdev], SGEMM_SOURCE, "");
-			char* p0 = "SGEMM_a";
-			char* p1 = "SGEMM_k";
-			char* p2 = "SGEMM_small";
-			char* p3 = "SGEMM_Trans";
-			SGEMMkernel[clsetdev * 4] = clCreateKernel(clp, p0, NULL);
-			SGEMMkernel[clsetdev * 4 + 1] = clCreateKernel(clp, p1, NULL);
-			SGEMMkernel[clsetdev * 4 + 2] = clCreateKernel(clp, p2, NULL);
-			SGEMMkernel[clsetdev * 4 + 3] = clCreateKernel(clp, p3, NULL);
-		}
+		sgemminit();
 
 		//引数1 buffer
 		cl_mem C = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
@@ -2393,14 +2396,6 @@ static int cmdfunc(int cmd)
 		//引数6 転置b
 		int b_t = code_getdi(0);
 
-		/*
-		dim64 Cdmy, 3
-		dim64 Admy, 3
-		dim64 Bdmy, 3
-		Cdmy.0 = int64(CLMmem(C))
-		Cdmy.1 = int64(CLMraw(C))
-		Cdmy.2 = int64(CLMcol(C))
-		*/
 		int aflag = 0;//最終的に転置するかフラグ
 		int bflag = 0;
 		int cflag = 0;
@@ -2416,34 +2411,75 @@ static int cmdfunc(int cmd)
 		if (allbit == 6) { cflag = 1; abswap = 1; }
 		if (allbit == 7) { abswap = 1; }
 
-		if (abswap == 1)
-			std::swap(A, B);
 
-		if (aflag == 1) 
-			A = MySgemmTrans1(A);
-
-		if (bflag == 1)
-			B = MySgemmTrans1(B);
-
-		
-		if (memmap[A].col != memmap[B].raw) 
+		//転置前エラーチェック
+		ShapeHP sha = memmap[A];
+		ShapeHP shb = memmap[B];
+		ShapeHP sha2 = sha;
+		ShapeHP shb2 = shb;
+		if (sha.raw * sha.col * 4 != GetMemSize(A))
 		{
-			std::string errs = "縦横サイズエラー：行列積できません\nA.col=" + std::to_string(memmap[A].col) + "\n B.raw=" + std::to_string(memmap[B].raw) + "";
+			std::string errs = "第2引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 			MessageBox(NULL, errs.c_str(), "エラー", 0);
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		}
-			
-		if (cflag == 1) 
+		if (shb.raw * shb.col * 4 != GetMemSize(B))
+		{
+			std::string errs = "第3引数のメモリサイズ(" + std::to_string(GetMemSize(B)) + ")と\nraw(" + std::to_string(shb.raw) + ")*col(" + std::to_string(shb.col) + ")の大きさが\n合いません";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+
+		//スワップ転置など前処理
+		if (abswap == 1) {
+			std::swap(A, B);
+			std::swap(sha, shb);
+		}
+
+		if (aflag == 1) {
+			A = MySgemmTrans1(A);
+			std::swap(sha.raw, sha.col);
+		}
+
+		if (bflag == 1) {
+			B = MySgemmTrans1(B);
+			std::swap(shb.raw, shb.col);
+		}
+
+		if (cflag == 1)
 		{
 			Cdmy = MyCreateBuffer(CL_MEM_READ_WRITE, GetMemSize(C), NULL);
 			std::swap(C, Cdmy);
 		}
 
 
-		//GEMM Cdmy, Admy, Bdmy
-		INT64 im = memmap[A].raw;
-		INT64 ik = memmap[A].col;
-		INT64 in = memmap[B].col;
+		//gemm前エラーチェック1、長さチェック
+		if (a_t == 1) { std::swap(sha2.raw, sha2.col); }
+		if (b_t == 1) { std::swap(shb2.raw, shb2.col); }
+		if (sha.col != shb.raw)
+		{
+			std::string sat = "A";
+			std::string sbt = "B";
+			if (a_t == 1)sat = "AT";
+			if (b_t == 1)sbt = "BT";
+			std::string errs;
+			errs = "縦横サイズエラー：行列行列積できません\n" + sat + ".col=" + std::to_string(sha2.col) + "\n" + sbt + ".raw=" + std::to_string(shb2.raw) + "";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+
+		//gemm前エラーチェック2、Cの大きさチェック
+		if (GetMemSize(C) != sha.raw * shb.col * 4) 
+		{
+			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(C)) + ")が\n行列行列積の結果の大きさと合いません";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+
+		//GEMM
+		int im = (int)sha.raw;
+		int ik = (int)sha.col;
+		int in = (int)shb.col;
 		cl_kernel gkernel;
 		if ((in < 128) | (im < 128))
 		{
@@ -2483,8 +2519,8 @@ static int cmdfunc(int cmd)
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 
-		memmap[C].raw = memmap[A].raw;
-		memmap[C].col = memmap[B].col;
+		memmap[C].raw = sha.raw;
+		memmap[C].col = shb.col;
 		//sgemmおわり
 		if (cflag == 1)
 		{
@@ -2509,6 +2545,22 @@ static int cmdfunc(int cmd)
 		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		//引数1 buffer
 		cl_mem AT = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		//転置前エラーチェック
+		ShapeHP sha = memmap[A];
+		if (sha.raw * sha.col * 4 != GetMemSize(A))
+		{
+			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+		if (GetMemSize(A) != GetMemSize(AT))
+		{
+			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\n第2引数のメモリサイズ(" + std::to_string(GetMemSize(AT)) + ")が合いません";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+			puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		}
+
 		MySgemmTrans2(A, AT);
 		break;
 	}

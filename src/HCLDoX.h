@@ -16,12 +16,12 @@ int isupper_lower(unsigned char c)
 	return 0;
 }
 
-std::string CodeRefine(std::string sor, int typeflg,int* argt)
+std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 {
 	std::string stype[5];
-	stype[0] = "uchar";
-	stype[1] = "uint";
-	stype[2] = "ulong";
+	stype[0] = "char";
+	stype[1] = "int";
+	stype[2] = "long";
 	stype[3] = "float";
 	stype[4] = "double";
 	std::string Aa = "A";
@@ -29,6 +29,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 	sor = " " + sor + "     ";
 	int len = sor.size();
 
+	int argcnt2 = 0;
 	int globalnum[26];
 	int privatenum[26];
 	int C[10];
@@ -158,21 +159,20 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 	}
 
 
-	std::string header = "#define REP(j, n) for(int j = 0; j < (int)(n); j++)\n__kernel void GenCode(";
+	std::string header = "#define REP(j, n) for(int j = 0; j < (int)(n); j++)\n#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);\n__kernel void GenCode(";
 
-	int oomjc = 0;
 	//大文字1文字処理
 	for (int i = 0; i < 26; i++)
 	{
 		if (globalnum[i] != 0)
 		{
-			oomjc++;
 			Aa[0] = 65 + i;
 			header += "__global " + stype[typeflg] + "* " + Aa + " ,";
+			argcnt2++;
 		}
 	}
 
-	if (oomjc == 0)
+	if (argcnt2 == 0)
 	{
 		MessageBox(NULL, "「A」などの大文字変数が一つもありません", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
@@ -184,6 +184,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (C[i] != 0)
 		{
 			header += "__global char* C" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -191,6 +192,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (D[i] != 0)
 		{
 			header += "__global double* D" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -198,6 +200,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (F[i] != 0)
 		{
 			header += "__global float* F" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -205,6 +208,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (I[i] != 0)
 		{
 			header += "__global int* I" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -212,6 +216,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (L[i] != 0)
 		{
 			header += "__global long long* L" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 
@@ -220,6 +225,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (UC[i] != 0)
 		{
 			header += "__global unssigned char* UC" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -227,6 +233,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (UI[i] != 0)
 		{
 			header += "__global unsigned int* UI" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 	for (int i = 0; i < 10; i++)
@@ -234,12 +241,12 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (UL[i] != 0)
 		{
 			header += "__global unsigned long long* UL" + std::to_string(i) + " ,";
+			argcnt2++;
 		}
 	}
 
 
 	//小文字処理
-	int kmjc = 0;
 	privatenum[8] = 0;//i
 	privatenum[9] = 0;//j
 	privatenum[10] = 0;//k
@@ -251,15 +258,41 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt)
 		if (privatenum[i] != 0)
 		{
 			Aa[0] = 97 + i;
-			header += "" + stype[argt[kmjc + oomjc]] + " " + Aa + " ,";
-			kmjc++;
+			if (argcnt2 >= 32)break;
+			header += "" + stype[argt[argcnt2]] + " " + Aa + " ,";
+			argcnt2++;
 		}
 	}
 
-	//残処理
-	header += "uint raw ,uint col";
-	
+	//念の為エラー処理
+	if (argcnt2 >= 32)
+	{
+		MessageBox(NULL, "カーネルコード側で生成された引数の数が31を超えました", "エラー", 0);
+
+		std::string srrs = "";
+		for (int i = 0; i < 26; i++) if (globalnum[i] != 0) { Aa[0] = 65 + i; srrs += Aa + ","; }
+		for (int i = 0; i < 10; i++) if (C[i] != 0) { srrs += "C" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (D[i] != 0) { srrs += "D" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (F[i] != 0) { srrs += "F" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (I[i] != 0) { srrs += "I" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (L[i] != 0) { srrs += "L" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (UC[i] != 0) { srrs += "UC" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (UI[i] != 0) { srrs += "UI" + std::to_string(i) + ","; }
+		for (int i = 0; i < 10; i++) if (UL[i] != 0) { srrs += "UL" + std::to_string(i) + ","; }
+		for (int i = 0; i < 26; i++) if (privatenum[i] != 0) { Aa[0] = 97 + i; srrs += Aa + ","; }
+
+		MessageBox(NULL, srrs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+	if (argcnt2 != argcnt) 
+	{
+		std::string errs = "カーネルコード側で生成された引数の数(" + std::to_string(argcnt2) + ")と\nHSP側で指定している引数の数(" + std::to_string(argcnt) + ")が異なります。";
+		MessageBox(NULL, errs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+
 	//global id埋め込み処理
+	if (header[header.size() - 1] == ',')header[header.size() - 1] = ' ';
 	header += ")\n{\nint i = get_global_id(0);\nint li = get_local_id(0);\n";
 
 	//shared memory埋め込み
@@ -295,6 +328,7 @@ static void HCLDoX(int typeflg)
 	int type;
 
 	int argt[32];
+	int argcnt = 0;
 	int argi32[32];
 	INT64 argi64[32];
 	double argdp[32];
@@ -302,7 +336,7 @@ static void HCLDoX(int typeflg)
 		argt[i] = -1; argi32[i] = -1; argi64[i] = -1; argdp[i] = -1.0;
 	}
 
-	for (int i = 0; i < 32; i++) {
+	for (int i = 0; i < 33; i++) {
 		chk = code_getprm();							// パラメーターを取得(型は問わない)
 		if (chk <= PARAM_END) break;				// パラメーター省略時の処理
 		type = mpval->flag;							// パラメーターの型を取得
@@ -312,6 +346,7 @@ static void HCLDoX(int typeflg)
 			ppttr = (double*)mpval->pt;
 			sizeofff = 8;
 			argt[i] = 4;
+			argcnt++;
 			argdp[i] = *((double*)ppttr);
 			break;
 		}
@@ -320,6 +355,7 @@ static void HCLDoX(int typeflg)
 			ppttr = (INT64*)mpval->pt;
 			sizeofff = 8;
 			argt[i] = 2;
+			argcnt++;
 			argi64[i] = *((INT64*)ppttr);
 			break;
 		}
@@ -328,6 +364,7 @@ static void HCLDoX(int typeflg)
 			ppttr = (int*)mpval->pt;
 			sizeofff = 4;
 			argt[i] = 1;
+			argcnt++;
 			argi32[i] = *((int*)ppttr);
 			break;
 		}
@@ -345,7 +382,7 @@ static void HCLDoX(int typeflg)
 	}
 
 	//コード生成して
-	s_sourse = CodeRefine(s_sourse, typeflg, argt);//, argi32, argi64, argdp
+	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt);
 	size_t h = KrnToHash(s_sourse);
 	auto itr = codemap.find(h);// h が設定されているか？
 	if (itr != codemap.end()) {
@@ -362,14 +399,13 @@ static void HCLDoX(int typeflg)
 	}
 
 	//これでkernelまで求まった。あとは引数指定
-	// 
 	//global数を計算。Aに対応
 	INT64 global_size = GetMemSize((cl_mem)argi64[0]) / sizelist[typeflg];
 
 	//引数
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < argcnt; i++)
 	{
-		if (argt[i] == -1) 
+		/*if (argt[i] == -1) 
 		{
 			cl_mem m = (cl_mem)argi64[0];
 			auto itr = memmap.find(m);
@@ -378,9 +414,9 @@ static void HCLDoX(int typeflg)
 			int ir = (int)sh_.raw;
 			int ic = (int)sh_.col;
 			clSetKernelArg(kernel, i, 4, &ir);
-			clSetKernelArg(kernel, i + 1, 4, &ic);
+			clSetKernelArg(kernel, i + 1, 4, &ic);			
 			break;
-		}
+		}*/
 		if (argt[i] == 1)ppttr = (int*)&argi32[i];
 		if (argt[i] == 2)ppttr = (INT64*)&argi64[i];
 		if (argt[i] == 4)ppttr = (double*)&argdp[i];

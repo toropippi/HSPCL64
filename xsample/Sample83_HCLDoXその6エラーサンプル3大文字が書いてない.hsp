@@ -1,0 +1,9 @@
+#include "HSPCL64a.as"
+	HCLinit
+
+	n=256//配列サイズ 256*4byte
+	memA=HCLCreateBuffer(n*4)
+	memB=HCLCreateBuffer(n*4)
+	
+	HCLDoXi "a[i]=b[i]",memA,memB
+	stop

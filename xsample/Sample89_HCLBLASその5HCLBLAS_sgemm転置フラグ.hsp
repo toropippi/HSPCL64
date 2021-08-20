@@ -29,37 +29,3 @@
 	HCLBLAS_sgemm matC,matA,matB,1,1,1 // C.T=A.T*B.T
 	HCLBLAS_sgemm matC,matA,matB,0,0,0 // C=A*B
 	//Ç®ÇÌÇË
-
-
-	//AíÜêg
-	HCLdim_i32FromBuffer h_matA,matA
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+10,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matA.(cnt+ycnt*2)))
-			loop
-		loop
-	//BíÜêg
-	HCLdim_i32FromBuffer h_matB,matB
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+130,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matB.(cnt+ycnt*2)))
-			loop
-		loop
-	//CíÜêg
-	HCLdim_i32FromBuffer h_matC,matC
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+250,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matC.(cnt+ycnt*2)))
-			loop
-		loop
-
-	pos 97,26
-	mes "Å~"
-	pos 218,26
-	mes "ÅÅ"
