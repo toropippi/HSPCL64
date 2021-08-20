@@ -44,6 +44,11 @@
 #cmd HCLdim_i32FromBuffer $8C
 #cmd HCLdim_i64FromBuffer $8D
 #cmd HCLdim_dpFromBuffer $8E
+#cmd HCLGetSize $90
+#cmd HCLGetAllBufferSize $91
+#cmd HCLGarbageCollectionNow $92
+#cmd HCLIncRefcntCLBufferId $93
+#cmd HCLDecRefcntCLBufferId $94
 
 #cmd HCLReadIndex_i32 $66
 #cmd HCLReadIndex_i64 $67
@@ -57,7 +62,15 @@
 #cmd HCLDoKrn2 $52
 #cmd HCLDoKrn3 $7E
 #cmd HCLDoKernel $6E
-#cmd HCLDoKrn1_sub	$6F
+#cmd HCLDoKrn1_sub $6F
+
+#cmd HCLDoCode $8F
+#cmd HCLDoXc $9B
+#cmd HCLDoXi $9C
+#cmd HCLDoXl $9D
+#cmd HCLDoXf $9E
+#cmd HCLDoXd $9F
+
 #cmd HCLFinish $70
 #cmd HCLFlush $71
 
@@ -81,6 +94,15 @@
 
 #cmd DoubleToFloat $81
 #cmd FloatToDouble $82
+
+#cmd HCLBLAS_Set2DShape $95
+#cmd HCLBLAS_Get2DShape $96
+#cmd HCLBLAS_sgemm $97
+#cmd HCLBLAS_dgemm $98
+#cmd HCLBLAS_sT $99
+#cmd HCLBLAS_dT $9A
+
+
 
 /*
 #cmd _ConvRGBtoBGR 		$83
