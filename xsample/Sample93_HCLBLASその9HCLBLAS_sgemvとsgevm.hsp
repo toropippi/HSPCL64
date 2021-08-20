@@ -4,10 +4,6 @@
 
 #include "HSPCL64a.as"
 	HCLinit
-
-	prg=HCLCreateProgram("SGEMV.cl")
-	krnGEMV=HCLCreateKernel(prg,"SGEMV")
-	krnGEVM=HCLCreateKernel(prg,"SGEVM")
 	
 	//y=Ax
 	matA=HCLCreateBuffer(10*100*4)

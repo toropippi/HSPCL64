@@ -4,10 +4,6 @@
 
 #include "HSPCL64a.as"
 	HCLinit
-
-	prg=HCLCreateProgram("SGEMV.cl")
-	krnGEMV=HCLCreateKernel(prg,"SGEMV")
-	krnGEVM=HCLCreateKernel(prg,"SGEVM")
 	
 	//y=Ax
 	matA=HCLCreateBuffer(10*100*4)
@@ -38,7 +34,7 @@
 
 	//HCLSetKrns krnGEVM,matA,vecX,vecY,100,10
 	//HCLDokrn1 krnGEVM,128,64
-	HCLBLAS_sgevm vecY,vecX1,matA2
+	HCLBLAS_sgevm vecY,vecX,matA
 	
 	HCLdim_i32FromBuffer h_y,vecY
 	screen 1,640,480
