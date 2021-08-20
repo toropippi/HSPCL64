@@ -1,0 +1,30 @@
+// 256並列でVectorの加算をしてみましょう
+#include "HSPCL64a.as"
+	HCLinit
+
+	n=256
+	dim a,n
+	dim b,n
+	dim c,n
+		repeat n
+		a.cnt=cnt
+		b.cnt=cnt
+		loop
+
+repeat 200000
+	HCLCall {"
+__kernel void test(__global int* a,__global int* b,__global int* c,int d)
+{
+	int gid=get_global_id(0);
+	c[gid]=a[gid]+b[gid]+d;
+}
+	"},n,n,a,b,c,10//10にあたるのがコードのd
+loop
+
+		repeat n//結果がcに代入されている
+		mes ""+a.cnt+" + "+b.cnt+" + 10 = "+c.cnt+""
+		loop
+	stop
+
+//256並列を指定しているので256thread立ち上がります。
+//c[gid]=a[gid]+b[gid]+dの部分が256並列で行われています。

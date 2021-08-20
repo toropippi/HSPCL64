@@ -1,0 +1,47 @@
+// HCLCreateBufferやHCLCreateBufferFromなどcl mem objectを生成すると
+// 明示的にHCLReleaseBufferで解放しない限り残り続けます。
+// もしコード内でcl mem idをロストしてしまうと解放することもできなくなってしまいます。
+
+// そこでプラグイン側で全て作成したcl mem idを覚えておき、擬似的なGCを行なうことで、いらなくなったcl memを解放できるようにしたのがHCLGarbageCollectionNow命令です。
+// ただしメモリの参照カウンタ等実装できないので手動でカウンタを回して頂く必要があります。
+
+#include "HSPCL64a.as"
+	HCLinit
+	
+	n=256//配列サイズ 256byte
+	clmem0=HCLCreateBuffer(n)
+
+	n=1024*1024*512//配列サイズ 512MB
+	clmem1=HCLCreateBuffer(n)
+
+	n=int64(1024)*1024*1024*1//配列サイズ 1GB
+	clmem2=HCLCreateBuffer(n)
+
+	dim data,64
+	HCLWriteBuffer clmem0,data,256
+	HCLWriteBuffer clmem1,data,256
+	HCLWriteBuffer clmem2,data,256//writeしないと実際には確保されない
+
+	mes "clmem0～clmem2が存在する" 
+	mes "総メモリサイズ(byte) = "+HCLGetAllBufferSize()
+	mes 
+	mes 
+
+
+	mes "HCLIncRefcntCLBufferId clmem0,clmem2"
+	HCLIncRefcntCLBufferId clmem0,clmem2//clmem0,clmem2の参照カウンタ(という名義の変数)をインクリメント
+	mes "HCLGarbageCollectionNow"
+	HCLGarbageCollectionNow//ここでclmem1は解放される
+	mes "総メモリサイズ(byte) = "+HCLGetAllBufferSize()
+	mes 
+	mes 
+
+	mes "HCLDecRefcntCLBufferId clmem0,clmem2"
+	HCLDecRefcntCLBufferId clmem0,clmem2//clmem0,clmem2の参照カウンタ(という名義の変数)をデクリメント
+	mes "HCLGarbageCollectionNow clmem0"
+	HCLGarbageCollectionNow clmem0//ここでclmem0は本来解放されるが除外される
+	mes "総メモリサイズ(byte) = "+HCLGetAllBufferSize()
+
+
+//インクリメントしたあとcl mem idをロストするとさすがにどうやっても解放できなくなるので
+//注意してください。

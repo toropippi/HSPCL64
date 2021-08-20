@@ -1,0 +1,29 @@
+#include "HSPCL64a.as"
+	HCLinit
+
+	n=256//配列サイズ 256byte
+	ddim host_a,n//double型
+	dim host_b,n//float型を想定
+	dim host_c,n//int型を想定
+	
+		repeat n
+		host_a.cnt=double(rnd(1000)-501)*0.5
+		loop
+	
+	clmem_a=HCLCreateBufferFrom(host_a)
+	clmem_b=HCLCreateBufferFrom(host_b)
+	clmem_c=HCLCreateBufferFrom(host_c)
+
+			repeat 999999
+			HCLDoXd "F0[i]=(float)Z[i];I0[i]=(int)Z[i];",clmem_a,clmem_b,clmem_c
+			HCLFinish
+			loop
+		pos 0,0
+			repeat 30
+			bb=FloatToDouble(HCLReadIndex_i32(clmem_b,cnt))
+			cc=HCLReadIndex_i32(clmem_c,cnt)
+	
+			mes ""+host_a.cnt+"	"+bb+"	"+cc+""
+			loop
+			
+	stop

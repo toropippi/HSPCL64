@@ -1799,10 +1799,6 @@ static int cmdfunc(int cmd)
 			}
 		}
 
-		//後片付け
-		clReleaseKernel(kernel);
-		clReleaseProgram(program);
-
 		//これにて全行程終了のはず！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
 		break;
 	}

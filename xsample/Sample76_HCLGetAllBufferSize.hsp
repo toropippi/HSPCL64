@@ -1,0 +1,30 @@
+// HCLCreateBufferで確保した総メモリサイズを確認するコード
+// これはHSPCL64で確保したGPUメモリのサイズが分かるだけであり実際のGPUメモリ使用量がわかるわけではありません。
+#include "HSPCL64a.as"
+	HCLinit
+	
+	n=256//配列サイズ 256byte
+	clmem0=HCLCreateBuffer(n)
+
+	n=1024*1024*512//配列サイズ 512MB
+	clmem1=HCLCreateBuffer(n)
+
+	n=int64(1024)*1024*1024*1//配列サイズ 1GB
+	clmem2=HCLCreateBuffer(n)
+
+	dim data,64
+	HCLWriteBuffer clmem0,data,256
+	HCLWriteBuffer clmem1,data,256
+	HCLWriteBuffer clmem2,data,256//writeしないと実際には確保されない
+
+	mes "clmem0のサイズ(byte) = "+HCLGetSize(clmem0)
+	mes "clmem1のサイズ(byte) = "+HCLGetSize(clmem1)
+	mes "clmem2のサイズ(byte) = "+HCLGetSize(clmem2)
+	mes 
+	mes "総メモリサイズ(byte) = "+HCLGetAllBufferSize()
+
+
+	mes 
+	HCLReleaseBuffer clmem2
+	mes "HCLReleaseBuffer clmem2"
+	mes "総メモリサイズ(byte) = "+HCLGetAllBufferSize()
