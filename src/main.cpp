@@ -34,6 +34,7 @@ cl_program program;
 cl_kernel kernel;
 cl_kernel* SGEMMkernel;//devごとに作る。a,k,small,transの4つ
 cl_kernel* DGEMMkernel;
+int GEMMkernelNum = 6;//sgemm*3+trans+gemv+gevm
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
 std::string SGEMM_SOURCE;
@@ -302,17 +303,21 @@ void MyReleaseBuffer(cl_mem m)
 
 void sgemminit()
 {
-	if (SGEMMkernel[clsetdev * 4] == NULL)
+	if (SGEMMkernel[clsetdev * GEMMkernelNum] == NULL)
 	{
 		cl_program clp = WithSource_func(context[clsetdev], SGEMM_SOURCE, "");
 		char* p0 = "SGEMM_a";
 		char* p1 = "SGEMM_k";
 		char* p2 = "SGEMM_small";
 		char* p3 = "Trans";
-		SGEMMkernel[clsetdev * 4] = clCreateKernel(clp, p0, NULL);
-		SGEMMkernel[clsetdev * 4 + 1] = clCreateKernel(clp, p1, NULL);
-		SGEMMkernel[clsetdev * 4 + 2] = clCreateKernel(clp, p2, NULL);
-		SGEMMkernel[clsetdev * 4 + 3] = clCreateKernel(clp, p3, NULL);
+		char* p4 = "SGEMV";
+		char* p5 = "SGEVM";
+		SGEMMkernel[clsetdev * GEMMkernelNum] = clCreateKernel(clp, p0, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 1] = clCreateKernel(clp, p1, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 2] = clCreateKernel(clp, p2, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 3] = clCreateKernel(clp, p3, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 4] = clCreateKernel(clp, p4, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 5] = clCreateKernel(clp, p5, NULL);
 	}
 }
 
@@ -328,7 +333,7 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 	}
 	ShapeHP sh = memmap[m];
 
-	kernel = SGEMMkernel[clsetdev * 4 + 3];
+	kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3];
 	//これでmemとkernelはok
 
 	//あとは引数指定して実行
@@ -465,17 +470,17 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	cl_kernel gkernel;
 	if ((in < 128) | (im < 128))
 	{
-		gkernel = SGEMMkernel[clsetdev * 4 + 2];
+		gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 2];
 	}
 	else
 	{
 		if (ik % 16 == 0)
 		{
-			gkernel = SGEMMkernel[clsetdev * 4 + 1];
+			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 1];
 		}
 		else
 		{
-			gkernel = SGEMMkernel[clsetdev * 4];
+			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum];
 		}
 	}
 
@@ -512,6 +517,108 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	if (aflag != 0) MyReleaseBuffer(A);
 	if (bflag != 0) MyReleaseBuffer(B);
 	if (cflag != 0) MyReleaseBuffer(C);
+}
+
+
+//関数型と命令形どちらにも対応できるように
+//retflgは0命令形、1関数型
+//y=Ax
+//global_size=256*raw
+//local_size=256
+void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg)
+{
+	sgemminit();
+	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 4];
+
+	auto itr = memmap.find(A);
+	if (itr == memmap.end()) MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
+	int col = (int)memmap[A].col;
+	int raw = (int)memmap[A].raw;
+	if (retflg == 1) 
+	{
+		Y = MyCreateBuffer(CL_MEM_READ_WRITE, raw * 4, NULL);
+	}
+	//エラーチェック
+	if (GetMemSize(Y) != 4 * raw)
+	{
+		std::string errs;
+		errs = "縦横サイズエラー：行列ベクトル積できません\nA.raw=" + std::to_string(raw) + "\nsize(Y)=" + std::to_string(GetMemSize(Y)) + "";
+		MessageBox(NULL, errs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+	if (GetMemSize(X) != 4 * col)
+	{
+		std::string errs;
+		errs = "縦横サイズエラー：行列ベクトル積できません\nA.col=" + std::to_string(col) + "\nsize(X)=" + std::to_string(GetMemSize(X)) + "";
+		MessageBox(NULL, errs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+	clSetKernelArg(gkernel, 0, sizeof(A), &A);
+	clSetKernelArg(gkernel, 1, sizeof(X), &X);
+	clSetKernelArg(gkernel, 2, sizeof(Y), &Y);
+	clSetKernelArg(gkernel, 3, sizeof(col), &col);
+
+	size_t global_size = 256 * raw;
+	size_t local_size = 256;
+	//outevent関連
+	//cl_event* outevent = EventOutChk(prm2);
+	//wait event list関連
+	cl_event* ev_ = GetWaitEvlist();
+	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+		gkernel, 1, NULL, &global_size, &local_size, num_event_wait_list, ev_, NULL);
+	if (ret != CL_SUCCESS) { retmeserr(ret); }
+	num_event_wait_list = 0;
+}
+
+//関数型と命令形どちらにも対応できるように
+//retflgは0命令形、1関数型
+// //y=xA
+//global_size=(col+63)/64*64
+//local_size=64
+void MySGEVMmain(cl_mem& Y, cl_mem& A, cl_mem& X, int retflg)
+{
+	sgemminit();
+	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 5];
+
+	auto itr = memmap.find(A);
+	if (itr == memmap.end()) MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
+	int col = (int)memmap[A].col;
+	int raw = (int)memmap[A].raw;
+	if (retflg == 1)
+	{
+		Y = MyCreateBuffer(CL_MEM_READ_WRITE, col * 4, NULL);
+	}
+	//エラーチェック
+	if (GetMemSize(Y) != 4 * col)
+	{
+		std::string errs;
+		errs = "縦横サイズエラー：ベクトル行列積できません\nA.col=" + std::to_string(col) + "\nsize(Y)=" + std::to_string(GetMemSize(Y)) + "";
+		MessageBox(NULL, errs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+	if (GetMemSize(X) != 4 * raw)
+	{
+		std::string errs;
+		errs = "縦横サイズエラー：ベクトル行列積できません\nA.raw=" + std::to_string(raw) + "\nsize(X)=" + std::to_string(GetMemSize(X)) + "";
+		MessageBox(NULL, errs.c_str(), "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+	}
+	clSetKernelArg(gkernel, 0, sizeof(A), &A);
+	clSetKernelArg(gkernel, 1, sizeof(X), &X);
+	clSetKernelArg(gkernel, 2, sizeof(Y), &Y);
+	clSetKernelArg(gkernel, 3, sizeof(col), &col);
+	clSetKernelArg(gkernel, 4, sizeof(raw), &raw);
+
+	size_t global_size = (col + 63) / 64 * 64;
+	size_t local_size = 64;
+	//outevent関連
+	//cl_event* outevent = EventOutChk(prm2);
+	//wait event list関連
+	cl_event* ev_ = GetWaitEvlist();
+	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+		gkernel, 1, NULL, &global_size, &local_size, num_event_wait_list, ev_, NULL);
+	if (ret != CL_SUCCESS) { retmeserr(ret); }
+	num_event_wait_list = 0;
 }
 
 ////////////自作関数ここまで
@@ -980,6 +1087,36 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
+	case 0xA0://HCLBLAS_sgemv
+	{
+		//引数1 buffer
+		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem Y = 0;
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		MySGEMVmain(Y, A, X, 1);
+		ref_int64val = (INT64)Y;
+		break;
+	}
+
+	case 0xA1://HCLBLAS_sgevm
+	{
+		//引数1 buffer
+		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem Y = 0;
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		MySGEVMmain(Y, A, X, 1);
+		ref_int64val = (INT64)Y;
+		break;
+	}
+
 	////////////////////////////////////////////////////////////ここまで
 
 	default:
@@ -1247,9 +1384,9 @@ static int cmdfunc(int cmd)
 		}
 
 		//SGEMMkernelの保管場所も
-		SGEMMkernel = new cl_kernel[dev_num * 4];
-		DGEMMkernel = new cl_kernel[dev_num * 4];
-		for (int k = 0; k < dev_num*4; k++)
+		SGEMMkernel = new cl_kernel[dev_num * GEMMkernelNum];
+		DGEMMkernel = new cl_kernel[dev_num * GEMMkernelNum];
+		for (int k = 0; k < dev_num * GEMMkernelNum; k++)
 		{
 			SGEMMkernel[k] = NULL;
 			DGEMMkernel[k] = NULL;
@@ -2601,6 +2738,41 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+
+	case 0xA0://HCLBLAS_sgemv
+	{
+		//引数1 buffer
+		cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		MySGEMVmain(Y, A, X, 0);
+		break;
+	}
+	case 0xA1://HCLBLAS_sgevm
+	{
+		//引数1 buffer
+		cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+
+		MySGEVMmain(Y, A, X, 0);
+		break;
+	}
+	case 0xA2://HCLBLAS_dgemv
+	{
+		//未実装
+		break;
+	}
+	case 0xA3://HCLBLAS_dgevm
+	{
+		//未実装
+		break;
+	}
 
 
 

@@ -1,30 +1,49 @@
-//C=A*B
-//の行列積のエラーサンプル
-//raw colがあっててもメモリ確保サイズがあってないといけない
+//y=Ax
+//y=xA
+//のサンプル
+
 #include "HSPCL64a.as"
 	HCLinit
-	HCLSetDevice 0
-	matA=HCLCreateBuffer(10*1000*4)
-	HCLBLAS_Set2DShape matA,10,1000
-	
-	matB=HCLCreateBuffer(10*1000*4)
-	HCLBLAS_Set2DShape matB,1000,10
-	
-	matC=HCLCreateBuffer(10*10*4)
 
-	//sgemm計算
-	HCLBLAS_sgemm matC,matA,matB,0,0,0
-	mes "C=A*B完了"
-	mes "Cの大きさbyte="+HCLGetSize(matC)
-	mes "C.raw="+HCLBLAS_Get2DShape(matC,0)
-	mes "C.col="+HCLBLAS_Get2DShape(matC,1)
+	prg=HCLCreateProgram("SGEMV.cl")
+	krnGEMV=HCLCreateKernel(prg,"SGEMV")
+	krnGEVM=HCLCreateKernel(prg,"SGEVM")
+	
+	//y=Ax
+	matA=HCLCreateBuffer(10*100*4)
+	vecX=HCLCreateBuffer(100*4)
+	vecY=HCLCreateBuffer(10*4)
+	HCLBLAS_Set2DShape matA,10,100
+	HCLFillBuffer_i32 matA,DoubleToFloat(1.0)
+	HCLFillBuffer_i32 vecX,DoubleToFloat(1.0)
 
-	wait 100
+	//HCLSetKrns krnGEMV,matA,vecX,vecY,100
+	//HCLDokrn1 krnGEMV,256*10,256
+	HCLBLAS_sgemv vecY,matA,vecX
+	HCLdim_i32FromBuffer h_y,vecY
+		repeat 10
+		mes  FloatToDouble(h_y.cnt)
+		loop
 	
-	//sgemm計算 C=A.T*B.Tなので1000*1000要素ないといけないが・・・
-	HCLBLAS_sgemm matC,matA,matB,0,1,1
-	mes "C=A.T*B.T完了"
+
+
 	
-	mes "Cの大きさbyte="+HCLGetSize(matC)
-	mes "C.raw="+HCLBLAS_Get2DShape(matC,0)
-	mes "C.col="+HCLBLAS_Get2DShape(matC,1)
+	//y=xA
+	matA=HCLCreateBuffer(10*100*4)
+	vecX=HCLCreateBuffer(10*4)
+	vecY=HCLCreateBuffer(100*4)
+	HCLBLAS_Set2DShape matA,10,100
+	HCLFillBuffer_i32 matA,DoubleToFloat(1.0)
+	HCLFillBuffer_i32 vecX,DoubleToFloat(1.0)
+
+	//HCLSetKrns krnGEVM,matA,vecX,vecY,100,10
+	//HCLDokrn1 krnGEVM,128,64
+	HCLBLAS_sgevm vecY,vecX,matA
+	
+	HCLdim_i32FromBuffer h_y,vecY
+	screen 1,640,480
+		repeat 100
+		mes  FloatToDouble(h_y.cnt)
+		loop
+
+	

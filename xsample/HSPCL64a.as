@@ -101,6 +101,10 @@
 #cmd HCLBLAS_dgemm $98
 #cmd HCLBLAS_sT $99
 #cmd HCLBLAS_dT $9A
+#cmd HCLBLAS_sgemv $A0
+#cmd HCLBLAS_sgevm $A1
+#cmd HCLBLAS_dgemv $A2
+#cmd HCLBLAS_dgevm $A3
 
 
 
