@@ -1,65 +1,70 @@
-//C=A*B
-//の行列積のサンプル
+//Aは256要素のfloat型で全て適当な初期値が入っている。
+//部分的に総和を求めた後Bに結果を格納したい
+//Aを64要素刻みでshared memoryを使って総和を計算しB[0]～B[3]に結果を入れるというサンプル
 #include "HSPCL64a.as"
 	HCLinit
-	matA=HCLCreateBuffer(2*2*4)
-	HCLBLAS_Set2DShape matA,2,2
-		repeat 2*2
-		HCLWriteIndex_i32 matA,cnt,DoubleToFloat(1.0*rnd(10))
-		loop
+
+	n=256//配列サイズ 256*4byte
+	clmem_a=HCLCreateBuffer(n*4)
+	clmem_b=HCLCreateBuffer(n/64*4)
+
+	//初期化
+	HCLDoXf "A[i]=(float)RND(i)/4294967296.0f;",clmem_a//ここで0～1.0までの適当なランダム値がはいる
+	HCLFillBuffer_i32 clmem_b,DoubleToFloat(0.0)
 	
-	matB=HCLCreateBuffer(2*2*4)
-	HCLBLAS_Set2DShape matB,2,2
-		repeat 2*2
-		HCLWriteIndex_i32 matB,cnt,DoubleToFloat(1.0*rnd(10))
+	HCLDoXf {"
+		S6[li]=A[i];
+		int x=32;
+		REP(j,6){
+			BARRIER
+			if (li<x){
+				S6[li]+=S6[li+x];
+			}
+			x/=2;
+		}
+		if (li==0) B[i/64]=S6[0];
+	"},clmem_a,clmem_b
+
+	//CPU側で結果確認
+		repeat 4
+		mes FloatToDouble(HCLReadIndex_i32(clmem_b,cnt))
 		loop
-	
-	matC=HCLCreateBuffer(2*2*4)
-	//HCLBLAS_Set2DShape matC,2,2// Cは計算で自動的にshapeが求まるので実はこれはいらない
-
-	//これでA,B,Cの初期設定完了
-
-	//sgemm計算
-	HCLBLAS_sgemm matC,matA,matB,0,1,0 // C=A.T*B
-	HCLBLAS_sgemm matC,matA,matB,0,0,1 // C=A*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,0,0 // C.T=A*B
-	HCLBLAS_sgemm matC,matA,matB,0,1,1 // C=A.T*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,0,1 // C.T=A*B.T
-	HCLBLAS_sgemm matC,matA,matB,1,1,0 // C.T=A.T*B
-	HCLBLAS_sgemm matC,matA,matB,1,1,1 // C.T=A.T*B.T
-	HCLBLAS_sgemm matC,matA,matB,0,0,0 // C=A*B
-	//おわり
+	stop
 
 
-	//A中身
-	HCLdim_i32FromBuffer h_matA,matA
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+10,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matA.(cnt+ycnt*2)))
-			loop
-		loop
-	//B中身
-	HCLdim_i32FromBuffer h_matB,matB
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+130,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matB.(cnt+ycnt*2)))
-			loop
-		loop
-	//C中身
-	HCLdim_i32FromBuffer h_matC,matC
-		repeat 2
-		ycnt=cnt
-			repeat 2
-			pos cnt*38+250,ycnt*32+10
-			mes strf("%3.1f",FloatToDouble(h_matC.(cnt+ycnt*2)))
-			loop
-		loop
-
-	pos 97,26
-	mes "×"
-	pos 218,26
-	mes "＝"
+//S0～S9という文字列も意味を持ちます。
+//SはShared memoryのSであり
+//	S0	:	1要素のShared memory
+//	S1	:	2要素のShared memory
+//	S2	:	4要素のShared memory
+//	S3	:	8要素のShared memory
+//	S4	:	16要素のShared memory
+//	S5	:	32要素のShared memory
+//	S6	:	64要素のShared memory
+//	S7	:	128要素のShared memory
+//	S8	:	256要素のShared memory
+//	S9	:	512要素のShared memory
+//
+//型はHCLDoXfなのでfloat型と決定されます。
+//今回はS6なので64要素のfloat型shared memoryを確保したことになります。
+//具体的には
+//	__local float S6[64];
+//というコードが追記されたことになっています。
+//
+//「li」という変数は
+//	int li = get_local_id(0);
+//と宣言されています。
+//
+//また#defineで下記文言が登録されており使うことができます。
+//	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+//	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+//
+//
+//コードの使い回しについて
+//HCLDoX系命令もHCLDoCodeもHCLCallも、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+//文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+//ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+//
+//したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+//2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+//例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)

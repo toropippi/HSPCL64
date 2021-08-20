@@ -50,6 +50,13 @@
 //	__global int *A,__global int *B,__global int *C,int a
 //という宣言がプラグイン内部によって追加されていることになります。
 //
+//対応関係としては
+// A:clmem_a
+// B:clmem_b
+// C:clmem_c
+// a:10
+//となっています。
+//
 //型については
 //global変数の場合、HCLDoXiなのでint型に決定されています。
 //private変数の場合、HSP側で入力した引数の型がそのまま採用されます。

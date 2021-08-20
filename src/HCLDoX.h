@@ -159,7 +159,10 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 	}
 
 
-	std::string header = "#define REP(j, n) for(int j = 0; j < (int)(n); j++)\n#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);\n__kernel void GenCode(";
+	std::string header = "#define REP(j, n) for(int j = 0; j < (int)(n); j++)\n";
+	header += "#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);\n";
+	header += "uint RND(uint s){s*=1847483629;s=(s^61)^(s>>16);s*=9;s=s^(s>>4);s*=0x27d4eb2d;s=s^(s>>15);return s;}\n";
+	header += "__kernel void GenCode(";
 
 	//大文字1文字処理
 	for (int i = 0; i < 26; i++)
@@ -258,17 +261,21 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 		if (privatenum[i] != 0)
 		{
 			Aa[0] = 97 + i;
-			if (argcnt2 >= 32)break;
+			if (argcnt2 >= 32) { argcnt2++; break; }
 			header += "" + stype[argt[argcnt2]] + " " + Aa + " ,";
 			argcnt2++;
 		}
 	}
 
 	//念の為エラー処理
-	if (argcnt2 >= 32)
+	if ((argcnt2 > 32) | (argcnt2 != argcnt))
 	{
-		MessageBox(NULL, "カーネルコード側で生成された引数の数が31を超えました", "エラー", 0);
-
+		if (argcnt2 > 32) MessageBox(NULL, "カーネルコード側で生成された引数の数が32を超えました", "エラー", 0);
+		if (argcnt2 != argcnt) 
+		{
+			std::string errs = "カーネルコード側で生成された引数の数(" + std::to_string(argcnt2) + ")と\nHSP側で指定している引数の数(" + std::to_string(argcnt) + ")が異なります。";
+			MessageBox(NULL, errs.c_str(), "エラー", 0);
+		}
 		std::string srrs = "";
 		for (int i = 0; i < 26; i++) if (globalnum[i] != 0) { Aa[0] = 65 + i; srrs += Aa + ","; }
 		for (int i = 0; i < 10; i++) if (C[i] != 0) { srrs += "C" + std::to_string(i) + ","; }
@@ -282,12 +289,6 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 		for (int i = 0; i < 26; i++) if (privatenum[i] != 0) { Aa[0] = 97 + i; srrs += Aa + ","; }
 
 		MessageBox(NULL, srrs.c_str(), "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-	}
-	if (argcnt2 != argcnt) 
-	{
-		std::string errs = "カーネルコード側で生成された引数の数(" + std::to_string(argcnt2) + ")と\nHSP側で指定している引数の数(" + std::to_string(argcnt) + ")が異なります。";
-		MessageBox(NULL, errs.c_str(), "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
 
@@ -336,7 +337,7 @@ static void HCLDoX(int typeflg)
 		argt[i] = -1; argi32[i] = -1; argi64[i] = -1; argdp[i] = -1.0;
 	}
 
-	for (int i = 0; i < 33; i++) {
+	for (int i = 0; i < 32; i++) {
 		chk = code_getprm();							// パラメーターを取得(型は問わない)
 		if (chk <= PARAM_END) break;				// パラメーター省略時の処理
 		type = mpval->flag;							// パラメーターの型を取得
