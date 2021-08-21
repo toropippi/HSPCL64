@@ -15,7 +15,7 @@
 #include "hsp3debug.h"			// hsp3 error code
 #include "hsp3struct.h"			// hsp3 core define
 
-extern int p1,p2,p3,p4,p5,p6;
+// extern int p1,p2,p3,p4,p5,p6;
 extern int *type;
 extern int *val;
 extern PVal *mpval;		// Master PVal pointer

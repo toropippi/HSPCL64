@@ -13,8 +13,11 @@
 #include "hsp3plugin.h"
 #include "hsp3struct.h"
 #include "hspvar_int64.h"
-#include "errmsg.h"
+#include "hspvar_float.h"
+#include "hspvar_callback64.h"
+#include "callback64.h"
 
+#include "errmsg.h"
 
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
@@ -24,6 +27,7 @@ int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 4;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//全プラットフォームのデバイスの合計数
 int bufferout[1024 * 4];//ほぼHCLGetDeviceInfoの返り値用
+int HspVarMemType;//64bitなら8、32bitならHSPVAR_FLAG_INT
 char hspcharout[1024 * 2];//HSPの文字列出力用バッファ
 cl_device_id *device_id;
 cl_context *context;
@@ -40,7 +44,7 @@ std::string SGEMM_SOURCE;
 
 struct EventStruct
 {
-	INT64 k;//kernel idまたはコピーサイズやら
+	size_t k;//kernel idまたはコピーサイズやら
 	int devno;
 	int queno;
 };
@@ -53,13 +57,13 @@ int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
 int thread_start = 0;//0はEnqueueまちがない、1以降はthreadに投げたがまだEnqueueされてない数
 INT64 bufferAllSize = 0;//cl_memの総合サイズ
 
-//Codeとkernelの紐付け
+//Codeのhashとkernelの紐付け
 std::map<size_t, cl_kernel> codemap;
 //clmem_idとshapeと生存フラグ紐付け
 struct ShapeHP
 {
-	INT64 raw;
-	INT64 col;
+	size_t raw;
+	size_t col;
 	int HP;
 };
 std::map<cl_mem, ShapeHP> memmap;
@@ -73,69 +77,68 @@ std::map<cl_mem, ShapeHP> memmap;
 
 
 //自作関数
-//int64だけを読み込むやつ
+//int64を読み込むやつ。他の型も強制的にint64になる
 INT64 Code_getint64() {
 	int prm;
 	prm = code_getprm();					// 整数値を取得(デフォルトなし)
 	if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
-	// パラメータ1:数値
 	return *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
 }
-//int32,int64両方の入力を場合分けで読み込むやつ
-INT64 Code_geti32i64() {
-	int chk = code_getprm();							// パラメーターを取得(型は問わない)
-	int type = mpval->flag;							// パラメーターの型を取得
-	void* ppttr;
 
-	int sizeofff;
-	switch (type) {
-	case 8:								// パラメーターがint64だった時
-	{
-		ppttr = (INT64 *)mpval->pt;
-		sizeofff = 8;
-		break;
-	}
-	case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-	{
-		ppttr = (int *)mpval->pt;
-		sizeofff = 4;
-		break;
-	}
-	default:
-		puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-		break;
-	}
-	return *(INT64*)ppttr;
-}
-
-
-//int32,int64両方の入力を場合分けで読み込むやつ
-INT64 Code_getdi32di64(INT64 defi) {
+//int64を読み込むやつ。他の型も強制的にint64になる
+//デフォルト値あり
+INT64 Code_getdi64(INT64 defi) {
 	int chk = code_getprm();							// パラメーターを取得(型は問わない)
 	if (chk <= PARAM_END)return defi;
-	int type = mpval->flag;							// パラメーターの型を取得
-	void* ppttr;
-
-	int sizeofff;
-	switch (type) {
-	case 8:								// パラメーターがint64だった時
-	{
-		ppttr = (INT64*)mpval->pt;
-		sizeofff = 8;
-		break;
-	}
-	case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-	{
-		ppttr = (int*)mpval->pt;
-		sizeofff = 4;
-		break;
-	}
-	default:
-		puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-		break;
-	}
-	return *(INT64*)ppttr;
+	return *(INT64*)HspVarInt64_Cnv(mpval->pt, mpval->flag);
 }
+
+//floatを読み込むやつ。他の型も強制的にfloatになる
+float Code_getf() {
+	int prm;
+	prm = code_getprm();					// 整数値を取得(デフォルトなし)
+	if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
+	return *(float*)HspVarFloat_Cnv(mpval->pt, mpval->flag);
+}
+
+//floatを読み込むやつ。他の型も強制的にfloatになる
+//デフォルト値あり
+float Code_getdf(float defi) {
+	int chk = code_getprm();							// パラメーターを取得(型は問わない)
+	if (chk <= PARAM_END)return defi;
+	return *(float*)HspVarFloat_Cnv(mpval->pt, mpval->flag);
+}
+
+//cl_memを読み込む、32bitならint,64bitならINT64型になる
+size_t Code_getMem() {
+	int prm = code_getprm();					// 整数値を取得(デフォルトなし)
+	if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
+	if (sizeof(size_t) == 4) 
+	{
+		if (mpval->flag == HSPVAR_FLAG_INT)
+		{
+			return (size_t)(*(mpval->pt));
+		}
+	}
+	INT64 t = *(INT64*)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+	return (size_t)t;
+}
+
+//cl_memを読み込む、32bitならint,64bitならINT64型になる
+size_t Code_getMemd(size_t defval) {
+	int prm = code_getprm();					// 整数値を取得(デフォルトなし)
+	if (prm <= PARAM_END) return defval;
+	if (sizeof(size_t) == 4)
+	{
+		if (mpval->flag == HSPVAR_FLAG_INT)
+		{
+			return (size_t)(*(mpval->pt));
+		}
+	}
+	INT64 t = *(INT64*)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+	return (size_t)t;
+}
+
 
 
 cl_event* GetWaitEvlist()
@@ -153,9 +156,7 @@ cl_event* GetWaitEvlist()
 size_t GetMemSize(cl_mem m) 
 {
 	size_t st;
-	cl_int ret = clGetMemObjectInfo(
-		m, CL_MEM_SIZE, sizeof(size_t), &st, NULL
-	);
+	cl_int ret = clGetMemObjectInfo(m, CL_MEM_SIZE, sizeof(size_t), &st, NULL);
 	if (ret != CL_SUCCESS) retmeserr12(ret);
 	return st;
 }
@@ -177,12 +178,10 @@ cl_program WithSource_func(cl_context contxt,std::string s_source, std::string s
 	cl_program program = clCreateProgramWithSource(contxt, 1, (const char**)&sp, (const size_t*)&sz, NULL);
 	cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], s_option.c_str(), NULL, NULL);
 	if (err0 != CL_SUCCESS) retmeserr7(device_id[clsetdev], program);
-	
 	return program;
 }
 
-
-void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
+void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, size_t ofst, size_t size,
 	const void* vptr, int num_event_wait_list__, cl_event* ev_, cl_event* outevent)
 {
 	//wait event list関連
@@ -193,7 +192,7 @@ void Thread_WriteBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size
 	return;
 }
 
-void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
+void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, size_t ofst, size_t size,
 	void* vptr,int num_event_wait_list__, cl_event* ev_, cl_event* outevent)
 {
 	//wait event list関連
@@ -205,11 +204,11 @@ void Thread_ReadBuffer(cl_command_queue cmd, cl_mem mem, INT64 ofst, INT64 size,
 }
 
 //prm3は参照渡しであることに注意
-void AutoReadWriteCopySize(INT64 &prm3,PVal* pval, cl_mem prm1)
+void AutoReadWriteCopySize(size_t &prm3,PVal* pval, cl_mem prm1)
 {
-	INT64 host_sz = pval->size;
-	INT64 dev_sz = GetMemSize((cl_mem)prm1);
-	if (prm3 == -1)
+	size_t host_sz = pval->size;
+	size_t dev_sz = GetMemSize((cl_mem)prm1);
+	if (prm3 == 0)
 	{
 		prm3 = min(dev_sz, host_sz);
 	}
@@ -241,7 +240,7 @@ void AutoReadWriteCopySize(INT64 &prm3,PVal* pval, cl_mem prm1)
 
 //DokrnやReadBuffer系でイベント記録するか
 //この関数内で code_getdiをしていることに注意
-cl_event* EventOutChk(INT64 k) 
+cl_event* EventOutChk(size_t k)
 {
 	//outevent関連
 	int eventid = code_getdi(-1);
@@ -265,7 +264,7 @@ size_t KrnToHash(std::string codes)
 	return hash;
 }
 
-cl_mem MyCreateBuffer(cl_mem_flags flgs, INT64 sz, void* ptr)
+cl_mem MyCreateBuffer(cl_mem_flags flgs, size_t sz, void* ptr)
 {
 	cl_int ret;
 	cl_mem m = clCreateBuffer(context[clsetdev], flgs, sz, ptr, &ret);
@@ -275,9 +274,10 @@ cl_mem MyCreateBuffer(cl_mem_flags flgs, INT64 sz, void* ptr)
 	sh.col = 1;
 	sh.HP = 0;
 	memmap[m] = sh;
-	bufferAllSize += sz;
+	bufferAllSize += (INT64)sz;
 	return m;
 }
+
 void MyReleaseBuffer(cl_mem m)
 {
 	auto itr = memmap.find(m);
@@ -289,17 +289,15 @@ void MyReleaseBuffer(cl_mem m)
 	{
 		memmap.erase(itr);
 	}
-	bufferAllSize -= GetMemSize(m);
+	bufferAllSize -= (INT64)GetMemSize(m);
 
 	cl_int ret = clReleaseMemObject(m);
 	if (ret != CL_SUCCESS) {
 		MessageBox(NULL, "メモリ開放ができませんでした", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
-
 	return;
 }
-
 
 void sgemminit()
 {
@@ -332,7 +330,6 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 		MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
 	}
 	ShapeHP sh = memmap[m];
-
 	kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3];
 	//これでmemとkernelはok
 
@@ -361,7 +358,6 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 		kernel, 2, NULL, global_size, local_size, num_event_wait_list, ev_, NULL);//1回目は無事終わる
 	if (ret != CL_SUCCESS) { retmeserr(ret); }
 	num_event_wait_list = 0;
-
 	return;
 }
 
@@ -621,9 +617,50 @@ void MySGEVMmain(cl_mem& Y, cl_mem& A, cl_mem& X, int retflg)
 	num_event_wait_list = 0;
 }
 
+void PrmChk1(int& sizeofff, void*& ppttr)
+{
+	int type = mpval->flag;							// パラメーターの型を取得
+	sizeofff = -1;
+	switch (type) {
+	case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
+	{
+		ppttr = (char*)mpval->pt;
+		sizeofff = 1;
+		break;
+	}
+	case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
+	{
+		ppttr = (double*)mpval->pt;
+		sizeofff = 8;
+		break;
+	}
+	case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
+	{
+		ppttr = (int*)mpval->pt;
+		sizeofff = 4;
+		break;
+	}
+	default:
+		if (type == HspVarInt64_typeid()) // パラメーターがint64だった時
+		{
+			ppttr = (INT64*)mpval->pt;
+			sizeofff = 8;
+			break;
+		}
+		if (type == HspVarFloat_typeid())// パラメーターがfloatだった時
+		{
+			ppttr = (float*)mpval->pt;
+			sizeofff = 4;
+			break;
+		}
+		puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+		sizeofff = -1;
+		break;
+	}
+	return;
+}
+
 ////////////自作関数ここまで
-
-
 #include "HCLDoX.h"
 
 
@@ -651,27 +688,17 @@ void MySGEVMmain(cl_mem& Y, cl_mem& A, cl_mem& X, int retflg)
 
 
 
-
-
-
-
-
-
-// 64bit dll call
-__declspec(align(16)) extern "C" INT64 __fastcall call_extfunc64(void *proc, INT64 *prm, INT64 *pinfo, INT64 prms);
-__declspec(align(16)) extern "C" double __fastcall call_extfunc64d(void *proc, INT64 *prm, INT64 *pinfo, INT64 prms);
-__declspec(align(16)) extern "C" float __fastcall call_extfunc64f(void *proc, INT64 *prm, INT64 *pinfo, INT64 prms);
-
  /*------------------------------------------------------------*/
 /*
 		controller
 */
 /*------------------------------------------------------------*/
 
-static INT64 ref_int64val;						// 返値のための変数
 static double ref_doubleval;					// 返値のための変数
 static float ref_floatval;						// 返値のための変数
 static int ref_int32val;						// 返値のための変数
+static INT64 ref_int64val;						// 返値のための変数
+static size_t ref_sztval;						// 返値のための変数
 static char* cptr;								// 返値のための変数
 
 static void *reffunc( int *type_res, int cmd )
@@ -687,7 +714,9 @@ static void *reffunc( int *type_res, int cmd )
 	bool fDouble = false;
 	bool fFloat = false;
 	bool fInt = false;
+	bool fInt64 = false;
 	bool fStr = false;
+	bool fSzt = false;
 	
 	switch( cmd ) {							// サブコマンドごとの分岐
 
@@ -697,85 +726,19 @@ static void *reffunc( int *type_res, int cmd )
 		prm = code_getprm();					// 整数値を取得(デフォルトなし)
 		if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
 		ref_int64val = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
+		fInt64 = true;
 		break;
 	}
-	case 0x01:								// qpeek関数
+
+	case 0x01:								// float関数
 	{
-		PVal *pval;
-		APTR aptr = code_getva(&pval);
-		int size = pval->size;
-		
-		p1 = code_geti();
-		if (p1<0) throw HSPERR_ILLEGAL_FUNCTION;
-		if (p1+8>size) throw HSPERR_ILLEGAL_FUNCTION;
-		ref_int64val = *(INT64 *)((pval->pt) + p1);
-		break;
-	}
-	case 0x03:								// varptr64
-	{
-		PVal *pval;
-		APTR aptr;
-		STRUCTDAT *st;
-		if (*type == TYPE_DLLFUNC) {
-			st = &(ctx->mem_finfo[*val]);
-			ref_int64val = (INT64)(st->proc);
-			code_next();
-			break;
-		}
-		aptr = code_getva(&pval);
-
-		HspVarProc *phvp;
-		phvp = exinfo->HspFunc_getproc(pval->flag);
-		ref_int64val = (INT64)phvp->GetPtr(pval);
-
-		break;
-	}
-	case 0x05:	// callfunc64i
-	case 0x06:	// callfunc64d
-	case 0x07:	// callfunc64f
-	{
-		// 1パラ= パラメタ(INT64変数), 2パラ= パラメタの型(INT64変数), 3パラ = アドレス(INT64), 4パラ = パラメタ数(INT64)
-		PVal *pval;
-		APTR aptr;
-
-		aptr = code_getva(&pval);
-		if (pval->flag != HspVarInt64_typeid())
-			puterror(HSPERR_ILLEGAL_FUNCTION);
-		HspVarProc *phvp;
-		phvp = exinfo->HspFunc_getproc(pval->flag);
-		INT64 prm1 = (INT64)phvp->GetPtr(pval);
-
-		aptr = code_getva(&pval);
-		if (pval->flag != HspVarInt64_typeid())
-			puterror(HSPERR_ILLEGAL_FUNCTION);
-		phvp = exinfo->HspFunc_getproc(pval->flag);
-		INT64 prm2 = (INT64)phvp->GetPtr(pval);
-
 		int prm;
-		prm = code_getprm();					// 整数値を取得(デフォルトなし)
+		prm = code_getprm();
 		if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
-		INT64 prm3 = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-
-		prm = code_getprm();					// 整数値を取得(デフォルトなし)
-		if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
-		INT64 prm4 = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-
-		if (0x05 == cmd){
-			ref_int64val = call_extfunc64((void *)prm3, (INT64 *)prm1, (INT64 *)prm2, prm4);
-		}
-		if (0x06 == cmd){
-			fDouble = true;
-			ref_doubleval = call_extfunc64d((void *)prm3, (INT64 *)prm1, (INT64 *)prm2, prm4);
-		}
-		if (0x07 == cmd){
-			fFloat = true;
-			ref_floatval = call_extfunc64f((void *)prm3, (INT64 *)prm1, (INT64 *)prm2, prm4);
-		}
-
+		ref_floatval = *(float*)HspVarFloat_Cnv(mpval->pt, mpval->flag);
+		fFloat = true;
 		break;
 	}
-
-
 	////////////////////////////////////////////////////////////ここから自作
 	case 0x54://HCLGetDeviceCount
 	{
@@ -804,7 +767,8 @@ static void *reffunc( int *type_res, int cmd )
 		buildoption = std::string(c_option);
 
 		// Build the program
-		ref_int64val = (INT64)WithSource_func(context[clsetdev], s_sourse, buildoption);
+		ref_sztval = (size_t)WithSource_func(context[clsetdev], s_sourse, buildoption);
+		fSzt = true;
 		break;
 	}
 
@@ -820,21 +784,23 @@ static void *reffunc( int *type_res, int cmd )
 		buildoption = std::string(c_option);
 
 		// Build the program
-		ref_int64val = (INT64)WithSource_func(context[clsetdev], s_sourse, buildoption);
+		ref_sztval = (size_t)WithSource_func(context[clsetdev], s_sourse, buildoption);
+		fSzt = true;
 		break;
 	}
 
 	//int64 kernelid,str kansuu_mei
 	case 0x5A:	// HCLCreateKernel
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カーネルid
+		size_t prm1 = Code_getMem();//パラメータ1:カーネルid
 		char* p;
 		//char pathname[_MAX_PATH];
 		p = code_gets();								// 文字列を取得
 		//strncpy(pathname, p, _MAX_PATH - 1);			// 取得した文字列をコピー
 		cl_int ret;
 		kernel = clCreateKernel((cl_program)prm1, p, &ret);
-		ref_int64val = (INT64)kernel;
+		ref_sztval = (size_t)kernel;
+		fSzt = true;
 		if (ret != CL_SUCCESS) retmeserr8(ret);
 		break;
 	}
@@ -842,8 +808,9 @@ static void *reffunc( int *type_res, int cmd )
 	//int64 bufsize
 	case 0x5E:	// HCLCreateBuffer
 	{
-		INT64 prm1 = Code_geti32i64();//パラメータ1:int64数値、サイズ
-		ref_int64val = (INT64)MyCreateBuffer(CL_MEM_READ_WRITE, prm1, NULL);
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、サイズ
+		ref_sztval = (size_t)MyCreateBuffer(CL_MEM_READ_WRITE, prm1, NULL);
+		fSzt = true;
 		break;
 	}
 
@@ -851,28 +818,31 @@ static void *reffunc( int *type_res, int cmd )
 	{
 		PVal* pval1 = code_getpval();
 		size_t sz = pval1->size;
-		ref_int64val = (INT64)MyCreateBuffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sz, pval1->pt);;
+		ref_sztval = (size_t)MyCreateBuffer(CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sz, pval1->pt);;
+		fSzt = true;
 		break;
 	}
 
 	case 0x90://HCLGetSize
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、mem id
-		ref_int64val = (INT64)(GetMemSize((cl_mem)prm1));
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、mem id
+		ref_sztval = (size_t)(GetMemSize((cl_mem)prm1));
+		fSzt = true;
 		break;
 	}
 
 	case 0x91://HCLGetAllBufferSize
 	{
 		ref_int64val = bufferAllSize;
+		fInt64 = true;
 		break;
 	}
 	
 	case 0x66://HCLReadIndex_i32
 	{
 		fInt = true;
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &ref_int32val, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -880,8 +850,9 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x67://HCLReadIndex_i64
 	{
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
+		fInt64 = true;
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_int64val, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -890,8 +861,8 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x68://HCLReadIndex_dp
 	{
 		fDouble = true;
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_doubleval, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -919,6 +890,7 @@ static void *reffunc( int *type_res, int cmd )
 		int eventid = code_geti();
 		int secprm = code_geti();
 		ref_int64val = 0;
+		fInt64 = true;
 		cl_int ret = CL_SUCCESS;
 
 		switch (secprm)
@@ -927,13 +899,13 @@ static void *reffunc( int *type_res, int cmd )
 			ret = clGetEventInfo(cppeventlist[eventid], CL_EVENT_COMMAND_TYPE, 8, &ref_int64val, NULL);
 			break;
 		case 1:
-			ref_int64val = evinfo[eventid].k;
+			ref_int64val = (INT64)evinfo[eventid].k;
 			break;
 		case 2:
-			ref_int64val = evinfo[eventid].devno;
+			ref_int64val = (INT64)evinfo[eventid].devno;
 			break;
 		case 3:
-			ref_int64val = evinfo[eventid].queno;
+			ref_int64val = (INT64)evinfo[eventid].queno;
 			break;
 		case 4:
 			ret = clGetEventProfilingInfo(cppeventlist[eventid], CL_PROFILING_COMMAND_QUEUED + 0, sizeof(INT64), &ref_int64val, NULL);
@@ -968,7 +940,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x79:  //HCLGetKernelName
 	{
 		fStr = true;
-		kernel = (cl_kernel)Code_geti32i64();
+		kernel = (cl_kernel)Code_getMem();
 		size_t szt = 0;
 		cl_int ret = clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, sizeof(hspcharout), &hspcharout, &szt);
 		hspcharout[szt] = 0;
@@ -978,18 +950,20 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x7F://Min64
 	{
-		INT64 a = Code_geti32i64();
-		INT64 b = Code_geti32i64();
+		INT64 a = Code_getint64();
+		INT64 b = Code_getint64();
 		ref_int64val = b;
+		fInt64 = true;
 		if (a < b)ref_int64val = a;
 		break;
 	}
 
 	case 0x80://Max64
 	{
-		INT64 a = Code_geti32i64();
-		INT64 b = Code_geti32i64();
+		INT64 a = Code_getint64();
+		INT64 b = Code_getint64();
 		ref_int64val = b;
+		fInt64 = true;
 		if (a > b)ref_int64val = a;
 		break;
 	}
@@ -1023,7 +997,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x96://HCLBLAS_Get2DShape
 	{
 		//引数1 buffer
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 no
 		int no = code_geti();
 
@@ -1039,11 +1013,11 @@ static void *reffunc( int *type_res, int cmd )
 			sh = memmap[m];
 		}
 
-		fInt = true;
+		fSzt = true;
 		if (no == 0)
-			ref_int32val = sh.raw;
+			ref_sztval = sh.raw;
 		if (no == 1)
-			ref_int32val = sh.col;
+			ref_sztval = sh.col;
 		break;
 	}
 
@@ -1054,9 +1028,9 @@ static void *reffunc( int *type_res, int cmd )
 		cl_mem C = NULL;
 		cl_mem Cdmy = 0;
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem B = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem B = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数4 転置c
 		int c_t = code_getdi(0);
 		//引数5 転置a
@@ -1065,14 +1039,15 @@ static void *reffunc( int *type_res, int cmd )
 		int b_t = code_getdi(0);
 
 		MySGEMMmain(Cdmy, A, B, c_t, a_t, b_t, 1, &C);
-		ref_int64val = (INT64)C;
+		ref_sztval = (size_t)C;
+		fSzt = true;
 		break;
 	}
 
 	case 0x99://HCLBLAS_sT
 	{
 		//引数1 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
@@ -1083,7 +1058,8 @@ static void *reffunc( int *type_res, int cmd )
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		}
 
-		ref_int64val = (INT64)MySgemmTrans1(A);
+		ref_sztval = (size_t)MySgemmTrans1(A);
+		fSzt = true;
 		break;
 	}
 
@@ -1093,12 +1069,13 @@ static void *reffunc( int *type_res, int cmd )
 		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem Y = 0;
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		MySGEMVmain(Y, A, X, 1);
-		ref_int64val = (INT64)Y;
+		ref_sztval = (size_t)Y;
+		fSzt = true;
 		break;
 	}
 
@@ -1108,12 +1085,13 @@ static void *reffunc( int *type_res, int cmd )
 		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem Y = 0;
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		MySGEVMmain(Y, A, X, 1);
-		ref_int64val = (INT64)Y;
+		ref_sztval = (size_t)Y;
+		fSzt = true;
 		break;
 	}
 
@@ -1134,7 +1112,7 @@ static void *reffunc( int *type_res, int cmd )
 	}
 
 	if (fFloat) {
-		*type_res = HSPVAR_FLAG_INT;
+		*type_res = HspVarFloat_typeid();
 		return (void *)&ref_floatval;
 	}
 
@@ -1148,10 +1126,35 @@ static void *reffunc( int *type_res, int cmd )
 		return (void*)cptr;
 	}
 
+	if (fInt64) {
+		*type_res = HspVarInt64_typeid();		// 返値のタイプを指定する
+		return (void*)&ref_int64val;
+	}
+
+	if (fSzt) {
+		if (sizeof(size_t) == 8)
+		{
+			*type_res = HspVarInt64_typeid();		// 返値のタイプを指定する
+			ref_int64val = (INT64)ref_sztval;
+			return (void*)&ref_int64val;
+		}
+		else 
+		{
+			*type_res = HSPVAR_FLAG_INT;		// 返値のタイプを指定する
+			ref_int32val = (int)ref_sztval;
+			return (void*)&ref_int32val;
+		}
+		
+	}
 
 	*type_res = HspVarInt64_typeid();		// 返値のタイプを指定する
 	return (void *)&ref_int64val;
 }
+
+
+
+
+
 
 
 
@@ -1279,41 +1282,24 @@ static int cmdfunc(int cmd)
 	code_next();
 
 	switch (cmd) {
-	case 0x02:								// qpoke関数
+
+	case 0x51://dim64
 	{
-		PVal *pval;
-		APTR aptr = code_getva(&pval);
-		int size = pval->size;
-		p1 = code_geti();
-
-		if (p1<0) throw HSPERR_BUFFER_OVERFLOW;
-
-		if ((p1 + 8)>size) throw HSPERR_BUFFER_OVERFLOW;
-
-		int prm;
-		prm = code_getprm();					// 整数値を取得(デフォルトなし)
-		if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
-
-		*(INT64 *)((pval->pt) + p1) = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-		break;
-	}
-	case 0x04:								// dupptr64
-	{
-		PVal *pval_m;
-		pval_m = code_getpval();
-		int prm = code_getprm();
-		if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
-		INT64 ptr = *(INT64 *)HspVarInt64_Cnv(mpval->pt, mpval->flag);
-		if (NULL == ptr) throw HSPERR_ILLEGAL_FUNCTION;
-		p2 = code_geti();
-		p3 = code_getdi(HSPVAR_FLAG_INT);
-		if (p2 <= 0) throw HSPERR_ILLEGAL_FUNCTION;
-
-		if (exinfo->HspFunc_getproc(p3)->flag == 0) throw HSPERR_ILLEGAL_FUNCTION;
-		HspVarCoreDupPtr(pval_m, p3, (void *)ptr, p2);
+		PVal* pval1;
+		APTR aptr1;
+		aptr1 = code_getva(&pval1);
+		exinfo->HspFunc_dim(pval1, HspVarInt64_typeid(), 0, code_getdi(0), 0, 0, 0);
 		break;
 	}
 
+	case 0x02://fdim
+	{
+		PVal* pval1;
+		APTR aptr1;
+		aptr1 = code_getva(&pval1);
+		exinfo->HspFunc_dim(pval1, HspVarFloat_typeid(), 0, code_getdi(0), 0, 0, 0);
+		break;
+	}
 
 	////////////////////////////////////////////////////////////ここから自作
 
@@ -1337,7 +1323,7 @@ static int cmdfunc(int cmd)
 
 		if (dev_num == 0)
 		{
-			MessageBox(NULL, "No OpenCL Devices\nHSPCL64は使えません", "error", 0);
+			MessageBox(NULL, "No OpenCL Devices\nHSPCL64,HSPCL32Nは使えません", "error", 0);
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 			break;
 		}
@@ -1394,15 +1380,15 @@ static int cmdfunc(int cmd)
 		//ソース
 		SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5 + SGEMM_SOURCE6 + SGEMM_SOURCE7;
 
-		break;
-	}
-
-	case 0x51://dim_i64
-	{
-		PVal* pval1;
-		APTR aptr1;
-		aptr1 = code_getva(&pval1);
-		exinfo->HspFunc_dim(pval1, 8, 0, code_getdi(0), 0, 0, 0);
+		//型
+		if (sizeof(size_t) == 8) 
+		{
+			HspVarMemType = HspVarInt64_typeid();
+		}
+		else 
+		{
+			HspVarMemType = HSPVAR_FLAG_INT;
+		}
 		break;
 	}
 
@@ -1413,9 +1399,9 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		INT64 prm2 = Code_getint64();//パラメータ2:int64数値、memobj
-		INT64 sz = GetMemSize((cl_mem)prm2);//サイズ
-		int n = (int)min((INT64)(1 << 30), sz);
+		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
+		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
 		exinfo->HspFunc_dim(pval1, HSPVAR_FLAG_INT, 0, (n + 3) / 4 * 4, 0, 0, 0);
 		//転送
@@ -1432,11 +1418,11 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		INT64 prm2 = Code_getint64();//パラメータ2:int64数値、memobj
-		INT64 sz = GetMemSize((cl_mem)prm2);//サイズ
-		int n = (int)min((INT64)(1 << 30), sz);
+		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
+		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
-		exinfo->HspFunc_dim(pval1, 8, 0, (n + 7) / 8 * 8, 0, 0, 0);
+		exinfo->HspFunc_dim(pval1, HspVarInt64_typeid(), 0, (n + 7) / 8 * 8, 0, 0, 0);
 		//転送
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm2, CL_TRUE, 0,
 			n, pval1->pt, 0, NULL, NULL);
@@ -1451,9 +1437,9 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		INT64 prm2 = Code_getint64();//パラメータ2:int64数値、memobj
-		INT64 sz = GetMemSize((cl_mem)prm2);//サイズ
-		int n = (int)min((INT64)(1 << 30), sz);
+		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
+		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
 		exinfo->HspFunc_dim(pval1, HSPVAR_FLAG_DOUBLE, 0, (n + 7) / 8 * 8, 0, 0, 0);
 		//転送
@@ -1491,54 +1477,23 @@ static int cmdfunc(int cmd)
 	case 0x59://HCLReleaseProgram
 	{
 		//引数1 kernel
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値
 		clReleaseProgram((cl_program)prm1);
 		break;
 	}
 
 	case 0x5B:	// HCLSetKernel
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
-		p2 = code_getdi(0);		// パラメータ2:数値、引数
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
+		auto p2 = code_getdi(0);		// パラメータ2:数値、引数
 
 		int chk = code_getprm();							// パラメーターを取得(型は問わない)
 
-		int type = mpval->flag;							// パラメーターの型を取得
 		void* ppttr;
-		int sizeofff = -1;
-		switch (type) {
-		case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
-		{
-			ppttr = (char*)mpval->pt;
-			sizeofff = 1;
-			break;
-		}
-		case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
-		{
-			ppttr = (double*)mpval->pt;
-			sizeofff = 8;
-			break;
-		}
-		case 8:								// パラメーターがint64だった時
-		{
-			ppttr = (INT64*)mpval->pt;
-			sizeofff = 8;
-			break;
-		}
-		case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-		{
-			ppttr = (int*)mpval->pt;
-			sizeofff = 4;
-			break;
-		}
-		default:
-			puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-			sizeofff = -1;
-			break;
-		}
+		int sizeofff;
+		PrmChk1(sizeofff, ppttr);//どちらも参照わたし
 
 		int p4 = code_getdi(0);		// パラメータ4:ローカルメモリーフラグ
-		int clret = 0;
 
 		if (prm1 == 0)
 		{
@@ -1548,16 +1503,15 @@ static int cmdfunc(int cmd)
 		else
 		{
 			//prm1カーネルid、p2は引数位置、p3には実態、p4はローカルメモリフラグ
-			if (p4 == 0) { clret = clSetKernelArg((cl_kernel)prm1, p2, sizeofff, ppttr); }
-			if (p4 != 0) { clret = clSetKernelArg((cl_kernel)prm1, p2, p4, NULL); }
+			if (p4 == 0) { clSetKernelArg((cl_kernel)prm1, p2, sizeofff, ppttr); }
+			if (p4 != 0) { clSetKernelArg((cl_kernel)prm1, p2, p4, NULL); }
 		}
-
 		break;
 	}
 
 	case 0x5C://HCLSetKrns
 	{
-		INT64 prm1 = Code_getint64();		// パラメータ1:カーネル
+		size_t prm1 = Code_getMem();		// パラメータ1:カーネル
 		if (prm1 == 0) {
 			MessageBox(NULL, "カーネルidが0です", "エラー", 0);
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
@@ -1566,44 +1520,12 @@ static int cmdfunc(int cmd)
 		void* ppttr;
 		int sizeofff;
 		int chk;
-		int type;
 
 		for (int i = 0; i < 32; i++) {
-			chk = code_getprm();							// パラメーターを取得(型は問わない)
-			if (chk <= PARAM_END) {
-				break;										// パラメーター省略時の処理
-			}
-			type = mpval->flag;							// パラメーターの型を取得
-			switch (type) {
-			case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
-			{
-				ppttr = (char*)mpval->pt;
-				sizeofff = 1;
-				break;
-			}
-			case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
-			{
-				ppttr = (double*)mpval->pt;
-				sizeofff = 8;
-				break;
-			}
-
-			case 8:								// パラメーターがint64だった時
-			{
-				ppttr = (INT64*)mpval->pt;
-				sizeofff = 8;
-				break;
-			}
-			case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-			{
-				ppttr = (int*)mpval->pt;
-				sizeofff = 4;
-				break;
-			}
-			default:
-				puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-			}
-
+			chk = code_getprm();						// パラメーターを取得(型は問わない)
+			if (chk == PARAM_DEFAULT) continue;				// パラメーター省略時の処理
+			if (chk <= PARAM_END) break;				// パラメーター省略時以外かつ値がない場合の状況の処理
+			PrmChk1(sizeofff, ppttr);
 			//p1カーネルid、p2は引数位置、p3には実態、p4はローカルメモリフラグ
 			clSetKernelArg((cl_kernel)prm1, i, sizeofff, ppttr);
 		}
@@ -1613,7 +1535,7 @@ static int cmdfunc(int cmd)
 	case 0x5D://HCLReleaseKernel
 	{
 		//引数1 kernel
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値
 		clReleaseKernel((cl_kernel)prm1);
 		break;
 	}
@@ -1621,15 +1543,15 @@ static int cmdfunc(int cmd)
 	case 0x60:	// HCLWriteBuffer
 	{
 		//引数1
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		size_t prm5 = Code_getMemd(0);//パラメータ5
 		int p7 = code_getdi(1);		//ブロッキングモード
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 		//引数省略ならサイズは自動
@@ -1642,7 +1564,6 @@ static int cmdfunc(int cmd)
 
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
-
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm1, TorF, prm4,
 			prm3, (char*)((pval->pt) + prm5), num_event_wait_list, ev_, &tmpev);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -1653,7 +1574,7 @@ static int cmdfunc(int cmd)
 			cl_int ret = clWaitForEvents(1, &tmpev);
 			if (ret != CL_SUCCESS) retmeserr6(ret);
 		}
-			
+		
 		if (outevent != NULL)
 		{
 			*outevent = tmpev;
@@ -1670,15 +1591,15 @@ static int cmdfunc(int cmd)
 	case 0x61:	// HCLReadBuffer
 	{
 		//引数1
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		size_t prm5 = Code_getMemd(0);//パラメータ5
 		int p7 = code_getdi(1);		//ブロッキングモード
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 		//引数省略ならサイズは自動
@@ -1700,15 +1621,15 @@ static int cmdfunc(int cmd)
 	case 0x86:	// HCLWriteBuffer_NonBlocking
 	{
 		//引数1
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		size_t prm5 = Code_getMemd(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		//引数省略ならサイズは自動
 		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
@@ -1744,15 +1665,15 @@ static int cmdfunc(int cmd)
 	case 0x87:	// HCLReadBuffer_NonBlocking
 	{
 		//引数1
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		INT64 prm3 = Code_getdi32di64(-1);//パラメータ3:int64
+		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		INT64 prm5 = Code_getdi32di64(0);//パラメータ5
+		size_t prm5 = Code_getMemd(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		//引数省略ならサイズは自動
 		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
@@ -1786,15 +1707,15 @@ static int cmdfunc(int cmd)
 
 	case 0x62:	// HCLCopyBuffer
 	{
-		INT64 prm2 = Code_getint64();//コピー先メモリオブジェクトid
-		INT64 prm3 = Code_getint64();//コピー元メモリオブジェクトid
-		INT64 prm4 = Code_getdi32di64(-1);// コピーサイズ
-		INT64 prm5 = Code_getdi32di64(0);// コピー先オフセット
-		INT64 prm6 = Code_getdi32di64(0);// コピー元オフセット
+		size_t prm2 = Code_getMem();//コピー先メモリオブジェクトid
+		size_t prm3 = Code_getMem();//コピー元メモリオブジェクトid
+		size_t prm4 = Code_getMemd(0);// コピーサイズ
+		size_t prm5 = Code_getMemd(0);// コピー先オフセット
+		size_t prm6 = Code_getMemd(0);// コピー元オフセット
 		//引数省略ならサイズは自動
-		INT64 sz2 = GetMemSize((cl_mem)prm2);
-		INT64 sz3 = GetMemSize((cl_mem)prm3);
-		if (prm4 == -1)
+		size_t sz2 = GetMemSize((cl_mem)prm2);
+		size_t sz3 = GetMemSize((cl_mem)prm3);
+		if (prm4 == 0)
 		{
 			prm4 = min(sz2, sz3);
 		}
@@ -1837,14 +1758,14 @@ static int cmdfunc(int cmd)
 	case 0x63://HCLFillBuffer_i32
 	{
 		//引数1 buffer
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		int pattern = code_getdi(0);
 		//引数3、offset(byte)
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
-		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
+		size_t prm5 = Code_getMemd(0);//パラメータ5
+		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		cl_event* outevent = EventOutChk(prm5);
@@ -1861,14 +1782,14 @@ static int cmdfunc(int cmd)
 	case 0x64://HCLFillBuffer_i64
 	{
 		//引数1 buffer
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		INT64 pattern = Code_getint64();
 		//引数3、offset(byte)
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
-		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
+		size_t prm5 = Code_getMemd(0);//パラメータ5
+		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		cl_event* outevent = EventOutChk(prm5);
@@ -1886,14 +1807,14 @@ static int cmdfunc(int cmd)
 	case 0x8B://HCLFillBuffer_dp
 	{
 		//引数1 buffer
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		double pattern = code_getdd(0.0);
 		//引数3、offset(byte)
-		INT64 prm4 = Code_getdi32di64(0);//パラメータ4:int64
+		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		INT64 prm5 = Code_getdi32di64(-1);//パラメータ5
-		if (prm5 == -1)prm5 = GetMemSize((cl_mem)prm1);
+		size_t prm5 = Code_getMemd(0);//パラメータ5
+		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
 		cl_event* outevent = EventOutChk(prm5);
@@ -1909,15 +1830,15 @@ static int cmdfunc(int cmd)
 
 	case 0x65://HCLReleaseBuffer
 	{
-		INT64 prm2 = Code_getint64();		// パラメータ1:memobj
+		size_t prm2 = Code_getMem();		// パラメータ1:memobj
 		MyReleaseBuffer((cl_mem)prm2);
 		break;
 	}
 
 	case 0x69://HCLWriteIndex_i32
 	{
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
 		int data = code_geti();//内容
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -1926,9 +1847,9 @@ static int cmdfunc(int cmd)
 
 	case 0x6A://HCLWriteIndex_i64
 	{
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
-		INT64 data = Code_geti32i64();//内容
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
+		INT64 data = Code_getint64();//内容
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -1936,8 +1857,8 @@ static int cmdfunc(int cmd)
 
 	case 0x6B://HCLWriteIndex_dp
 	{
-		INT64 memid = Code_geti32i64();
-		INT64 b = Code_geti32i64();//idx
+		size_t memid = Code_getMem();
+		size_t b = Code_getMem();//idx
 		double data = code_getd();//内容
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -2006,7 +1927,6 @@ static int cmdfunc(int cmd)
 				ppttr = (char*)pval->pt;
 				int asz = max(pval->len[1], 1) * max(pval->len[2], 1) * max(pval->len[3], 1) * max(pval->len[4], 1);
 				sizeofff = (pval->size) / asz;
-
 				//配列がありそうなら
 				if (asz > 1)
 				{
@@ -2017,7 +1937,6 @@ static int cmdfunc(int cmd)
 					}
 					else//添え字に意味がありそうなら
 					{
-						//sizeofff = (pval->size) / asz;
 						ppttr = ((char*)ppttr) + ((int)pval->offset * sizeofff);
 					}
 				}
@@ -2028,38 +1947,8 @@ static int cmdfunc(int cmd)
 				if (chk <= PARAM_END) {
 					break;										// パラメーター省略時の処理
 				}
-				type = mpval->flag;							// パラメーターの型を取得
-				switch (type) {
-				case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
-				{
-					ppttr = (char*)mpval->pt;
-					sizeofff = 1;
-					break;
-				}
-				case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
-				{
-					ppttr = (double*)mpval->pt;
-					sizeofff = 8;
-					break;
-				}
-
-				case 8:								// パラメーターがint64だった時
-				{
-					ppttr = (INT64*)mpval->pt;
-					sizeofff = 8;
-					break;
-				}
-				case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-				{
-					ppttr = (int*)mpval->pt;
-					sizeofff = 4;
-					break;
-				}
-				default:
-					puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-				}
+				PrmChk1(sizeofff, ppttr);//どちらも参照わたし
 			}
-
 
 
 
@@ -2080,7 +1969,7 @@ static int cmdfunc(int cmd)
 				if (ret != CL_SUCCESS) { retmeserr2(ret); }
 				//ブロッキングありで転送
 				//p1カーネルid、p2は引数位置、p3にはサイズ、p4は実体
-				clSetKernelArg(kernel, i, 8, &clm[i]);
+				clSetKernelArg(kernel, i, sizeof(cl_mem), &clm[i]);
 			}
 		}
 
@@ -2121,7 +2010,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	// HCLDoCode
+	// HCLCall2
 	// str source,int global_size,int local_size,var a1,var a2・・・・・
 	case 0x8F:
 	{
@@ -2153,44 +2042,13 @@ static int cmdfunc(int cmd)
 		void* ppttr;
 		int sizeofff;
 		int chk;
-		int type;
 
 		for (int i = 0; i < 32; i++) {
 			chk = code_getprm();							// パラメーターを取得(型は問わない)
 			if (chk <= PARAM_END) {
 				break;										// パラメーター省略時の処理
 			}
-			type = mpval->flag;							// パラメーターの型を取得
-			switch (type) {
-			case HSPVAR_FLAG_STR:								// パラメーターが文字列だった時
-			{
-				ppttr = (char*)mpval->pt;
-				sizeofff = 1;
-				break;
-			}
-			case HSPVAR_FLAG_DOUBLE:									// パラメーターが実数だった時
-			{
-				ppttr = (double*)mpval->pt;
-				sizeofff = 8;
-				break;
-			}
-
-			case 8:								// パラメーターがint64だった時
-			{
-				ppttr = (INT64*)mpval->pt;
-				sizeofff = 8;
-				break;
-			}
-			case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
-			{
-				ppttr = (int*)mpval->pt;
-				sizeofff = 4;
-				break;
-			}
-			default:
-				puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
-			}
-
+			PrmChk1(sizeofff,ppttr);
 			//p1カーネルid、p2は引数位置、p3には実態、p4はローカルメモリフラグ
 			clSetKernelArg(kernel, i, sizeofff, ppttr);
 		}
@@ -2225,7 +2083,7 @@ static int cmdfunc(int cmd)
 
 	case 0x6D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize = code_getdi(1);
 		size_t localsize = code_getdi(0);
 
@@ -2251,7 +2109,7 @@ static int cmdfunc(int cmd)
 
 	case 0x52:	// HCLDoKrn2 int p1,int p2,int p3,int p4,int p5,int p6
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize[2];
 		size_t localsize[2];
 		globalsize[0] = code_geti();
@@ -2273,7 +2131,7 @@ static int cmdfunc(int cmd)
 
 	case 0x7E:	// HCLDoKrn3 int p1,int p2,int p3,int p4,int p5,int p6,int p7,int p8
 	{
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize[3];
 		size_t localsize[3];
 		globalsize[0] = code_geti();
@@ -2297,8 +2155,8 @@ static int cmdfunc(int cmd)
 
 	case 0x6E:	// HCLDoKernel int64 p1,int p2,array p3,array p4
 	{
-		INT64 prm2 = Code_getint64();		// カーネル
-		p3 = code_getdi(1);		// work_dim
+		size_t prm2 = Code_getMem();		// カーネル
+		auto p3 = code_getdi(1);		// work_dim
 		size_t p4[3] = { 1,1,1 };
 		size_t ptryes[3] = { 1,1,1 };
 
@@ -2362,7 +2220,7 @@ static int cmdfunc(int cmd)
 
 	case 0x6F://HCLDoKrn1_sub
 	{
-		INT64 prm2 = Code_getint64();		// パラメータ1:カーネル
+		size_t prm2 = Code_getMem();		// パラメータ1:カーネル
 		size_t p4 = code_getdi(1);	//並列数
 		size_t p5 = code_getdi(1);//ローカルサイズ
 		if (p5 == 0) { p5 = 64; }
@@ -2450,7 +2308,7 @@ static int cmdfunc(int cmd)
 
 	case 0x77:	//HCLSetWaitEvent int p1
 	{
-		p1 = code_geti();
+		auto p1 = code_geti();
 		num_event_wait_list = 1;
 		event_wait_list[0] = cppeventlist[p1];
 		break;
@@ -2466,7 +2324,7 @@ static int cmdfunc(int cmd)
 		
 		for (int i = 0; i < num_event_wait_list; i++)
 		{
-			p2 = *((int*)pval1->pt + i);
+			auto p2 = *((int*)pval1->pt + i);
 			event_wait_list[i] = cppeventlist[p2];
 		}
 		break;
@@ -2488,7 +2346,7 @@ static int cmdfunc(int cmd)
 		int n = pval1->len[1];//全体の要素数
 		for (int i = 0; i < n; i++)
 		{
-			p2 = *((int*)pval1->pt + i);
+			auto p2 = *((int*)pval1->pt + i);
 			event_wait_list[i] = cppeventlist[p2];
 		}
 
@@ -2513,16 +2371,10 @@ static int cmdfunc(int cmd)
 		cl_int ret;
 		int event_id = code_geti();
 		cl_int event_stts = code_getdi(CL_SUBMITTED);
-
 		ret = clSetUserEventStatus(cppeventlist[event_id], event_stts);
 		if (ret != CL_SUCCESS)retmeserr14(ret);
-
 		break;
 	}
-
-
-
-
 
 
 
@@ -2537,23 +2389,21 @@ static int cmdfunc(int cmd)
 			chk = code_getprm();							// パラメーターを取得(型は問わない)
 			if (chk <= PARAM_END) break;										// パラメーター省略時の処理
 			type = mpval->flag;							// パラメーターの型を取得
-			switch (type) {
-			case 8:								// パラメーターがint64だった時
+
+			if (type == HspVarMemType) 
 			{
-				ppttr = (INT64*)mpval->pt;
-				break;
+				ppttr = (size_t*)mpval->pt;
 			}
-			default:
+			else 
+			{
 				puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
 			}
 
-			INT64* ppttr64 = (INT64*)ppttr;
-			c[i] = (cl_mem)(*ppttr64);
+			size_t* ppttrszt = (size_t*)ppttr;
+			c[i] = (cl_mem)(*ppttrszt);
 		}
 
-		
-		//std::map<std::string, int> mp
-		//いろんな値を設定;
+		//map
 		cl_mem *atodekesu_mem = new cl_mem[memmap.size()];
 		int kesucnt = 0;
 		for (auto itr = memmap.begin(); itr != memmap.end(); ++itr)
@@ -2592,18 +2442,18 @@ static int cmdfunc(int cmd)
 			chk = code_getprm();							// パラメーターを取得(型は問わない)
 			if (chk <= PARAM_END) break;										// パラメーター省略時の処理
 			type = mpval->flag;							// パラメーターの型を取得
-			switch (type) {
-			case 8:								// パラメーターがint64だった時
+
+			if (type == HspVarMemType)
 			{
-				ppttr = (INT64*)mpval->pt;
-				break;
+				ppttr = (size_t*)mpval->pt;
 			}
-			default:
+			else
+			{
 				puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
 			}
 
-			INT64* ppttr64 = (INT64*)ppttr;
-			cl_mem m = (cl_mem)(*ppttr64);
+			size_t* ppttrszt = (size_t*)ppttr;
+			cl_mem m = (cl_mem)(*ppttrszt);
 
 			auto itr = memmap.find(m);
 			if (itr == memmap.end()) 
@@ -2628,18 +2478,18 @@ static int cmdfunc(int cmd)
 			chk = code_getprm();							// パラメーターを取得(型は問わない)
 			if (chk <= PARAM_END) break;										// パラメーター省略時の処理
 			type = mpval->flag;							// パラメーターの型を取得
-			switch (type) {
-			case 8:								// パラメーターがint64だった時
+
+			if (type == HspVarMemType)
 			{
-				ppttr = (INT64*)mpval->pt;
-				break;
+				ppttr = (size_t*)mpval->pt;
 			}
-			default:
+			else
+			{
 				puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
 			}
 
-			INT64* ppttr64 = (INT64*)ppttr;
-			cl_mem m = (cl_mem)(*ppttr64);
+			size_t* ppttrszt = (size_t*)ppttr;
+			cl_mem m = (cl_mem)(*ppttrszt);
 
 			auto itr = memmap.find(m);
 			if (itr == memmap.end())
@@ -2657,12 +2507,11 @@ static int cmdfunc(int cmd)
 	case 0x95://HCLBLAS_Set2DShape
 	{
 		//引数1 buffer
-		INT64 prm1 = Code_getint64();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 raw
-		INT64 raw = Code_getdi32di64(0);
+		size_t raw = Code_getMemd(0);
 		//引数3 col
-		INT64 col = Code_getdi32di64(0);
-
+		size_t col = Code_getMemd(0);
 		ShapeHP sh;
 
 		cl_mem m = (cl_mem)prm1;
@@ -2684,11 +2533,11 @@ static int cmdfunc(int cmd)
 	case 0x97://HCLBLAS_sgemm
 	{
 		//引数1 buffer
-		cl_mem C = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem C = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem B = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem B = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数4 転置c
 		int c_t = code_getdi(0);
 		//引数5 転置a
@@ -2709,9 +2558,9 @@ static int cmdfunc(int cmd)
 	case 0x99://HCLBLAS_sT
 	{
 		//引数1 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数1 buffer
-		cl_mem AT = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem AT = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
@@ -2742,11 +2591,11 @@ static int cmdfunc(int cmd)
 	case 0xA0://HCLBLAS_sgemv
 	{
 		//引数1 buffer
-		cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem Y = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		MySGEMVmain(Y, A, X, 0);
 		break;
@@ -2754,11 +2603,11 @@ static int cmdfunc(int cmd)
 	case 0xA1://HCLBLAS_sgevm
 	{
 		//引数1 buffer
-		cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem Y = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
 
 		MySGEVMmain(Y, A, X, 0);
 		break;
@@ -2875,7 +2724,8 @@ EXPORT void WINAPI hsp3cmdinit( HSP3TYPEINFO *info )
 	info->cmdfunc = cmdfunc;		// 命令の登録
 	info->termfunc = termfunc;		// 終了関数(termfunc)の登録
 
-	registvar( -1, HspVarInt64_Init );		// 新しい型の追加
+	registvar(-1, HspVarInt64_Init);		// 新しい型の追加
+	registvar(-1, HspVarFloat_Init);		// 新しい型の追加
 }
 
 /*------------------------------------------------------------*/

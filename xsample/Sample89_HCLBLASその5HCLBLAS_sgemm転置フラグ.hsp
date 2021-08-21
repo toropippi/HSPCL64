@@ -4,7 +4,6 @@
 
 	HCLinit
 	
-	HCLSetDevice 1
 	matA=HCLCreateBuffer(2*2*4)
 	HCLBLAS_Set2DShape matA,2,2
 		repeat 2*2

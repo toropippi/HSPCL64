@@ -1,8 +1,6 @@
 #include "HSPCL64a.as"
 	HCLinit
 	
-	HCLSetDevice 1
-
 	n=256//配列サイズ 256*4byte
 	ddim host_a,n//double型
 	dim host_b,n//float型を想定

@@ -1,6 +1,8 @@
 #include "hsp3_64.as"
-#regcmd "hsp3cmdinit","HSPCL64a.dll", 1
+#regcmd "hsp3cmdinit","HSPCL64a.dll", 2
 #cmd int64 $00
+#cmd float $01
+/*
 #cmd qpeek $01
 #cmd qpoke $02
 #cmd varptr64 $03
@@ -8,11 +10,12 @@
 #cmd callfunc64i $05
 #cmd callfunc64d $06
 #cmd callfunc64f $07
-
+*/
 
 #cmd HCLinit $50
 
 #cmd dim64 $51
+#cmd fdim $02
 
 #cmd HCLSetDevice $53
 #cmd HCLGetDeviceCount $54

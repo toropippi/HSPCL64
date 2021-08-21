@@ -333,8 +333,9 @@ static void HCLDoX(int typeflg)
 	int argi32[32];
 	INT64 argi64[32];
 	double argdp[32];
+	float argfp[32];
 	for (int i = 0; i < 32; i++) {
-		argt[i] = -1; argi32[i] = -1; argi64[i] = -1; argdp[i] = -1.0;
+		argt[i] = 0; argi32[i] = 0; argi64[i] = 0; argdp[i] = 0.0; argfp[i] = 0.0;
 	}
 
 	for (int i = 0; i < 32; i++) {
@@ -351,15 +352,6 @@ static void HCLDoX(int typeflg)
 			argdp[i] = *((double*)ppttr);
 			break;
 		}
-		case 8:								// パラメーターがint64だった時
-		{
-			ppttr = (INT64*)mpval->pt;
-			sizeofff = 8;
-			argt[i] = 2;
-			argcnt++;
-			argi64[i] = *((INT64*)ppttr);
-			break;
-		}
 		case HSPVAR_FLAG_INT:									// パラメーターが整数だった時
 		{
 			ppttr = (int*)mpval->pt;
@@ -370,17 +362,42 @@ static void HCLDoX(int typeflg)
 			break;
 		}
 		default:
+			if (type == HspVarInt64_typeid()) // パラメーターがint64だった時
+			{
+				ppttr = (INT64*)mpval->pt;
+				sizeofff = 8;
+				argt[i] = 2;
+				argcnt++;
+				argi64[i] = *((INT64*)ppttr);
+				break;
+			}
+			if (type == HspVarFloat_typeid()) // パラメーターがfloatだった時
+			{
+				ppttr = (float*)mpval->pt;
+				sizeofff = 4;
+				argt[i] = 3;
+				argcnt++;
+				argfp[i] = *((float*)ppttr);
+				break;
+			}
 			puterror(HSPERR_TYPE_MISMATCH);			// サポートしていない型ならばエラー
+			sizeofff = -1;
+			break;
 		}
 	}
 	//引数取得ここまで
 	
+
 	//一旦エラー処理
-	if (argi64[0] == -1) 
+	cl_mem baseMem;
+	if (sizeof(size_t) == 8)baseMem = (cl_mem)argi64[0];
+	if (sizeof(size_t) == 4)baseMem = (cl_mem)argi32[0];
+	if (baseMem == 0)
 	{
 		MessageBox(NULL, "第一引数が有効なcl_mem idではありません", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
+
 
 	//コード生成して
 	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt);
@@ -401,25 +418,14 @@ static void HCLDoX(int typeflg)
 
 	//これでkernelまで求まった。あとは引数指定
 	//global数を計算。Aに対応
-	INT64 global_size = GetMemSize((cl_mem)argi64[0]) / sizelist[typeflg];
+	size_t global_size = GetMemSize(baseMem) / sizelist[typeflg];
 
 	//引数
 	for (int i = 0; i < argcnt; i++)
 	{
-		/*if (argt[i] == -1) 
-		{
-			cl_mem m = (cl_mem)argi64[0];
-			auto itr = memmap.find(m);
-			if (itr == memmap.end()) MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
-			ShapeHP sh_ = memmap[m];
-			int ir = (int)sh_.raw;
-			int ic = (int)sh_.col;
-			clSetKernelArg(kernel, i, 4, &ir);
-			clSetKernelArg(kernel, i + 1, 4, &ic);			
-			break;
-		}*/
 		if (argt[i] == 1)ppttr = (int*)&argi32[i];
 		if (argt[i] == 2)ppttr = (INT64*)&argi64[i];
+		if (argt[i] == 3)ppttr = (float*)&argfp[i];
 		if (argt[i] == 4)ppttr = (double*)&argdp[i];
 		clSetKernelArg(kernel, i, sizelist[argt[i]], ppttr);
 	}

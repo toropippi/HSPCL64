@@ -5,7 +5,6 @@
 
 	HCLinit
 	
-	HCLSetDevice 1
 
 	matA=HCLCreateBuffer(10*10*4)
 	HCLBLAS_Set2DShape matA,10,10

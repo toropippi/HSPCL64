@@ -3,7 +3,6 @@
 
 #include "HSPCL64a.as"
 	HCLinit
-	HCLSetDevice 1
 	
 	raw=1024
 	col=1024

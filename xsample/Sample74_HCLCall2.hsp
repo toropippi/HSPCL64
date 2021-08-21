@@ -3,7 +3,6 @@
 // ‚Â‚Ü‚èHCLCall‚ÌHSP”z—ñ¨cl mem”Å
 #include "HSPCL64a.as"
 	HCLinit
-	HCLSetDevice 1
 	n=256
 	dim a,n
 	dim b,n
