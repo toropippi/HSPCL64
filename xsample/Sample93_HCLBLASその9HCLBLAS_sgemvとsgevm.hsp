@@ -1,7 +1,7 @@
 //y=Ax
 //y=xA
 //のサンプル
-
+//この場合Aのみ2DShapeを決めておけばあとはメモリサイズがあってれば計算できる
 #include "HSPCL64a.as"
 	HCLinit
 	
@@ -12,18 +12,15 @@
 	HCLBLAS_Set2DShape matA,10,100
 	HCLFillBuffer_i32 matA,DoubleToFloat(1.0)
 	HCLFillBuffer_i32 vecX,DoubleToFloat(1.0)
-
-	//HCLSetKrns krnGEMV,matA,vecX,vecY,100
-	//HCLDokrn1 krnGEMV,256*10,256
+	
 	HCLBLAS_sgemv vecY,matA,vecX
+	
 	HCLdim_i32FromBuffer h_y,vecY
 		repeat 10
 		mes  FloatToDouble(h_y.cnt)
 		loop
 	
 
-
-	
 	//y=xA
 	matA=HCLCreateBuffer(10*100*4)
 	vecX=HCLCreateBuffer(10*4)
@@ -32,8 +29,6 @@
 	HCLFillBuffer_i32 matA,DoubleToFloat(1.0)
 	HCLFillBuffer_i32 vecX,DoubleToFloat(1.0)
 
-	//HCLSetKrns krnGEVM,matA,vecX,vecY,100,10
-	//HCLDokrn1 krnGEVM,128,64
 	HCLBLAS_sgevm vecY,vecX,matA
 	
 	HCLdim_i32FromBuffer h_y,vecY
@@ -41,5 +36,3 @@
 		repeat 100
 		mes  FloatToDouble(h_y.cnt)
 		loop
-
-	
