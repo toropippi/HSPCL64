@@ -3,6 +3,8 @@
 #include "HSPCL64a.as"
 
 	HCLinit
+	
+	HCLSetDevice 1
 
 	matA=HCLCreateBuffer(10*10*4)
 	//matAT=HCLCreateBuffer(10*10*4)

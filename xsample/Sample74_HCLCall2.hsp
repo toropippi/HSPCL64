@@ -1,8 +1,9 @@
 // HCLDoKrn1,2,3等、これまでのカーネル実行命令はHCLSetKrns命令で事前に引数をセットしておかなければいけなく、面倒でした。
-// 今回のHCLDoCodeは引数を直接(?)指定できるので、より直観的に書くことができます。
+// 今回のHCLCall2は引数を直接(?)指定できるので、より直観的に書くことができます。
 // つまりHCLCallのHSP配列→cl mem版
 #include "HSPCL64a.as"
 	HCLinit
+	HCLSetDevice 1
 	n=256
 	dim a,n
 	dim b,n
@@ -14,7 +15,7 @@
 	memb=HCLCreateBufferFrom(b)
 	memc=HCLCreateBuffer(n*4)
 
-	HCLDoCode {"
+	HCLCall2 {"
 __kernel void test(__global int* a,__global int* b,__global int* c,int d)
 {
 	int gid=get_global_id(0);
@@ -29,7 +30,7 @@ __kernel void test(__global int* a,__global int* b,__global int* c,int d)
 	stop
 
 
-// HCLDoCodeでは第一引数の入力文字列がプラグイン内部でハッシュ化され保存されており、
+// HCLCallでは第一引数の入力文字列がプラグイン内部でハッシュ化され保存されており、
 // 全く同じ文字列の場合、前回のビルドを自動で使いまわすことができるようになっています。
 // つまり毎回カーネルソースをコンパイルしているわけではないので高速です。
 // ただHCLDokrn1,2,3命令のように引数指定と分離できてるわけではないので、細かいことを言えば引数指定の分オーバーヘッドはどうしてもあります。

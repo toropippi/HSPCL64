@@ -34,7 +34,7 @@ cl_program program;
 cl_kernel kernel;
 cl_kernel* SGEMMkernel;//devごとに作る。a,k,small,transの4つ
 cl_kernel* DGEMMkernel;
-int GEMMkernelNum = 6;//sgemm*3+trans+gemv+gevm
+const int GEMMkernelNum = 6;//sgemm*3+trans+gemv+gevm
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
 std::string SGEMM_SOURCE;
@@ -178,6 +178,7 @@ cl_program WithSource_func(cl_context contxt,std::string s_source, std::string s
 	cl_program program = clCreateProgramWithSource(contxt, 1, (const char**)&sp, (const size_t*)&sz, NULL);
 	cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], s_option.c_str(), NULL, NULL);
 	if (err0 != CL_SUCCESS) retmeserr7(device_id[clsetdev], program);
+	
 	return program;
 }
 
@@ -1392,7 +1393,7 @@ static int cmdfunc(int cmd)
 			DGEMMkernel[k] = NULL;
 		}
 		//ソース
-		SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5 + SGEMM_SOURCE6 + SGEMM_SOURCE7 + SGEMM_SOURCE8 + SGEMM_SOURCE9;
+		SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5 + SGEMM_SOURCE6 + SGEMM_SOURCE7;
 
 		break;
 	}

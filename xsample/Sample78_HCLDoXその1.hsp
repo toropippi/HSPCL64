@@ -2,12 +2,13 @@
 //HCLCall
 //HCLDoKernel
 //HCLDokrn1,2,3
-//HCLDoCode
+//HCLCall2
 //とありましたが今回のHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXf,HCLDoXdは5種類目の命令となります。
 //詳細はソース最後のコメントに
 
 #include "HSPCL64a.as"
 	HCLinit
+	HCLSetDevice 1
 
 	n=256//配列サイズ 256*4byte
 	dim host_a,n

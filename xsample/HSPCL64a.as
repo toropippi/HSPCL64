@@ -64,7 +64,7 @@
 #cmd HCLDoKernel $6E
 #cmd HCLDoKrn1_sub $6F
 
-#cmd HCLDoCode $8F
+#cmd HCLCall2 $8F
 #cmd HCLDoXc $9B
 #cmd HCLDoXi $9C
 #cmd HCLDoXl $9D

@@ -3,6 +3,8 @@
 //Aを64要素刻みでshared memoryを使って総和を計算しB[0]～B[3]に結果を入れる
 #include "HSPCL64a.as"
 	HCLinit
+	
+	HCLSetDevice 1
 
 	n=256//配列サイズ 256*4byte
 	clmem_a=HCLCreateBuffer(n*4)

@@ -3,7 +3,7 @@
 //raw colがあっててもメモリ確保サイズがあってないといけない
 #include "HSPCL64a.as"
 	HCLinit
-	HCLSetDevice 0
+	HCLSetDevice 1
 	matA=HCLCreateBuffer(10*1000*4)
 	HCLBLAS_Set2DShape matA,10,1000
 	

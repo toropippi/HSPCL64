@@ -1,0 +1,87 @@
+// std::string SGEMM_SOURCE0 = R"EOB(
+// )EOB";
+
+exist "SGEMM2.cl"
+sdim data,strsize
+
+bload "SGEMM2.cl",data
+
+
+strrep data,"\t"," "
+	repeat 999
+	stt=0
+	strrep data,"\n\n","\n"
+	stt+=stat
+	strrep data,"  "," "
+	stt+=stat
+	strrep data,"\n ","\n"
+	stt+=stat
+	strrep data," \n","\n"
+	stt+=stat
+	if stt==0:break
+	loop
+
+notesel data
+	repeat noteinfo(0)
+	noteget p1,cnt
+	i=instr(p1,0,"//")
+	if i==-1:continue
+
+	p1=strmid(p1,0,i)
+	noteadd p1,cnt,1
+	loop
+
+
+	repeat 999
+	stt=0
+	strrep data,"\n\n","\n"
+	stt+=stat
+	strrep data,"  "," "
+	stt+=stat
+	strrep data,"\n ","\n"
+	stt+=stat
+	strrep data," \n","\n"
+	stt+=stat
+	strrep data," +","+"
+	stt+=stat
+	strrep data,"+ ","+"
+	stt+=stat
+	strrep data,"= ","="
+	stt+=stat
+	strrep data," =","="
+	stt+=stat
+	
+	strrep data,"- ","-"
+	stt+=stat
+	strrep data," -","-"
+	stt+=stat
+	
+	strrep data,"* ","*"
+	stt+=stat
+	strrep data," *","*"
+	stt+=stat
+	
+	strrep data,"/ ","/"
+	stt+=stat
+	strrep data," /","/"
+	stt+=stat
+	
+	strrep data,"% ","%"
+	stt+=stat
+	strrep data," %","%"
+	stt+=stat
+	if stt==0:break
+	loop
+
+
+sdim outstr,65536
+ln=strlen(data)
+
+	repeat (ln+2047)/2048
+	outstr+={"std::string SGEMM_SOURCE"}+str(cnt)+{" = R"EOB("}
+	outstr+=strmid(data,cnt*2048,2048)
+	outstr+={")EOB";\n\n\n"}
+	loop
+
+bsave "xxx.txt",outstr,strlen(outstr)
+end

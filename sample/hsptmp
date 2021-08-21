@@ -1,153 +1,89 @@
-//HSPのgzoom命令に相当することOpenCLで実行します。
-//コピー元のピクセルの色で、透明色を指定した場合のサンプルです。
-//注意としてはmref命令で画面情報を取得するため、画面横幅が4の倍数でないといけないです。
+//N*N要素の行列AとBをかけてCを求める計算
+//row major
 #include "HSPCL64.as"
 	HCLinit
-
-	wx0=660
-	wy0=620
-	screen 0,wx0,wy0
-	title "コピー元"
-		repeat wx0*wy0/1000
-		pos rnd(wx0),rnd(wy0)
-		mes rnd(32766)
-		loop
-
-	//ゲーム画面などを想定
-	wx1=432
-	wy1=348
-	//grotateだとどうなるか
-	screen 2,wx1,wy1
-	title "grotate"
-	//ゲーム画面などを想定
-		repeat wx1/4
-		cntx=cnt
-			repeat wy1/4
-			hsvcolor rnd(192),64,250
-			boxf cntx*4,cnt*4,cntx*4+4,cnt*4+4
-			loop
-		loop
-	color 255,255,255
-	gmode 4,wx0,wy0,255
-	pos wx1/2,wy1/2
-	grotate 0,0,0,0,wx1,wy1
-
-	//HCLgzoomだとどうなるか
-	screen 1,wx1,wy1
-	title "HCLgzoom_gmode4"
-		repeat wx1/4
-		cntx=cnt
-			repeat wy1/4
-			hsvcolor rnd(192),64,250
-			boxf cntx*4,cnt*4,cntx*4+4,cnt*4+4
-			loop
-		loop
-
-	HCLgzoom_gmode4 0,1,255,255,255//0→1に拡大縮小。透明色は(255,255,255)
-	gsel 1
-	redraw 1
-
-
+	HCLSetDevice 1
+	randomize
+	
+	//配列 A は m x k 行列、配列 B は k x n 行列、配列 C は m x n 行列
+	n=rnd(1024*8)+1
+	k=rnd(1024*8)+1
+	m=rnd(1024*8)+1
+	mes "n=" + n + " m=" + m + " k=" + k + ""
+	
+	//カーネル設定
+	prgid=HCLCreateProgram("SGEMM.cl")
+	krnSGEMM_a=HCLCreateKernel(prgid,"SGEMM_a")
+	krnSGEMM_k=HCLCreateKernel(prgid,"SGEMM_k")
+	krnSGEMM_s=HCLCreateKernel(prgid,"SGEMM_small")
+	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
+	
+	//行列初期化
+	gpu_A = HCLCreateBuffer(m*k*4)
+	gpu_B = HCLCreateBuffer(k*n*4)
+	gpu_C = HCLCreateBuffer(m*n*4)
+	//まずは初期値をGPUで生成
+	HCLSetKrns krnRnd,gpu_A,rnd(9999)
+	HCLDoKrn1_sub krnRnd,m*k,64
+	HCLSetKrns krnRnd,gpu_B,rnd(9999)
+	HCLDoKrn1_sub krnRnd,k*n,64
+	
+	// GPUで計算
+	mes "計算開始"
+	gosub*mySGEMM
+	HCLFinish
+	mes "計算終了"
+	gosub*検算
 	stop
 
 
-#module
 
-#defcfunc gcd int a_, int b_
-	a = a_
-	b = b_
-	r = a \ b
-		repeat 128
-		if r==0:break
-		a = b
-		b = r
-		r = a \ b
-		loop
-	return b
-
-#deffunc HCLgzoom_gmode4 int gselid0, int gselid1,int toumei_r,int toumei_g,int toumei_b
-	gsel gselid0
-	wx0=ginfo(12)
-	wy0=ginfo(13)
-	if wx0\4!=0:dialog "画面の横幅が4の倍数でないと予期しない動作が起こります。",1
-	mref host_g0,66//これを拡大縮小コピーしたい。アンチエイジング付きで
-	
-	gsel gselid1
-	wx1=ginfo(12)
-	wy1=ginfo(13)
-	if wx1\4!=0:dialog "画面の横幅が4の倍数でないと予期しない動作が起こります。",1
-	mref host_g1,66
-	
-	HCLCall {"__kernel void gzoom(__global uchar* g0,__global uchar* g1
-	,int wx0,int wy0,int wx1,int wy1,int gcdx,int gcdy,uint tr,uint tg,uint tb)
-	{
-		uint gid=get_global_id(0);
-		uint x=gid%wx1;
-		uint y=gid/wx1;
-
-		uint wx0g=wx0/gcdx;
-		uint wy0g=wy0/gcdy;
-		uint wx1g=wx1/gcdx;
-		uint wy1g=wy1/gcdy;
-		
-		uint srclx=x*wx0g; //g1側の左x座標
-		uint srcrx=(x+1)*wx0g; //g1側の右x座標
-		uint srcly=y*wy0g; //g1側の上y座標
-		uint srcry=(y+1)*wy0g; //g1側の下y座標
-		//srclxからsrcrxまで、srclyからsrcryまで色を拾いながら加算していくコード
-
-		uint r_sm=0;
-		uint g_sm=0;
-		uint b_sm=0;
-
-		uint r_start=(srclx/wx1g+1)*wx1g;
-		uint d_start=(srcly/wy1g+1)*wy1g;
-		uint l=srclx;
-		uint u=srcly;
-
-		uint mycolb=g1[(x+y*wx1)*3+0];
-		uint mycolg=g1[(x+y*wx1)*3+1];
-		uint mycolr=g1[(x+y*wx1)*3+2];
-
-		for(uint d=d_start;;)
-		{
-			if (d>=srcry)d=srcry;
-			uint ysz=d-u;
-			for(uint r=r_start,l=srclx;;)
-			{
-				if (r>=srcrx)r=srcrx;
-				uint xsz=r-l;
-				
-				uint idx=(u/wy1g)*wx0 + l/wx1g;
-				uint bb=g0[idx*3+2];
-				uint gg=g0[idx*3+1];
-				uint rr=g0[idx*3+0];
-				if ((rr==tr)&(gg==tg)&(bb==tb)){
-					bb=mycolb;
-					gg=mycolg;
-					rr=mycolr;
-				}
-				
-				b_sm+=ysz*xsz*rr;
-				g_sm+=ysz*xsz*gg;
-				r_sm+=ysz*xsz*bb;
-				
-				l=r;
-				if (l>=srcrx)break;
-				r+=wx1g;
-			}
-			u=d;
-			if (u>=srcry)break;
-			d+=wy1g;
-		}
-
-		uint rev=wx0g*wy0g;
-		g1[(x+y*wx1)*3+0] = (uchar)(b_sm/rev);
-		g1[(x+y*wx1)*3+1] = (uchar)(g_sm/rev);
-		g1[(x+y*wx1)*3+2] = (uchar)(r_sm/rev);
+//mySGEMM(m, n, k, gpu_A, gpu_B, gpu_C);
+*mySGEMM
+	if ((n < 128) | (m < 128)){
+	    kernel = krnSGEMM_s
+	}else{
+	    if (k \ 16 == 0){
+	        kernel = krnSGEMM_k
+	    }else{
+	        kernel = krnSGEMM_a
+	    }
 	}
-"},wx1*wy1,0,host_g0,host_g1,wx0,wy0,wx1,wy1,gcd(wx0,wx1),gcd(wy0,wy1),int(toumei_r),int(toumei_g),int(toumei_b)
+	
+	//引数をセット
+	HCLSetKrns kernel,m,n,k,gpu_A,gpu_B,gpu_C
+	
+	//計算
+	HCLDokrn2 kernel,(n + 127) / 128 * 16, (m + 127) / 128 * 16,16,16
 	return
-#global
 
-//これを更に発展させることでpngみたく各ドット透明色指定できて、アンチエイリアシング機能付き画像回転拡大縮小とかも作れると思います。
+
+*検算
+	HCLdim_i32FromBuffer cpu_A,gpu_A
+	HCLdim_i32FromBuffer cpu_B,gpu_B
+	HCLdim_i32FromBuffer cpu_C,gpu_C
+
+	colno=rnd(n)
+	rowno=rnd(m)
+
+	mes
+	mes "行="+rowno+" 列="+colno+" の結果"
+	gpu_ans=cpu_C.(rowno*n+colno)
+	mes "gpu_C["+rowno+"]["+colno+"]="+FloatToDouble(gpu_ans)+""
+	
+	cpu_ans=0.0
+		repeat k
+		a=cpu_A.(rowno*k+cnt)
+		b=cpu_B.(cnt*n+colno)
+		da=FloatToDouble(a)
+		db=FloatToDouble(b)
+		cpu_ans+=da*db
+		loop
+	
+
+	len=strlen(str(rowno))+strlen(str(colno))
+	sp=""
+	repeat len:sp+=" ":loop
+
+	mes "CPU検算  "+sp+"="+cpu_ans+""
+	return
