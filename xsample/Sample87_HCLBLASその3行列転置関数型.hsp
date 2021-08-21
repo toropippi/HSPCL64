@@ -1,6 +1,6 @@
 //行列転置サンプル
 //HCLBLAS_sTは関数としても使える
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 
 	HCLinit
 	

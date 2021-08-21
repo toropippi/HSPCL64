@@ -2,7 +2,7 @@
 //y=xA
 //のサンプル
 //この場合Aのみ2DShapeを決めておけばあとはメモリサイズがあってれば計算できる
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	

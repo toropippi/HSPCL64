@@ -1,7 +1,7 @@
 //C=A*B
 //の行列積のサンプル
 //Cを生成して返す関数型の sgemm命令を使うサンプル
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	

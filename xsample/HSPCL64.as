@@ -1,16 +1,7 @@
 #include "hsp3_64.as"
-#regcmd "hsp3cmdinit","HSPCL64a.dll", 2
+#regcmd "hsp3cmdinit","HSPCL64.dll", 2
 #cmd int64 $00
 #cmd float $01
-/*
-#cmd qpeek $01
-#cmd qpoke $02
-#cmd varptr64 $03
-#cmd dupptr64 $04
-#cmd callfunc64i $05
-#cmd callfunc64d $06
-#cmd callfunc64f $07
-*/
 
 #cmd HCLinit $50
 
@@ -19,7 +10,9 @@
 
 #cmd HCLSetDevice $53
 #cmd HCLGetDeviceCount $54
-#cmd HCLGetDeviceInfo $55
+#cmd HCLGetDeviceInfo_s $03
+#cmd HCLGetDeviceInfo_i $04
+#cmd HCLGetDeviceInfo_i64 $05
 #cmd HCLGetSettingDevice $56
 
 #cmd HCLCreateProgram $57
@@ -592,92 +585,3 @@
 #define global CL_PROFILING_COMMAND_SUBMIT                 0x1281
 #define global CL_PROFILING_COMMAND_START                  0x1282
 #define global CL_PROFILING_COMMAND_END                    0x1283
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#module _HCLModule_
-#defcfunc HCLGetDeviceInfo_s int a
-	ptrk=0:szs=0
-	HCLGetDeviceInfo a,ptrk,szs
-	if szs!=0{
-		dupptr64 out,ptrk,szs,2;2文字列型、ptrkは整数ポインタ、szsはサイズ、「out」はここで作成された新しい変数
-		//この時点でoutは、C++側で定義している変数のポインタを参照している→今後内容が変わる可能性
-		sdim retstr,szs
-		retstr=out
-		return retstr
-	}else{
-		return ""
-	}
-
-#defcfunc HCLGetDeviceInfo_i int a,int index
-	ptrk=int64(0):szs=0
-	HCLGetDeviceInfo a,ptrk,szs
-	if szs!=0{
-		dupptr64 out,ptrk,szs,4;4整数型、ptrkは整数ポインタ、szsはサイズ、変数名はここで作成された新しい変数
-		return out.index
-	}else{
-		return 0
-	}
-
-#defcfunc HCLGetDeviceInfo_i64 int a,int index
-	ptrk=int64(0):szs=0
-	HCLGetDeviceInfo a,ptrk,szs
-	if szs!=0{
-		dupptr64 out64,ptrk,szs,8;8int64型、ptrkは整数ポインタ、szsはサイズ、変数名はここで作成された新しい変数
-		return str(out64.index)
-	}else{
-		return str(int64(0))
-	}
-
-/*
-#deffunc convRGBtoBGR array a,array b
-	sizea=varsize(a)
-	sizeb=varsize(b)
-	if sizea>sizeb:sizea=sizeb
-	_convRGBtoBGR a,b,sizea
-	return
-#deffunc convRGBAtoRGB array a,array b
-	sizea=varsize(a)
-	sizeb=(varsize(b)/3)*4
-	if sizea>sizeb:sizea=sizeb
-	_convRGBAtoRGB a,b,sizea
-	return
-#deffunc convRGBtoRGBA array a,array b,int toumeiflg
-	if toumeiflg:tmpr=ginfo_r:tmpg=ginfo_g:tmpb=ginfo_b
-	sizea=varsize(a)
-	sizeb=(varsize(b)/4)*3
-	if sizea>sizeb:sizea=sizeb
-	if toumeiflg=0:_convRGBtoRGBA a,b,sizea,0,0,0,0:else:_convRGBtoRGBA a,b,sizea,1,tmpr,tmpg,tmpb
-	return
-*/
-#global

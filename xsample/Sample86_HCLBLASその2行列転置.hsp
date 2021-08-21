@@ -1,5 +1,5 @@
 //行列転置サンプル
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 

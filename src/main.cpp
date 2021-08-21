@@ -26,7 +26,7 @@ const int CLCALL_LOOP = 32;//HCLCallの引数の可能な数
 int CL_EVENT_MAX = 65536;//cl_eventを記憶して置ける最大数
 int COMMANDQUEUE_PER_DEVICE = 4;//1デバイスあたりのコマンドキュー、設定で変更できる
 int dev_num = 0;//全プラットフォームのデバイスの合計数
-int bufferout[1024 * 4];//ほぼHCLGetDeviceInfoの返り値用
+char bufferout[4096];//ほぼHCLGetDeviceInfoの返り値用
 int HspVarMemType;//64bitなら8、32bitならHSPVAR_FLAG_INT
 char hspcharout[1024 * 2];//HSPの文字列出力用バッファ
 cl_device_id *device_id;
@@ -110,7 +110,7 @@ float Code_getdf(float defi) {
 }
 
 //cl_memを読み込む、32bitならint,64bitならINT64型になる
-size_t Code_getMem() {
+size_t Code_getSzt() {
 	int prm = code_getprm();					// 整数値を取得(デフォルトなし)
 	if (prm <= PARAM_END) puterror(HSPERR_NO_DEFAULT);
 	if (sizeof(size_t) == 4) 
@@ -125,7 +125,7 @@ size_t Code_getMem() {
 }
 
 //cl_memを読み込む、32bitならint,64bitならINT64型になる
-size_t Code_getMemd(size_t defval) {
+size_t Code_getSztd(size_t defval) {
 	int prm = code_getprm();					// 整数値を取得(デフォルトなし)
 	if (prm <= PARAM_END) return defval;
 	if (sizeof(size_t) == 4)
@@ -740,6 +740,42 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 	////////////////////////////////////////////////////////////ここから自作
+
+	case 0x03:	// HCLGetDeviceInfo_s
+	{
+		fStr = true;
+		cl_device_info devinfoi = code_getdi(0);
+		size_t szt = 0;
+		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), bufferout, &szt);
+		bufferout[szt] = 0;
+		cptr = bufferout;
+		break;
+	}
+
+	case 0x04:	// HCLGetDeviceInfo_i
+	{
+		fInt = true;
+		cl_device_info devinfoi = code_getdi(0);
+		size_t szt = 0;
+		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), bufferout, &szt);
+		int* ib = (int*)bufferout;
+		int no = min(code_getdi(0), 1023);
+		ref_int32val = ib[no];
+		break;
+	}
+
+	case 0x05:	// HCLGetDeviceInfo_i64
+	{
+		fInt64 = true;
+		cl_device_info devinfoi = code_getdi(0);
+		size_t szt = 0;
+		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), bufferout, &szt);
+		INT64* ib = (INT64*)bufferout;
+		int no = min(code_getdi(0), 511);
+		ref_int64val = ib[no];
+		break;
+	}
+
 	case 0x54://HCLGetDeviceCount
 	{
 		fInt = true;
@@ -792,7 +828,7 @@ static void *reffunc( int *type_res, int cmd )
 	//int64 kernelid,str kansuu_mei
 	case 0x5A:	// HCLCreateKernel
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:カーネルid
+		size_t prm1 = Code_getSzt();//パラメータ1:カーネルid
 		char* p;
 		//char pathname[_MAX_PATH];
 		p = code_gets();								// 文字列を取得
@@ -808,7 +844,7 @@ static void *reffunc( int *type_res, int cmd )
 	//int64 bufsize
 	case 0x5E:	// HCLCreateBuffer
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、サイズ
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、サイズ
 		ref_sztval = (size_t)MyCreateBuffer(CL_MEM_READ_WRITE, prm1, NULL);
 		fSzt = true;
 		break;
@@ -825,7 +861,7 @@ static void *reffunc( int *type_res, int cmd )
 
 	case 0x90://HCLGetSize
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、mem id
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、mem id
 		ref_sztval = (size_t)(GetMemSize((cl_mem)prm1));
 		fSzt = true;
 		break;
@@ -841,8 +877,8 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x66://HCLReadIndex_i32
 	{
 		fInt = true;
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &ref_int32val, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -851,8 +887,8 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x67://HCLReadIndex_i64
 	{
 		fInt64 = true;
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_int64val, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -861,8 +897,8 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x68://HCLReadIndex_dp
 	{
 		fDouble = true;
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_doubleval, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
@@ -940,7 +976,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x79:  //HCLGetKernelName
 	{
 		fStr = true;
-		kernel = (cl_kernel)Code_getMem();
+		kernel = (cl_kernel)Code_getSzt();
 		size_t szt = 0;
 		cl_int ret = clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, sizeof(hspcharout), &hspcharout, &szt);
 		hspcharout[szt] = 0;
@@ -997,7 +1033,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x96://HCLBLAS_Get2DShape
 	{
 		//引数1 buffer
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 no
 		int no = code_geti();
 
@@ -1028,9 +1064,9 @@ static void *reffunc( int *type_res, int cmd )
 		cl_mem C = NULL;
 		cl_mem Cdmy = 0;
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem B = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem B = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数4 転置c
 		int c_t = code_getdi(0);
 		//引数5 転置a
@@ -1047,7 +1083,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x99://HCLBLAS_sT
 	{
 		//引数1 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
@@ -1069,9 +1105,9 @@ static void *reffunc( int *type_res, int cmd )
 		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem Y = 0;
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		MySGEMVmain(Y, A, X, 1);
 		ref_sztval = (size_t)Y;
@@ -1085,9 +1121,9 @@ static void *reffunc( int *type_res, int cmd )
 		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem Y = 0;
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		MySGEVMmain(Y, A, X, 1);
 		ref_sztval = (size_t)Y;
@@ -1399,7 +1435,7 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t prm2 = Code_getSzt();//パラメータ2:int64数値、memobj
 		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
 		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
@@ -1418,7 +1454,7 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t prm2 = Code_getSzt();//パラメータ2:int64数値、memobj
 		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
 		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
@@ -1437,7 +1473,7 @@ static int cmdfunc(int cmd)
 		APTR aptr1;
 		aptr1 = code_getva(&pval1);
 		//引数2
-		size_t prm2 = Code_getMem();//パラメータ2:int64数値、memobj
+		size_t prm2 = Code_getSzt();//パラメータ2:int64数値、memobj
 		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
 		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
@@ -1455,36 +1491,17 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x55:	// HCLGetDeviceInfo
-	{
-		cl_device_info devinfoi = code_getdi(0);
-		size_t szt = 0;
-
-		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), &bufferout, &szt);
-		INT64* datp = (INT64*)&bufferout[0];
-		PVal* pval;
-		APTR aptr;
-		aptr = code_getva(&pval);
-		code_setva(pval, aptr, HspVarInt64_typeid(), &datp);
-
-		PVal* pval2;
-		APTR aptr2;
-		aptr2 = code_getva(&pval2);
-		code_setva(pval2, aptr2, HSPVAR_FLAG_INT, &szt);
-		break;
-	}
-
 	case 0x59://HCLReleaseProgram
 	{
 		//引数1 kernel
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値
 		clReleaseProgram((cl_program)prm1);
 		break;
 	}
 
 	case 0x5B:	// HCLSetKernel
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
 		auto p2 = code_getdi(0);		// パラメータ2:数値、引数
 
 		int chk = code_getprm();							// パラメーターを取得(型は問わない)
@@ -1511,7 +1528,7 @@ static int cmdfunc(int cmd)
 
 	case 0x5C://HCLSetKrns
 	{
-		size_t prm1 = Code_getMem();		// パラメータ1:カーネル
+		size_t prm1 = Code_getSzt();		// パラメータ1:カーネル
 		if (prm1 == 0) {
 			MessageBox(NULL, "カーネルidが0です", "エラー", 0);
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
@@ -1535,7 +1552,7 @@ static int cmdfunc(int cmd)
 	case 0x5D://HCLReleaseKernel
 	{
 		//引数1 kernel
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値
 		clReleaseKernel((cl_kernel)prm1);
 		break;
 	}
@@ -1543,15 +1560,15 @@ static int cmdfunc(int cmd)
 	case 0x60:	// HCLWriteBuffer
 	{
 		//引数1
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
+		size_t prm3 = Code_getSztd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		int p7 = code_getdi(1);		//ブロッキングモード
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 		//引数省略ならサイズは自動
@@ -1591,15 +1608,15 @@ static int cmdfunc(int cmd)
 	case 0x61:	// HCLReadBuffer
 	{
 		//引数1
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
+		size_t prm3 = Code_getSztd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		int p7 = code_getdi(1);		//ブロッキングモード
 		cl_bool TorF = ((p7 == 0) ? CL_FALSE : CL_TRUE);
 		//引数省略ならサイズは自動
@@ -1621,15 +1638,15 @@ static int cmdfunc(int cmd)
 	case 0x86:	// HCLWriteBuffer_NonBlocking
 	{
 		//引数1
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
+		size_t prm3 = Code_getSztd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		//引数省略ならサイズは自動
 		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
@@ -1665,15 +1682,15 @@ static int cmdfunc(int cmd)
 	case 0x87:	// HCLReadBuffer_NonBlocking
 	{
 		//引数1
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2。HSP側の配列変数
 		PVal* pval = code_getpval();
 		//引数3、コピーサイズ
-		size_t prm3 = Code_getMemd(0);//パラメータ3:int64
+		size_t prm3 = Code_getSztd(0);//パラメータ3:int64
 		//引数4、コピー先のofset
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数5、コピー元のofset
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		cl_bool p7 = code_getdi(1);		//ブロッキングモード
 		//引数省略ならサイズは自動
 		AutoReadWriteCopySize(prm3, pval, (cl_mem)prm1);////prm3は参照渡しであることに注意
@@ -1707,11 +1724,11 @@ static int cmdfunc(int cmd)
 
 	case 0x62:	// HCLCopyBuffer
 	{
-		size_t prm2 = Code_getMem();//コピー先メモリオブジェクトid
-		size_t prm3 = Code_getMem();//コピー元メモリオブジェクトid
-		size_t prm4 = Code_getMemd(0);// コピーサイズ
-		size_t prm5 = Code_getMemd(0);// コピー先オフセット
-		size_t prm6 = Code_getMemd(0);// コピー元オフセット
+		size_t prm2 = Code_getSzt();//コピー先メモリオブジェクトid
+		size_t prm3 = Code_getSzt();//コピー元メモリオブジェクトid
+		size_t prm4 = Code_getSztd(0);// コピーサイズ
+		size_t prm5 = Code_getSztd(0);// コピー先オフセット
+		size_t prm6 = Code_getSztd(0);// コピー元オフセット
 		//引数省略ならサイズは自動
 		size_t sz2 = GetMemSize((cl_mem)prm2);
 		size_t sz3 = GetMemSize((cl_mem)prm3);
@@ -1758,13 +1775,13 @@ static int cmdfunc(int cmd)
 	case 0x63://HCLFillBuffer_i32
 	{
 		//引数1 buffer
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		int pattern = code_getdi(0);
 		//引数3、offset(byte)
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
@@ -1782,13 +1799,13 @@ static int cmdfunc(int cmd)
 	case 0x64://HCLFillBuffer_i64
 	{
 		//引数1 buffer
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		INT64 pattern = Code_getint64();
 		//引数3、offset(byte)
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
@@ -1807,13 +1824,13 @@ static int cmdfunc(int cmd)
 	case 0x8B://HCLFillBuffer_dp
 	{
 		//引数1 buffer
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 pattern
 		double pattern = code_getdd(0.0);
 		//引数3、offset(byte)
-		size_t prm4 = Code_getMemd(0);//パラメータ4:int64
+		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数4、size(byte)
-		size_t prm5 = Code_getMemd(0);//パラメータ5
+		size_t prm5 = Code_getSztd(0);//パラメータ5
 		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
 
 		//outevent関連
@@ -1830,15 +1847,15 @@ static int cmdfunc(int cmd)
 
 	case 0x65://HCLReleaseBuffer
 	{
-		size_t prm2 = Code_getMem();		// パラメータ1:memobj
+		size_t prm2 = Code_getSzt();		// パラメータ1:memobj
 		MyReleaseBuffer((cl_mem)prm2);
 		break;
 	}
 
 	case 0x69://HCLWriteIndex_i32
 	{
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		int data = code_geti();//内容
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -1847,8 +1864,8 @@ static int cmdfunc(int cmd)
 
 	case 0x6A://HCLWriteIndex_i64
 	{
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		INT64 data = Code_getint64();//内容
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -1857,8 +1874,8 @@ static int cmdfunc(int cmd)
 
 	case 0x6B://HCLWriteIndex_dp
 	{
-		size_t memid = Code_getMem();
-		size_t b = Code_getMem();//idx
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
 		double data = code_getd();//内容
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
@@ -2083,7 +2100,7 @@ static int cmdfunc(int cmd)
 
 	case 0x6D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize = code_getdi(1);
 		size_t localsize = code_getdi(0);
 
@@ -2109,7 +2126,7 @@ static int cmdfunc(int cmd)
 
 	case 0x52:	// HCLDoKrn2 int p1,int p2,int p3,int p4,int p5,int p6
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize[2];
 		size_t localsize[2];
 		globalsize[0] = code_geti();
@@ -2131,7 +2148,7 @@ static int cmdfunc(int cmd)
 
 	case 0x7E:	// HCLDoKrn3 int p1,int p2,int p3,int p4,int p5,int p6,int p7,int p8
 	{
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、カ－ネルid
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize[3];
 		size_t localsize[3];
 		globalsize[0] = code_geti();
@@ -2155,7 +2172,7 @@ static int cmdfunc(int cmd)
 
 	case 0x6E:	// HCLDoKernel int64 p1,int p2,array p3,array p4
 	{
-		size_t prm2 = Code_getMem();		// カーネル
+		size_t prm2 = Code_getSzt();		// カーネル
 		auto p3 = code_getdi(1);		// work_dim
 		size_t p4[3] = { 1,1,1 };
 		size_t ptryes[3] = { 1,1,1 };
@@ -2220,7 +2237,7 @@ static int cmdfunc(int cmd)
 
 	case 0x6F://HCLDoKrn1_sub
 	{
-		size_t prm2 = Code_getMem();		// パラメータ1:カーネル
+		size_t prm2 = Code_getSzt();		// パラメータ1:カーネル
 		size_t p4 = code_getdi(1);	//並列数
 		size_t p5 = code_getdi(1);//ローカルサイズ
 		if (p5 == 0) { p5 = 64; }
@@ -2507,11 +2524,11 @@ static int cmdfunc(int cmd)
 	case 0x95://HCLBLAS_Set2DShape
 	{
 		//引数1 buffer
-		size_t prm1 = Code_getMem();//パラメータ1:int64数値、memobj
+		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 raw
-		size_t raw = Code_getMemd(0);
+		size_t raw = Code_getSztd(0);
 		//引数3 col
-		size_t col = Code_getMemd(0);
+		size_t col = Code_getSztd(0);
 		ShapeHP sh;
 
 		cl_mem m = (cl_mem)prm1;
@@ -2533,11 +2550,11 @@ static int cmdfunc(int cmd)
 	case 0x97://HCLBLAS_sgemm
 	{
 		//引数1 buffer
-		cl_mem C = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem C = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem B = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem B = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数4 転置c
 		int c_t = code_getdi(0);
 		//引数5 転置a
@@ -2558,9 +2575,9 @@ static int cmdfunc(int cmd)
 	case 0x99://HCLBLAS_sT
 	{
 		//引数1 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数1 buffer
-		cl_mem AT = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem AT = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
@@ -2591,11 +2608,11 @@ static int cmdfunc(int cmd)
 	case 0xA0://HCLBLAS_sgemv
 	{
 		//引数1 buffer
-		cl_mem Y = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		MySGEMVmain(Y, A, X, 0);
 		break;
@@ -2603,11 +2620,11 @@ static int cmdfunc(int cmd)
 	case 0xA1://HCLBLAS_sgevm
 	{
 		//引数1 buffer
-		cl_mem Y = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getMem();//パラメータ1:int64数値、memobj
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
 		MySGEVMmain(Y, A, X, 0);
 		break;
@@ -2650,16 +2667,6 @@ static int cmdfunc(int cmd)
 	}
 	return RUNMODE_RUN;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

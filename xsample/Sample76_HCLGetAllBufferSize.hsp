@@ -1,9 +1,7 @@
 // HCLCreateBufferで確保した総メモリサイズを確認するコード
 // これはHSPCL64で確保したGPUメモリのサイズが分かるだけであり実際のGPUメモリ使用量がわかるわけではありません。
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
-	
-	HCLSetDevice 1
 	
 	n=256//配列サイズ 256byte
 	clmem0=HCLCreateBuffer(n)

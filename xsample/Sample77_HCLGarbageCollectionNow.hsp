@@ -5,7 +5,7 @@
 // そこでプラグイン側で全て作成したcl mem idを覚えておき、擬似的なGCを行なうことで、いらなくなったcl memを解放できるようにしたのがHCLGarbageCollectionNow命令です。
 // ただしメモリの参照カウンタ等実装できないので手動でカウンタを回して頂く必要があります。
 
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	n=256//配列サイズ 256byte

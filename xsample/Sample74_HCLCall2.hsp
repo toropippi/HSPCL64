@@ -1,7 +1,7 @@
 // HCLDoKrn1,2,3等、これまでのカーネル実行命令はHCLSetKrns命令で事前に引数をセットしておかなければいけなく、面倒でした。
 // 今回のHCLCall2は引数を直接(?)指定できるので、より直観的に書くことができます。
 // つまりHCLCallのHSP配列→cl mem版
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	n=256
 	dim a,n

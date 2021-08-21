@@ -1,4 +1,4 @@
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 

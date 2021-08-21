@@ -1,7 +1,7 @@
 //正則行列 A (1024*1024)の固有値と固有ベクトルを求めるサンプル
 //べき乗法で
 
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	raw=1024

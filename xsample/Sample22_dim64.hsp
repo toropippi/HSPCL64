@@ -1,7 +1,7 @@
 //HCLなんちゃらで使う変数は大抵64bit変数です。
 //ポインタのサイズが64bitなので、どうしてもHSPで64bit型が扱えるようにする必要があります。
 //例えばHCLCreateBufferで作成したclmemの変数は64bit型になっています。
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 
 fdim ff,2
 	mes vartype(ff)

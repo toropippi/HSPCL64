@@ -1,89 +1,99 @@
-//N*N要素の行列AとBをかけてCを求める計算
-//row major
+//こちらはinoviaさんの作成したHSPint64のサンプルそのままです。
+//最新版はこちらをhttps://github.com/inovia/HSPInt64
+//HSPCL64を作るためにint64の機能がどうしても必要であり、下記命令を拝借させて頂いております。
+
 #include "HSPCL64.as"
-	HCLinit
-	HCLSetDevice 1
-	randomize
+#define MB_ICONINFORMATION $40
+#define MB_OK 0
+#uselib "user32.dll"
+#func MessageBox "MessageBoxA" int,int,int,int
+
+	INT64_ZERO = int64(0)
+	INT64_ONE = int64(1)
+
+	a = "こんにちは"
+	b = "てすと"
+
+	// ウィンドウハンドルは64bitアプリでも32bit分しか使っていない
+	// https://msdn.microsoft.com/en-us/library/aa384203(VS.85).aspx
+	// int64(hwnd) でOK!
 	
-	//配列 A は m x k 行列、配列 B は k x n 行列、配列 C は m x n 行列
-	n=rnd(1024*8)+1
-	k=rnd(1024*8)+1
-	m=rnd(1024*8)+1
-	mes "n=" + n + " m=" + m + " k=" + k + ""
+	dimtype prmData, vartype("int64"), 4
+	prmData = int64(hwnd), varptr64(a), varptr64(b), int64(MB_OK | MB_ICONINFORMATION)
 	
-	//カーネル設定
-	prgid=HCLCreateProgram("SGEMM.cl")
-	krnSGEMM_a=HCLCreateKernel(prgid,"SGEMM_a")
-	krnSGEMM_k=HCLCreateKernel(prgid,"SGEMM_k")
-	krnSGEMM_s=HCLCreateKernel(prgid,"SGEMM_small")
-	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
+	dimtype prmInfo, vartype("int64"), 4
+	prmInfo = INT64_ZERO, INT64_ZERO, INT64_ZERO, INT64_ZERO
 	
-	//行列初期化
-	gpu_A = HCLCreateBuffer(m*k*4)
-	gpu_B = HCLCreateBuffer(k*n*4)
-	gpu_C = HCLCreateBuffer(m*n*4)
-	//まずは初期値をGPUで生成
-	HCLSetKrns krnRnd,gpu_A,rnd(9999)
-	HCLDoKrn1_sub krnRnd,m*k,64
-	HCLSetKrns krnRnd,gpu_B,rnd(9999)
-	HCLDoKrn1_sub krnRnd,k*n,64
+	// 
+	// callfunc64i()
+	// 外部関数を実行します
+	// 戻り値: int64
+	// 
+	// 第1引数: 実行先関数の引数データ（配列）
+	// 第2引数: 実行先関数の引数の型情報（配列）
+	//          引数が int/int64の場合は、INT64_ZERO
+	//          引数が flaot/doubleの場合は、INT64_ONE
+	//          を指定します。
+	// 第3引数: 関数のアドレス
+	// 第4引数: 実行先関数の引数の数 (= 配列の要素数)
+	// 
+	// ※ 戻り値がdouble版は「callfunc64d」関数
+	//            float版は「callfunc64f」関数
+	// 
+	mes "MessageBox()の戻り値: " + callfunc64i(prmData, prmInfo, varptr64(MessageBox), 4)
+
+	// 
+	// int64()
+	// int64型の変数に変換します
+	// 戻り値: int64
+	//
+	// 第1引数: 変換元値または変数(文字列,数値,実数)
+	// 
+	mes "int64最大値: " + int64("9223372036854775807")
 	
-	// GPUで計算
-	mes "計算開始"
-	gosub*mySGEMM
-	HCLFinish
-	mes "計算終了"
-	gosub*検算
-	stop
+	// 
+	// qpoke
+	// バッファに8byte書き込み
+	// 
+	// ※ poke系命令の8byte版です。
+	//    使い方は同じです。
+	// 
 
-
-
-//mySGEMM(m, n, k, gpu_A, gpu_B, gpu_C);
-*mySGEMM
-	if ((n < 128) | (m < 128)){
-	    kernel = krnSGEMM_s
-	}else{
-	    if (k \ 16 == 0){
-	        kernel = krnSGEMM_k
-	    }else{
-	        kernel = krnSGEMM_a
-	    }
-	}
+	sdim buf, 64
+	qpoke buf, 0, int64("9223372036854775807")
 	
-	//引数をセット
-	HCLSetKrns kernel,m,n,k,gpu_A,gpu_B,gpu_C
+	// 
+	// qpeek()
+	// バッファから8byte読み出し
+	// 戻り値: int64
+	// 
+	// ※ peek系関数の8byte版です。
+	//    使い方は同じです。
+	// 
+	mes "bufの先頭から8バイト読み込む: " + qpeek(buf, 0)
 	
-	//計算
-	HCLDokrn2 kernel,(n + 127) / 128 * 16, (m + 127) / 128 * 16,16,16
-	return
-
-
-*検算
-	HCLdim_i32FromBuffer cpu_A,gpu_A
-	HCLdim_i32FromBuffer cpu_B,gpu_B
-	HCLdim_i32FromBuffer cpu_C,gpu_C
-
-	colno=rnd(n)
-	rowno=rnd(m)
-
-	mes
-	mes "行="+rowno+" 列="+colno+" の結果"
-	gpu_ans=cpu_C.(rowno*n+colno)
-	mes "gpu_C["+rowno+"]["+colno+"]="+FloatToDouble(gpu_ans)+""
+	//
+	// varptr64()
+	// 変数/命令/関数のポインタを返す
+	// 戻り値: int64
+	// 
+	// ※ varptr関数の64bit版です。
+	//    使い方は同じです。
+	// 
+	ptr = varptr64(MessageBox)
+	mes "MessageBox()のポインタ: " + ptr
 	
-	cpu_ans=0.0
-		repeat k
-		a=cpu_A.(rowno*k+cnt)
-		b=cpu_B.(cnt*n+colno)
-		da=FloatToDouble(a)
-		db=FloatToDouble(b)
-		cpu_ans+=da*db
-		loop
+	a = "あいうえお"
+	mes "a: " + a
+	aPtr = varptr64(a)
 	
-
-	len=strlen(str(rowno))+strlen(str(colno))
-	sp=""
-	repeat len:sp+=" ":loop
-
-	mes "CPU検算  "+sp+"="+cpu_ans+""
-	return
+	//
+	// dupptr64
+	// ポインタからクローン変数を作成
+	// 
+	// ※ dupptr命令の64bit版です。
+	//    使い方は同じです。
+	// 
+	
+	dupptr64 b, aPtr, 64, vartype("str")
+	mes "b: " + b

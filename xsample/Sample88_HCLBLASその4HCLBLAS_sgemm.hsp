@@ -1,6 +1,6 @@
 //C=A*B
 //‚Ìs—ñÏ‚ÌƒTƒ“ƒvƒ‹
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	

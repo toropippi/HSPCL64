@@ -1,7 +1,7 @@
 //SetしたShapeを確認
 //HCLBLAS_Set2DShape命令はsgemm命令や転置命令で使われる情報であり
 //OpenCLカーネルコード内で二次元配列として使えるようになるわけではないことに注意してください。
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 
 	HCLinit
 	

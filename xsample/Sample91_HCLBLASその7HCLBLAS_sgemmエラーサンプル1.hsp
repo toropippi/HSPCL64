@@ -1,7 +1,7 @@
 //C=A*B
 //の行列積のエラーサンプル
 //raw colが合わないといけない
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
 	
 	

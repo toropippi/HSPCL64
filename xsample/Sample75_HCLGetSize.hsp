@@ -1,7 +1,6 @@
 // HCLCreateBufferで確保したメモリサイズを確認するコード
-#include "HSPCL64a.as"
+#include "HSPCL64.as"
 	HCLinit
-	HCLSetDevice 1
 	
 	n=256//配列サイズ 256byte
 	clmem0=HCLCreateBuffer(n)
