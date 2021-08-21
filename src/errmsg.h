@@ -13,6 +13,7 @@ void retmeserr11(cl_int ret);//clFlushで失敗した時出すエラーメッセージをまとめた
 void retmeserr12(cl_int ret);//clGetMemObjectInfoで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr13(cl_int ret);//clCreateUserEventで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr14(cl_int ret);//clSetUserEventStatusで失敗した時出すエラーメッセージをまとめた関数
+void mes(const char* strc, int val);
 
 
 
@@ -497,6 +498,44 @@ void retmeserr14(cl_int ret)
 	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
 	puterror(HSPERR_UNSUPPORTED_FUNCTION);
 }
+
+
+
+
+
+
+
+
+
+
+
+void mes(const char* strc, int val)
+{
+	char c[10];
+	c[0] = val % 1000000000 / 100000000 + 48;
+	c[1] = val % 100000000 / 10000000 + 48;
+	c[2] = val % 10000000 / 1000000 + 48;
+	c[3] = val % 1000000 / 100000 + 48;
+	c[4] = val % 100000 / 10000 + 48;
+	c[5] = val % 10000 / 1000 + 48;
+	c[6] = val % 1000 / 100 + 48;
+	c[7] = val % 100 / 10 + 48;
+	c[8] = val % 10 + 48;
+	c[9] = 0;
+	MessageBox(NULL, c, strc, 0);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

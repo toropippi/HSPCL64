@@ -14,7 +14,6 @@
 #include "hsp3struct.h"
 #include "hspvar_int64.h"
 #include "errmsg.h"
-#include "RGB.h"
 
 
 
@@ -2792,17 +2791,6 @@ static int cmdfunc(int cmd)
 		break;
 	case 0x9F://HCLDoXd
 		HCLDoXd();
-		break;
-
-
-	case 0x83:								// newcmd31 //convRGBtoBGR
-		_ConvRGBtoBGR();
-		break;
-	case 0x84:								// newcmd31 //convRGBAtoRGB
-		_ConvRGBAtoRGB();
-		break;
-	case 0x85:								// newcmd31 //convRGBtoRGBA
-		_ConvRGBtoRGBA();
 		break;
 
 	////////////////////////////////////////////////////////////‚±‚±‚Ü‚Å

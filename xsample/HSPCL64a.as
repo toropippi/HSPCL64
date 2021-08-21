@@ -108,12 +108,6 @@
 
 
 
-/*
-#cmd _ConvRGBtoBGR 		$83
-#cmd _ConvRGBAtoRGB 		$84
-#cmd _ConvRGBtoRGBA 		$85
-*/
-
 
 
 
