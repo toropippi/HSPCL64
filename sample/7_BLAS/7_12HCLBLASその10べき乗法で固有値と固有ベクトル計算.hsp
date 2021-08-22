@@ -15,14 +15,12 @@
 	
 	//u
 	u=HCLCreateBuffer(raw*4)
-	HCLBLAS_Set2DShape u,1,col
 	HCLWriteIndex_fp u,0,1
 	HCLWriteIndex_fp u,1,2
 	
 	//uu
 	uu=HCLCreateBuffer(raw*4)
 	HCLFillBuffer uu,float(0)
-	HCLBLAS_Set2DShape uu,1,col
 
 	//eigen_value
 	eigen_value = HCLCreateBuffer(4)
@@ -34,30 +32,27 @@
 	rel_eps = float(0.0001)
 	rel_delta_u = float(100.0)
 
-	
 
 	//べき乗法のループ
 	while rel_delta_u>=rel_eps
 		//#正規化(ノルムを1にする)
 	    //uu = u/np.linalg.norm(u) 
-		l2n2=HCLBLAS_sgemv(u,u)//uのL2ノルムの2乗が求まる
-		HCLDoXf "A[i]=B[i]/sqrt(C[0]);",uu,u,l2n2
+		l2n2=HCLBLAS_snrm2(u)//uのL2ノルムが求まる
+		HCLDoXf "A[i]=B[i]/C[0];",uu,u,l2n2
 
 		//u = np.dot(A,uu.T)
 		HCLBLAS_sgemv u,A,uu
 
 		//eigen_value=np.dot(uu,u)/(np.dot(uu,uu.T))
 		//※並列数=1
-		HCLDoXf "A[i]=B[i]/C[i];",eigen_value,HCLBLAS_sgemv(uu,u),HCLBLAS_sgemv(uu,uu)
+		HCLDoXf "A[i]=B[i]/C[i];",eigen_value,HCLBLAS_sdot(uu,u),HCLBLAS_sdot(uu,uu)
 
 		//delta_u_vec = uu-u/np.linalg.norm(u)
-		HCLBLAS_sgemv l2n2,u,u//uのL2ノルムの2乗が求まる
-		delta_u_vec = HCLDoXf("OUT[i]=A[i]-B[i]/sqrt(C[0]);",uu,u,l2n2 )
+		HCLBLAS_snrm2 l2n2,u//uのL2ノルムが求まる
+		delta_u_vec = HCLDoXf("OUT[i]=A[i]-B[i]/C[0];",uu,u,l2n2 )
 
 	    //abs_delta_u_value= np.linalg.norm(delta_u_vec)
-		HCLBLAS_Set2DShape delta_u_vec,1,raw
-	    abs_delta_u_value = HCLBLAS_sgemv(delta_u_vec,HCLBLAS_sT(delta_u_vec))
-	    HCLDoXf "A[i]=sqrt(A[i]);",abs_delta_u_value
+	    abs_delta_u_value = HCLBLAS_snrm2(delta_u_vec)
 	    
 		//rel_delta_u=abs_delta_u_value/np.abs(eigen_value) # 繰り返しステップに対する固有値の相対変化量
 		rel_delta_u = HCLReadIndex_fp(abs_delta_u_value,0) / HCLReadIndex_fp(eigen_value,0)

@@ -1,0 +1,16 @@
+//y=sqrt(dot(x1,x1))
+//‚ÌƒTƒ“ƒvƒ‹
+#include "HSPCL64.as"
+	HCLinit
+	
+	//y=Ax
+	vecX=HCLCreateBuffer(100*4)
+	Y=HCLCreateBuffer(4)
+	HCLFillBuffer vecX,float(1.41421356237)
+	
+	HCLBLAS_snrm2 Y,vecX
+	mes "sqrt(dot(vecX,vecX)) = "+HCLReadIndex_fp(Y,0)
+
+	//ŠÖ”‚Æ‚µ‚Äg‚¤‚±‚Æ‚à
+	Y=HCLBLAS_snrm2(vecX)
+	mes "sqrt(dot(vecX,vecX)) = "+HCLReadIndex_fp(Y,0)

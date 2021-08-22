@@ -571,7 +571,7 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 //y=Ax
 //global_size=256*raw
 //local_size=256
-void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, size_t fdflg)
+void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, size_t fdflg, int sqrtflg)
 {
 	sgemminit();
 	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 4 + fdflg * GEMMkernelNum / 2];
@@ -603,6 +603,8 @@ void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, size_t fdflg)
 	clSetKernelArg(gkernel, 1, sizeof(X), &X);
 	clSetKernelArg(gkernel, 2, sizeof(Y), &Y);
 	clSetKernelArg(gkernel, 3, sizeof(col), &col);
+	clSetKernelArg(gkernel, 4, sizeof(sqrtflg), &sqrtflg);
+	
 
 	size_t global_size = 256 * raw;
 	size_t local_size = 256;
@@ -1208,11 +1210,56 @@ static void *reffunc( int *type_res, int cmd )
 		size_t fdflg = 0;
 		if (cmd == 0xA2)fdflg = 1;
 
-		MySGEMVmain(Y, A, X, 1, fdflg);
+		MySGEMVmain(Y, A, X, 1, fdflg, 0);
 		ref_sztval = (size_t)Y;
 		fSzt = true;
 		break;
 	}
+
+	case 0xA5://HCLBLAS_sdot
+	case 0xA6://HCLBLAS_ddot
+	{
+		//引数1 buffer
+		cl_mem Y = 0;
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		ShapeHP sha = memmap[A];
+		size_t fdflg = 0;
+		if (cmd == 0xA6)fdflg = 1;
+
+		memmap[A].col = GetMemSize(A) / (fdflg * 4 + 4);
+		memmap[A].raw = 1;
+
+		MySGEMVmain(Y, A, X, 1, fdflg, 0);
+		memmap[A] = sha;
+		ref_sztval = (size_t)Y;
+		fSzt = true;
+		break;
+	}
+
+	case 0xA7://HCLBLAS_snrm2
+	case 0xA8://HCLBLAS_dnrm2
+	{
+		//引数1 buffer
+		cl_mem Y = 0;
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		ShapeHP sha = memmap[A];
+		size_t fdflg = 0;
+		if (cmd == 0xA8)fdflg = 1;
+
+		memmap[A].col = GetMemSize(A) / (fdflg * 4 + 4);
+		memmap[A].raw = 1;
+
+		MySGEMVmain(Y, A, A, 1, fdflg, 1);
+		memmap[A] = sha;
+		ref_sztval = (size_t)Y;
+		fSzt = true;
+		break;
+	}
+
 
 	case 0x9B://HCLDoXc
 	{
@@ -2631,7 +2678,47 @@ static int cmdfunc(int cmd)
 		size_t fdflg = 0;
 		if (cmd == 0xA2)fdflg = 1;
 
-		MySGEMVmain(Y, A, X, 0, fdflg);
+		MySGEMVmain(Y, A, X, 0, fdflg, 0);
+		break;
+	}
+
+	case 0xA5://HCLBLAS_sdot
+	case 0xA6://HCLBLAS_ddot
+	{
+		//引数1 buffer
+		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		//引数3 buffer
+		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		ShapeHP sha = memmap[A];
+		size_t fdflg = 0;
+		if (cmd == 0xA6)fdflg = 1;
+
+		memmap[A].col = GetMemSize(A) / (fdflg * 4 + 4);
+		memmap[A].raw = 1;
+
+		MySGEMVmain(Y, A, X, 0, fdflg, 0);
+		memmap[A] = sha;
+		break;
+	}
+
+	case 0xA7://HCLBLAS_snrm2
+	case 0xA8://HCLBLAS_dnrm2
+	{
+		//引数1 buffer
+		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		//引数2 buffer
+		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		ShapeHP sha = memmap[A];
+		size_t fdflg = 0;
+		if (cmd == 0xA8)fdflg = 1;
+
+		memmap[A].col = GetMemSize(A) / (fdflg * 4 + 4);
+		memmap[A].raw = 1;
+
+		MySGEMVmain(Y, A, A, 0, fdflg, 1);
+		memmap[A] = sha;
 		break;
 	}
 

@@ -1,0 +1,17 @@
+//y=dot(x1,x2)
+//ÇÃÉTÉìÉvÉã
+#include "HSPCL64.as"
+	HCLinit
+	
+	vecX1=HCLCreateBuffer(100*4)
+	vecX2=HCLCreateBuffer(100*4)
+	Y=HCLCreateBuffer(4)
+	HCLFillBuffer vecX1,float(1.41421356237)
+	HCLFillBuffer vecX2,float(1.41421356238)
+	
+	HCLBLAS_sdot Y,vecX1,vecX2
+	mes "dot(vecX1,vecX2) = "+HCLReadIndex_fp(Y,0)
+
+	//ä÷êîÇ∆ÇµÇƒégÇ§Ç±Ç∆Ç‡
+	Y=HCLBLAS_sdot(vecX1,vecX2)
+	mes "dot(vecX1,vecX2) = "+HCLReadIndex_fp(Y,0)

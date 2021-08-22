@@ -1229,7 +1229,7 @@ sub[tidoffset+tidm*16]=A[offsetN+offsetM*N];
 barrier(CLK_LOCAL_MEM_FENCE);
 AT[woffsetN*M+woffsetM]=sub[tidoffset+tidn*16];
 }
-__kernel void floatGEMV(__global float*A,__global float*X,__global float*Y,int col){
+__kernel void floatGEMV(__global float*A,__global float*X,__global float*Y,int col,int sqrtflg){
 int gi=get_group_id(0);
 int i=get_local_id(0);
 int li=i;
@@ -1244,7 +1244,10 @@ for(;i>0;i/=2)
 barrier(CLK_LOCAL_MEM_FENCE);
 if (li<i)S[li]+=S[li+i];
 }
-if (li==0){Y[gi]=S[0];}
+if (li==0){
+if (sqrtflg==1)S[0]=sqrt(S[0]);
+Y[gi]=S[0];
+}
 }
 )EOB";
 
