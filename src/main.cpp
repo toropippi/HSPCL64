@@ -30,12 +30,10 @@ int dev_num = 0;//全プラットフォームのデバイスの合計数
 char bufferout[4096];//ほぼHCLGetDeviceInfoの返り値用
 int HspVarMemType;//64bitなら8、32bitならHSPVAR_FLAG_INT
 char hspcharout[1024 * 2];//HSPの文字列出力用バッファ
+unsigned char* bins;//ほぼバイナリ出力用
 cl_device_id *device_id;
 cl_context *context;
 cl_command_queue *command_queue;
-cl_mem mem_obj;
-cl_program program;
-cl_kernel kernel;
 cl_kernel* SGEMMkernel;//devごとに作る。a,k,small,transの4つ
 cl_kernel* DGEMMkernel;
 const int GEMMkernelNum = 10;//sgemm*3+trans+sgemv+dgemm*3+trans+dgemv
@@ -372,7 +370,7 @@ void sgemminit()
 }
 
 //GEMM用関数。転置先bufferも指定
-void MySgemmTrans2(cl_mem m, cl_mem tm,int fdflg)
+void MySgemmTrans2(cl_mem m, cl_mem tm,size_t fdflg)
 {
 	sgemminit();
 
@@ -382,7 +380,7 @@ void MySgemmTrans2(cl_mem m, cl_mem tm,int fdflg)
 		MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
 	}
 	ShapeHP sh = memmap[m];
-	kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3 + fdflg * GEMMkernelNum / 2];
+	cl_kernel kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3 + fdflg * GEMMkernelNum / 2];
 	//これでmemとkernelはok
 
 	//あとは引数指定して実行
@@ -395,8 +393,8 @@ void MySgemmTrans2(cl_mem m, cl_mem tm,int fdflg)
 	clSetKernelArg(kernel, 3, sizeof(cl_mem), &tm);
 	size_t global_size[2];
 	size_t local_size[2];
-	global_size[0] = (icol + 15) / 16 * 16;
-	global_size[1] = (iraw + 15) / 16 * 16;
+	global_size[0] = (sh.col + 15) / 16 * 16;
+	global_size[1] = (sh.raw + 15) / 16 * 16;
 	local_size[0] = 16;
 	local_size[1] = 16;
 	memmap[tm].raw = sh.col;
@@ -414,7 +412,7 @@ void MySgemmTrans2(cl_mem m, cl_mem tm,int fdflg)
 }
 
 //GEMM用関数。新しくbufferを確保し転置したものを返す
-cl_mem MySgemmTrans1(cl_mem m, int fdflg)
+cl_mem MySgemmTrans1(cl_mem m, size_t fdflg)
 {
 	cl_mem tm = MyCreateBuffer(CL_MEM_READ_WRITE, GetMemSize(m), NULL);
 	MySgemmTrans2(m, tm, fdflg);
@@ -423,7 +421,7 @@ cl_mem MySgemmTrans1(cl_mem m, int fdflg)
 
 //関数型と命令形どちらにも対応できるように
 //retflgは0命令形、1関数型。Cを生成するかどうかの違い
-void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int retflg,cl_mem *inoutC,int fdflg)
+void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int retflg,cl_mem *inoutC,size_t fdflg)
 {
 	sgemminit();
 	cl_mem Cdmy;
@@ -540,8 +538,8 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	clSetKernelArg(gkernel, 5, sizeof(cl_mem), &C);
 	size_t global_size[2];
 	size_t local_size[2];
-	global_size[0] = (in + 127) / 128 * 16;
-	global_size[1] = (im + 127) / 128 * 16;
+	global_size[0] = (shb.col + 127) / 128 * 16;//(in + 127) / 128 * 16
+	global_size[1] = (sha.raw + 127) / 128 * 16;//(im + 127) / 128 * 16
 	local_size[0] = 16;
 	local_size[1] = 16;
 
@@ -573,7 +571,7 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 //y=Ax
 //global_size=256*raw
 //local_size=256
-void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, int fdflg)
+void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, size_t fdflg)
 {
 	sgemminit();
 	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 4 + fdflg * GEMMkernelNum / 2];
@@ -584,17 +582,17 @@ void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, int fdflg)
 	int raw = (int)memmap[A].raw;
 	if (retflg == 1) 
 	{
-		Y = MyCreateBuffer(CL_MEM_READ_WRITE, raw * (4 + fdflg * 4), NULL);
+		Y = MyCreateBuffer(CL_MEM_READ_WRITE, raw * (fdflg * 4 + 4), NULL);
 	}
 	//エラーチェック
-	if (GetMemSize(Y) != (4 + fdflg * 4) * raw)
+	if (GetMemSize(Y) != (fdflg * 4 + 4) * raw)
 	{
 		std::string errs;
 		errs = "縦横サイズエラー：行列ベクトル積できません\nA.raw=" + std::to_string(raw) + "\nsize(Y)=" + std::to_string(GetMemSize(Y)) + "";
 		MessageBox(NULL, errs.c_str(), "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
-	if (GetMemSize(X) != (4 + fdflg * 4) * col)
+	if (GetMemSize(X) != (fdflg * 4 + 4) * col)
 	{
 		std::string errs;
 		errs = "縦横サイズエラー：行列ベクトル積できません\nA.col=" + std::to_string(col) + "\nsize(X)=" + std::to_string(GetMemSize(X)) + "";
@@ -681,7 +679,7 @@ cl_kernel StrHashToKernel(std::string& s, size_t h)
 	else
 	{
 		//設定されていない場合の処理
-		program = WithSource_func(context[clsetdev], s, "");
+		cl_program program = WithSource_func(context[clsetdev], s, "");
 		cl_int ret = clCreateKernelsInProgram(program, 1, &k, NULL);//プログラムの中の最初にでてくるカーネルを取得
 		if (ret != CL_SUCCESS)retmeserr8(ret);
 		codemap[h] = k;
@@ -709,7 +707,7 @@ void GemmSourceStrInit()
 
 	std::string s = SGEMM_SOURCE;     // 置換対象の文字列
 	std::string target = "float";     // 検索文字列
-	std::string replacement = "doub;e"; // 置換文字列
+	std::string replacement = "double"; // 置換文字列
 	if (!target.empty()) {
 		std::string::size_type pos = 0;
 		while ((pos = s.find(target, pos)) != std::string::npos) {
@@ -893,6 +891,50 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
+	case 0x0B://HCLGetProgramBinary
+	{
+		size_t prm1 = Code_getSzt();//パラメータ1:prg id
+		size_t binSizes;
+		// 各デバイス向けのコンパイル後のバイナリのサイズを取得
+		clGetProgramInfo((cl_program)prm1, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), &binSizes, nullptr);
+		bins = new unsigned char[binSizes];
+		
+		// コンパイル後のバイナリをコピー
+		cl_int ret = clGetProgramInfo((cl_program)prm1, CL_PROGRAM_BINARIES, sizeof(unsigned char*), &bins, nullptr);
+
+		fStr = true;
+		cptr = (char*)bins;
+		break;
+	}
+
+	case 0x0C://HCLCreateProgramWithBinary str source,str build option
+	{
+		//バイナリ→program
+		char* pathname;
+		pathname = code_gets();								// 文字列を取得
+		std::string s_sourse = readFileIntoString(std::string(pathname));
+		size_t binSizes = s_sourse.size();
+		cl_int binary_status,ret;
+		
+		cl_program program = clCreateProgramWithBinary(context[clsetdev], 1, &device_id[clsetdev], (const size_t*)&binSizes,
+			(const unsigned char**)&pathname, &binary_status, &ret);
+		if (binary_status != CL_SUCCESS)retmeserr15(binary_status);
+		if (binary_status != CL_SUCCESS)retmeserr16(ret);
+
+		//オプション、ビルド
+		char* c_option;
+		c_option = code_getds("");								// 文字列を取得
+		std::string buildoption;
+		buildoption = std::string(c_option);
+
+		cl_int err0 = clBuildProgram(program, 1, &device_id[clsetdev], buildoption.c_str(), NULL, NULL);
+		if (err0 != CL_SUCCESS) retmeserr7(device_id[clsetdev], program);
+
+		fSzt = true;
+		ref_sztval = (size_t)program;
+		break;
+	}
+
 	//int64 kernelid,str kansuu_mei
 	case 0x5A:	// HCLCreateKernel
 	{
@@ -902,7 +944,7 @@ static void *reffunc( int *type_res, int cmd )
 		p = code_gets();								// 文字列を取得
 		//strncpy(pathname, p, _MAX_PATH - 1);			// 取得した文字列をコピー
 		cl_int ret;
-		kernel = clCreateKernel((cl_program)prm1, p, &ret);
+		cl_kernel kernel = clCreateKernel((cl_program)prm1, p, &ret);
 		ref_sztval = (size_t)kernel;
 		fSzt = true;
 		if (ret != CL_SUCCESS) retmeserr8(ret);
@@ -1044,7 +1086,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x79:  //HCLGetKernelName
 	{
 		fStr = true;
-		kernel = (cl_kernel)Code_getSzt();
+		cl_kernel kernel = (cl_kernel)Code_getSzt();
 		size_t szt = 0;
 		cl_int ret = clGetKernelInfo(kernel, CL_KERNEL_FUNCTION_NAME, sizeof(hspcharout), &hspcharout, &szt);
 		hspcharout[szt] = 0;
@@ -1086,6 +1128,9 @@ static void *reffunc( int *type_res, int cmd )
 		if (itr == memmap.end())
 		{
 			MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
+			sh.col = 0;
+			sh.raw = 0;
+			sh.HP = 0;
 		}
 		else
 		{
@@ -1105,7 +1150,7 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x97://HCLBLAS_sgemm
 	case 0x98://HCLBLAS_dgemm
 	{
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0x98)fdflg = 1;
 		//引数1 buffer
 		//cl_mem C = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
@@ -1134,12 +1179,12 @@ static void *reffunc( int *type_res, int cmd )
 		//引数1 buffer
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0x9A)fdflg = 1;
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
-		if (sha.raw * sha.col * (4 + fdflg * 4) != GetMemSize(A))
+		if (sha.raw * sha.col * (fdflg * 4 + 4) != GetMemSize(A))
 		{
 			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 			MessageBox(NULL, errs.c_str(), "エラー", 0);
@@ -1160,7 +1205,7 @@ static void *reffunc( int *type_res, int cmd )
 		//引数3 buffer
 		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0xA2)fdflg = 1;
 
 		MySGEMVmain(Y, A, X, 1, fdflg);
@@ -1791,7 +1836,7 @@ static int cmdfunc(int cmd)
 		
 		cl_command_queue cmd = command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque];
 		void* vptr = (char*)((pval->pt) + prm5);
-		mem_obj = (cl_mem)prm1;
+		cl_mem mem_obj = (cl_mem)prm1;
 		//ここで別スレッドになげる
 		thread_start++;
 		std::thread th(Thread_WriteBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
@@ -1835,7 +1880,7 @@ static int cmdfunc(int cmd)
 
 		cl_command_queue cmd = command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque];
 		void* vptr = (char*)((pval->pt) + prm5);
-		mem_obj = (cl_mem)prm1;
+		cl_mem mem_obj = (cl_mem)prm1;
 		//ここで別スレッドになげる
 		thread_start++;
 		std::thread th(Thread_ReadBuffer, cmd, mem_obj, prm4, prm3, vptr, num_event_wait_list, ev_, outevent);
@@ -1942,7 +1987,7 @@ static int cmdfunc(int cmd)
 		std::string s_sourse = std::string(c_source);
 
 		size_t h = KrnToHash(s_sourse);
-		kernel = StrHashToKernel(s_sourse, h);
+		cl_kernel kernel = StrHashToKernel(s_sourse, h);
 
 		//次にglobal_sizeとlocal_size
 		size_t global_size = code_getdi(1);	//並列数
@@ -2066,7 +2111,7 @@ static int cmdfunc(int cmd)
 		std::string s_sourse = std::string(c_source);
 
 		size_t h = KrnToHash(s_sourse);
-		kernel = StrHashToKernel(s_sourse, h);
+		cl_kernel kernel = StrHashToKernel(s_sourse, h);
 
 		//次にglobal_sizeとlocal_size
 		size_t global_size = code_getdi(1);	//並列数
@@ -2523,7 +2568,7 @@ static int cmdfunc(int cmd)
 	case 0x97://HCLBLAS_sgemm
 	case 0x98://HCLBLAS_dgemm
 	{
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0x98)fdflg = 1;
 		//引数1 buffer
 		cl_mem C = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
@@ -2550,12 +2595,12 @@ static int cmdfunc(int cmd)
 		//引数1 buffer
 		cl_mem AT = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0x9A)fdflg = 1;
 
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
-		if (sha.raw * sha.col * (4 + 4 * fdflg) != GetMemSize(A))
+		if (sha.raw * sha.col * (fdflg * 4 + 4) != GetMemSize(A))
 		{
 			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 			MessageBox(NULL, errs.c_str(), "エラー", 0);
@@ -2582,7 +2627,7 @@ static int cmdfunc(int cmd)
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
 		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
-		int fdflg = 0;
+		size_t fdflg = 0;
 		if (cmd == 0xA2)fdflg = 1;
 
 		MySGEMVmain(Y, A, X, 0, fdflg);

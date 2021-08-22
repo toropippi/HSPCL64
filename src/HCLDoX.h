@@ -28,7 +28,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt,int &_O
 	std::string Aa = "A";
 
 	sor = " " + sor + "     ";
-	int len = sor.size();
+	size_t len = sor.size();
 
 	int argcnt2 = 0;
 	int globalnum[26];
@@ -45,7 +45,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt,int &_O
 	for (int i = 0; i < 26; i++) { globalnum[i] = 0; privatenum[i] = 0;}
 	for (int i = 0; i < 10; i++) { C[i] = UC[i] = I[i] = UI[i] = L[i] = UL[i] = F[i] = D[i] = S[i] = 0; }
 
-	for (int i = 1; i < len - 5; i++)
+	for (size_t i = 1; i < len - 5; i++)
 	{
 		unsigned char c = sor[i];
 		if (c >= 128) {
@@ -431,7 +431,7 @@ void HCLDoX(int typeflg,cl_mem &newmem)
 	int _OUT_ = 0;
 	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt, _OUT_);
 	size_t h = KrnToHash(s_sourse);
-	kernel = StrHashToKernel(s_sourse, h);
+	cl_kernel kernel = StrHashToKernel(s_sourse, h);
 
 	//これでkernelまで求まった。あとは引数指定
 	//global数を計算。Aに対応

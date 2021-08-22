@@ -13,6 +13,8 @@ void retmeserr11(cl_int ret);//clFlushで失敗した時出すエラーメッセージをまとめた
 void retmeserr12(cl_int ret);//clGetMemObjectInfoで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr13(cl_int ret);//clCreateUserEventで失敗した時出すエラーメッセージをまとめた関数
 void retmeserr14(cl_int ret);//clSetUserEventStatusで失敗した時出すエラーメッセージをまとめた関数
+void retmeserr15(cl_int ret);//HCLCreateProgramWithBinaryで失敗した時出すエラーメッセージをまとめた関数
+void retmeserr16(cl_int ret);//HCLCreateProgramWithBinaryで失敗した時出すエラーメッセージをまとめた関数
 void mes(const char* strc, int val);
 
 
@@ -500,7 +502,58 @@ void retmeserr14(cl_int ret)
 }
 
 
+void retmeserr15(cl_int ret)
+{
+	switch (ret)
+	{							//分岐
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "CL_INVALID_VALUE\nlengths[i] が0もしくは\nbinaries[i] が NULL のとき", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_BINARY:
+		MessageBox(NULL, "CL_INVALID_BINARY\nプログラムバイナリがデバイスに対して有効なものでないとき\nCL_INVALID_BINARY が返されます。\nbinary_status に NULL を指定すると無視されます。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
 
+
+void retmeserr16(cl_int ret)
+{
+	switch (ret)
+	{							//分岐
+	case CL_INVALID_CONTEXT:
+		MessageBox(NULL, "CL_INVALID_CONTEXT\ncontext が有効なOpenCLコンテキストでないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_VALUE:
+		MessageBox(NULL, "CL_INVALID_VALUE\ndevice_list が NULL のとき。\nあるいは、num_devices が0であるとき。\nlengths もしくは binaries が NULL のとき。\nあるいは、lengths[i] のいずれかが0もしくは\nbinaries[i] のいずれかが NULL のとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_DEVICE:
+		MessageBox(NULL, "CL_INVALID_DEVICE\ndevice_list で指定されているOpenCLデバイスが\ncontext と関連付けられたデバイスでないとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_INVALID_BINARY:
+		MessageBox(NULL, "CL_INVALID_BINARY\nいずれかのデバイスでプログラムバイナリが有効なものでなかったたとき。\nbinary_statusにそれぞれのデバイスでの状況が返されます。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_RESOURCES:
+		MessageBox(NULL, "CL_OUT_OF_RESOURCES\nデバイス上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	case CL_OUT_OF_HOST_MEMORY:
+		MessageBox(NULL, "CL_OUT_OF_HOST_MEMORY\nホスト上でのリソース確保に失敗したとき。", "エラー", 0);
+		puterror(HSPERR_UNSUPPORTED_FUNCTION);
+		break;
+	}
+	//上のどれでもなければ
+	MessageBox(NULL, "原因不明のエラーです", "エラー", 0);
+	puterror(HSPERR_UNSUPPORTED_FUNCTION);
+}
 
 
 
