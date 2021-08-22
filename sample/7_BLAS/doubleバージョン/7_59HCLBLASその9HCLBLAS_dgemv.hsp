@@ -1,0 +1,20 @@
+//y=Ax
+//のサンプル
+//この場合Aのみ2DShapeを決めておけばあとはメモリサイズがあってれば計算できる
+#include "HSPCL64.as"
+	HCLinit
+	
+	//y=Ax
+	matA=HCLCreateBuffer(10*100*8)
+	vecX=HCLCreateBuffer(100*8)
+	vecY=HCLCreateBuffer(10*8)
+	HCLBLAS_Set2DShape matA,10,100
+	HCLFillBuffer matA,1.0
+	HCLFillBuffer vecX,1.0
+	
+	HCLBLAS_dgemv vecY,matA,vecX
+	
+	HCLdim_dpFromBuffer h_y,vecY
+		repeat 10
+		mes  h_y.cnt
+		loop

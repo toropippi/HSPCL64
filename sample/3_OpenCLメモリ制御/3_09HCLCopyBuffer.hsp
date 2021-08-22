@@ -1,0 +1,27 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024*1024*32
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	
+	pattern=12345
+	offset=0
+	size=n*4
+	HCLFillBuffer clmem_A,pattern,offset,size
+
+	//これでBにコピー
+	HCLCopyBuffer clmem_B,clmem_A,n*4,0,0
+
+	//結果表示
+	pos 0,0
+	mes "clmem_Aの中身"
+		repeat 17
+		mes HCLReadIndex_i32(clmem_A,cnt)
+		loop
+
+	pos 320,0
+	mes "clmem_Bの中身"
+		repeat 17
+		mes HCLReadIndex_i32(clmem_B,cnt)
+		loop

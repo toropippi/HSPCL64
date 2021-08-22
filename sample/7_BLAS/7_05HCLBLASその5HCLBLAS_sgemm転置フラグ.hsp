@@ -1,0 +1,33 @@
+//C=A*B
+//の行列積のサンプル
+#include "HSPCL64.as"
+	HCLinit
+	
+	matA=HCLCreateBuffer(2*2*4)
+	HCLBLAS_Set2DShape matA,2,2
+		repeat 2*2
+		HCLWriteIndex_fp matA,cnt,float(1.0*rnd(10))
+		loop
+	
+	matB=HCLCreateBuffer(2*2*4)
+	HCLBLAS_Set2DShape matB,2,2
+		repeat 2*2
+		HCLWriteIndex_fp matB,cnt,float(1.0*rnd(10))
+		loop
+	
+	matC=HCLCreateBuffer(2*2*4)
+	//HCLBLAS_Set2DShape matC,2,2// Cは計算で自動的にshapeが求まるので実はこれはいらない
+
+	//これでA,B,Cの初期設定完了
+
+	//sgemm計算
+	HCLBLAS_sgemm matC,matA,matB,0,1,0 // C=A.T*B
+	HCLBLAS_sgemm matC,matA,matB,0,0,1 // C=A*B.T
+	HCLBLAS_sgemm matC,matA,matB,1,0,0 // C.T=A*B
+	HCLBLAS_sgemm matC,matA,matB,0,1,1 // C=A.T*B.T
+	HCLBLAS_sgemm matC,matA,matB,1,0,1 // C.T=A*B.T
+	HCLBLAS_sgemm matC,matA,matB,1,1,0 // C.T=A.T*B
+	HCLBLAS_sgemm matC,matA,matB,1,1,1 // C.T=A.T*B.T
+	HCLBLAS_sgemm matC,matA,matB,0,0,0 // C=A*B
+	//おわり
+	mes "おわり"

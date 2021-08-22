@@ -1,0 +1,39 @@
+//DoKrn1,DoKrn2,DoKrn3‚Í
+//HCLDoKernel‚ÉŸŒ³”‚ğ1,2,3‚Æİ’è‚µ‚½ê‡‚Æ“¯‚¶
+#include "HSPCL64.as"
+	HCLinit
+	source={"
+__kernel void test(__global int* A)
+{
+	int i=get_global_id(0)+get_global_id(1)*2+get_global_id(2)*4;
+	A[i]=get_global_id(0)+get_global_id(1)*10+get_global_id(2)*100;
+}"}
+	
+	prg=HCLCreateProgramWithSource(source)
+	krn=HCLCreateKernel(prg,"test")
+	
+	//ŒvZNDrange‚ğ3ŸŒ³‚Æ‚µ‚Ä
+	global_size=2,2,2
+	local_size=2,2,2
+	
+	clmem_A=HCLCreateBuffer(2*2*2*4)
+	HCLSetKrns krn,clmem_A
+
+	//HCLDoKrn3‚Ìê‡
+	HCLDoKrn3 krn,global_size.0,global_size.1,global_size.2,local_size.0,local_size.1,local_size.2//2*2*2=8•À—ñ‚ÅÀs
+	HCLdim_i32FromBuffer host_A,clmem_A
+	pos 0,0
+		repeat 2*2*2
+		mes host_A.cnt
+		loop
+
+
+	//HCLDoKernel‚Ìê‡
+	HCLDoKernel krn,3,global_size,local_size//2*2*2=8•À—ñ‚ÅÀs
+	HCLdim_i32FromBuffer host_A,clmem_A
+	pos 320,0
+		repeat 2*2*2
+		mes host_A.cnt
+		loop
+	
+	stop

@@ -1,0 +1,85 @@
+//N*N要素の行列AとBをかけてCを求める計算
+//row major
+#include "HSPCL64.as"
+	HCLinit
+	randomize
+	
+	//配列 A は m x k 行列、配列 B は k x n 行列、配列 C は m x n 行列
+	n=rnd(1024*8)+1
+	k=rnd(1024*8)+1
+	m=rnd(1024*8)+1
+	mes "n=" + n + " m=" + m + " k=" + k + ""
+	
+	//カーネル設定
+	prgid=HCLCreateProgram("SGEMM.cl")
+	krnSGEMM_a=HCLCreateKernel(prgid,"SGEMM_a")
+	krnSGEMM_k=HCLCreateKernel(prgid,"SGEMM_k")
+	krnSGEMM_s=HCLCreateKernel(prgid,"SGEMM_small")
+	krnRnd=HCLCreateKernel(prgid,"GenerateRandom")
+	
+	//行列初期化
+	gpu_A = HCLCreateBuffer(m*k*4)
+	gpu_B = HCLCreateBuffer(k*n*4)
+	gpu_C = HCLCreateBuffer(m*n*4)
+	//まずは初期値をGPUで生成
+	HCLSetKrns krnRnd,gpu_A,rnd(9999)
+	HCLDoKrn1_sub krnRnd,m*k,64
+	HCLSetKrns krnRnd,gpu_B,rnd(9999)
+	HCLDoKrn1_sub krnRnd,k*n,64
+	
+	// GPUで計算
+	mes "計算開始"
+	gosub*mySGEMM
+	HCLFinish
+	mes "計算終了"
+	gosub*検算
+	stop
+
+
+
+//mySGEMM(m, n, k, gpu_A, gpu_B, gpu_C);
+*mySGEMM
+	if ((n < 128) | (m < 128)){
+	    kernel = krnSGEMM_s
+	}else{
+	    if (k \ 16 == 0){
+	        kernel = krnSGEMM_k
+	    }else{
+	        kernel = krnSGEMM_a
+	    }
+	}
+	
+	//引数をセット
+	HCLSetKrns kernel,m,n,k,gpu_A,gpu_B,gpu_C
+	
+	//計算
+	HCLDokrn2 kernel,(n + 127) / 128 * 16, (m + 127) / 128 * 16,16,16
+	return
+
+
+*検算
+	HCLdim_fpFromBuffer cpu_A,gpu_A
+	HCLdim_fpFromBuffer cpu_B,gpu_B
+	HCLdim_fpFromBuffer cpu_C,gpu_C
+
+	colno=rnd(n)
+	rowno=rnd(m)
+
+	mes
+	mes "行="+rowno+" 列="+colno+" の結果"
+	gpu_ans=cpu_C.(rowno*n+colno)
+	mes "gpu_C["+rowno+"]["+colno+"]="+gpu_ans+""
+	
+	cpu_ans=0.0
+		repeat k
+		a=cpu_A.(rowno*k+cnt)
+		b=cpu_B.(cnt*n+colno)
+		cpu_ans+=a*b
+		loop
+
+	len=strlen(str(rowno))+strlen(str(colno))
+	sp=""
+	repeat len:sp+=" ":loop
+
+	mes "CPU検算  "+sp+"="+cpu_ans+""
+	return

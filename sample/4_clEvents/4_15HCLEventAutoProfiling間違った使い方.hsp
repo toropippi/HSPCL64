@@ -1,0 +1,29 @@
+//HCLEventAutoProfilingStartで手動でeventをとらなくても自動でカウンタをすすめながらeventを記録してくれる
+//ただし、event idを手動で入力できるところにidを指定している場合は除外される
+#include "HSPCL64.as"
+#include "ViewTimeStamp_module.as"
+	randomize
+	HCLinit
+	
+	prg=HCLCreateProgram("VecAdd.cl")
+	krn=HCLCreateKernel(prg,"vecAdd")
+
+	n=1024*1024*16
+	clmem_A=HCLCreateBuffer(n)
+	clmem_B=HCLCreateBuffer(n)
+	clmem_C=HCLCreateBuffer(n)
+
+	HCLEventAutoProfilingStart
+		repeat 20
+		HCLSetKrns krn,clmem_A,clmem_B,clmem_C
+		HCLDoKrn1 krn,n/4,64,0//ここでevent id 0を指定。これをすると自動でevent記録から除外される
+		loop
+	evnum=HCLEventAutoProfilingEnd()
+	title ""+evnum+""
+	HCLFinish
+	//実行状況可視化
+	ViewEvents3 evnum
+
+	///////////////////
+	mes "HCLEventAutoProfiling命令で自動記録したevent数="+evnum
+	stop

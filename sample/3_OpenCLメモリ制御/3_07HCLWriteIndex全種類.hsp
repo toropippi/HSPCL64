@@ -1,0 +1,15 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024
+	clmem=HCLCreateBuffer(n*4)
+	
+	HCLWriteIndex_i32 clmem,0,77//poke的な使い方
+	HCLWriteIndex_fp clmem,1,77//poke的な使い方
+	HCLWriteIndex_i64 clmem,1,77//poke的な使い方
+	HCLWriteIndex_dp clmem,2,77//poke的な使い方
+
+	mes HCLReadIndex_i32(clmem,0)
+	mes HCLReadIndex_fp(clmem,1)
+	mes HCLReadIndex_i64(clmem,1)
+	mes HCLReadIndex_dp(clmem,2)

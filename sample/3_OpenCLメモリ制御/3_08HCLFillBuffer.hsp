@@ -1,0 +1,35 @@
+//FillBuffer系はpatternの型を自動で認識して埋めます。
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024*1024*32
+	clmem_A=HCLCreateBuffer(n*4)
+
+	//32bit intでfill
+	pattern=12345
+	offset=0
+	size=16//sizeはbyteで指定すること
+	HCLFillBuffer clmem_A,pattern,offset,size
+	mes HCLReadIndex_i32(clmem_A,cnt)
+
+	//64bit intでfill
+	pattern=int64("99999999999999")
+	offset=0
+	size=16//sizeはbyteで指定すること
+	HCLFillBuffer clmem_A,pattern,offset,size
+	mes HCLReadIndex_i64(clmem_A,cnt)
+	
+	//floatでfill
+	pattern=float(567.8)
+	offset=0
+	size=16//sizeはbyteで指定すること
+	HCLFillBuffer clmem_A,pattern,offset,size
+	mes HCLReadIndex_fp(clmem_A,cnt)
+	
+	//doubleでfill
+	pattern=987.654
+	offset=0
+	size=16//sizeはbyteで指定すること
+	HCLFillBuffer clmem_A,pattern,offset,size
+	mes HCLReadIndex_dp(clmem_A,cnt)
+	

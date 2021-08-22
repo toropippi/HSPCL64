@@ -1,0 +1,38 @@
+//行列転置サンプル
+//HCLBLAS_sTは関数としても使える
+#include "HSPCL64.as"
+	HCLinit
+
+	matA=HCLCreateBuffer(10*10*4)
+	//matAT=HCLCreateBuffer(10*10*4)
+	HCLBLAS_Set2DShape matA,10,10
+	//HCLBLAS_Set2DShape matAT,10,10
+
+		repeat 100
+		HCLWriteIndex_fp matA,cnt,float(1.0*rnd(10))
+		loop
+
+	matAT=HCLBLAS_sT(matA)
+
+	HCLdim_fpFromBuffer h_matA,matA
+	HCLdim_fpFromBuffer h_matAT,matAT
+
+	screen 0,640,480
+	title "matA"
+		repeat 10
+		ycnt=cnt
+			repeat 10
+			pos cnt*38,ycnt*32
+			mes strf("%3.1f",h_matA.(cnt+ycnt*10))
+			loop
+		loop
+	
+	screen 1,640,480
+	title "matAT"
+		repeat 10
+		ycnt=cnt
+			repeat 10
+			pos cnt*38,ycnt*32
+			mes strf("%3.1f",h_matAT.(cnt+ycnt*10))
+			loop
+		loop

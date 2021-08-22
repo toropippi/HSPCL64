@@ -1,0 +1,10 @@
+//SetしたShapeを確認
+//HCLBLAS_Set2DShape命令はsgemm,dgemm命令や転置命令で使われる情報であり
+//OpenCLカーネルコード内で二次元配列として使えるようになるわけではないことに注意してください。
+#include "HSPCL64.as"
+	HCLinit
+	
+	matA=HCLCreateBuffer(10*10*4)
+	HCLBLAS_Set2DShape matA,10,10
+	mes HCLBLAS_Get2DShape(matA,0)
+	mes HCLBLAS_Get2DShape(matA,1)

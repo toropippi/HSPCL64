@@ -1,0 +1,52 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=256//配列サイズ 256*4byte
+	ddim host_a,n//double型
+	dim host_b,n//float型を想定
+	dim host_c,n//int型を想定
+	
+		repeat n
+		host_a.cnt=double(rnd(1000)-501)*0.5
+		loop
+	
+	clmem_a=HCLCreateBufferFrom(host_a)
+	clmem_b=HCLCreateBufferFrom(host_b)
+	clmem_c=HCLCreateBufferFrom(host_c)
+
+	HCLDoXd "F0[i]=(float)Z[i];I0[i]=(int)Z[i];",clmem_a,clmem_b,clmem_c
+		repeat 30
+		bb=HCLReadIndex_fp(clmem_b,cnt)
+		cc=HCLReadIndex_i32(clmem_c,cnt)
+
+		mes ""+host_a.cnt+"	"+bb+"	"+cc+""
+		loop
+			
+	stop
+
+//1文字の大文字はglobal変数と解釈されますが、型については全てHCLDoXdならdoubleと決め打ちされてしまいます。
+//そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+//	C0 ～C9 	:	global変数をchar型と解釈
+//	UC0～UC9	:	global変数をunsigned char型と解釈
+//	I0 ～I9 	:	global変数をint型と解釈
+//	UI0～UI9	:	global変数をunsigned int型と解釈
+//	L0 ～L9 	:	global変数をlong long型と解釈
+//	UL0～UL9	:	global変数をunsigned long long型と解釈
+//	F0 ～F9 	:	global変数をfloat型と解釈
+//	D0 ～D9 	:	global変数をdouble型と解釈
+//
+//
+//ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+//それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+//今回の例では「Z」になっています。(可能ならAから順に使ったほうが望ましい)
+//
+//HCLDoXdに引数を与える順番ですが
+//１ 半角1文字大文字変数A-Z
+//２ C D F I L UC UI UL
+//３ 半角1文字小文字変数a-z
+//の順になります。
+//
+//今回の例ではZ,F0,I0の順になります。
+// Z:clmem_a
+// F0:clmem_b
+// I0:clmem_c

@@ -1,0 +1,45 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=256//配列サイズ
+	dim host_A,n
+		repeat n
+		host_A.cnt=rnd(256)+rnd(256)*256+rnd(256)*65536+rnd(151)*65536*151
+		loop
+	//CPU→GPU
+	clmem_A=HCLCreateBufferFrom(host_A)
+
+	//int型で認識
+	HCLdim_i32FromBuffer host_B,clmem_A
+	pos 0,0
+	mes "int"
+		repeat n
+		mes host_B.cnt
+		loop
+
+	//float型で認識
+	HCLdim_fpFromBuffer host_B,clmem_A
+	pos 160,0
+	mes "float"
+		repeat n
+		mes host_B.cnt
+		loop
+
+	//int64型で認識
+	HCLdim_i64FromBuffer host_B,clmem_A
+	pos 320,0
+	mes "int64"
+		repeat n/2
+		mes host_B.cnt
+		loop
+		
+	//double型で認識
+	HCLdim_dpFromBuffer host_B,clmem_A
+	pos 480,0
+	mes "double"
+		repeat n/2
+		mes host_B.cnt
+		loop
+
+
+	stop

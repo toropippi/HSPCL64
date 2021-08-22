@@ -1,0 +1,16 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024
+	dim data,n
+		repeat n
+		data.cnt=77+cnt
+		loop
+	clmem=HCLCreateBufferFrom(data)
+	//今GPUに数値の入ったデータが転送されている状態
+
+	//GPUの中身を見たいけどわざわざReadBufferするのは面倒というとき
+	mes HCLReadIndex_i32(clmem,0)
+	mes HCLReadIndex_i64(clmem,0)
+	mes HCLReadIndex_fp(clmem,0)
+	mes HCLReadIndex_dp(clmem,0)

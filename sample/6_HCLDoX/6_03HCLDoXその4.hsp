@@ -1,0 +1,31 @@
+//Aの2倍をBに代入
+//B自体を作成してcl_memを返す
+#include "HSPCL64.as"
+	HCLinit
+
+	n=256//配列サイズ 256*4byte
+	clmem_a=HCLCreateBuffer(n*4)
+
+	//初期化
+	HCLDoXf "A[i]=(float)RND(i)/4294967296.0f;",clmem_a//ここで0～1.0までの適当なランダム値が代入される
+	
+	clmem_b=HCLDoXf("OUT[i]=2.0*A[i];",clmem_a)
+
+	//CPU側で結果確認
+		repeat 16
+		mes ""+HCLReadIndex_fp(clmem_a,cnt)+"	"+HCLReadIndex_fp(clmem_b,cnt)+""
+		loop
+	stop
+
+
+//OUTという文字も意味を持ちます。
+//まずHCLDoX系命令は関数として使うこともでき、今回のように新しくcl_memを作成し返すことができます。
+//カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+//カーネルコード内ではOUTはfloat型(HCLDoXfの場合)であり
+//メモリのサイズは「A」と同じものが作られます。
+//
+//1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成される
+//という規則があります。
+//
+//もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合
+//OUTは一度作成されますがプラグイン内部ですぐ破棄されます。

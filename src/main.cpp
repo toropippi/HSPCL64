@@ -335,7 +335,7 @@ void MyReleaseBuffer(cl_mem m)
 
 	cl_int ret = clReleaseMemObject(m);
 	if (ret != CL_SUCCESS) {
-		MessageBox(NULL, "メモリ開放ができませんでした", "エラー", 0);
+		MessageBox(NULL, "メモリ解放ができませんでした", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
 	return;
@@ -690,7 +690,8 @@ cl_kernel StrHashToKernel(std::string& s, size_t h)
 void GemmSourceStrInit() 
 {
 	//ソース
-	std::string header = R"EOB("#define TSN 128
+	std::string header = R"EOB(
+#define TSN 128
 #define TSM 128
 #define TSK 16
 #define WPTN 8
@@ -699,7 +700,7 @@ void GemmSourceStrInit()
 #define RTSM (TSM/WPTM)
 #define LPTA ((TSK*TSN)/(RTSN*RTSM))
 #define LPTB ((TSK*TSM)/(RTSN*RTSM))
-		")EOB";
+)EOB";
 	SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5
 		+ SGEMM_SOURCE6 + SGEMM_SOURCE7;
 
@@ -910,14 +911,13 @@ static void *reffunc( int *type_res, int cmd )
 	case 0x0C://HCLCreateProgramWithBinary str source,str build option
 	{
 		//バイナリ→program
-		char* pathname;
-		pathname = code_gets();								// 文字列を取得
-		std::string s_sourse = readFileIntoString(std::string(pathname));
-		size_t binSizes = s_sourse.size();
+		char* bn;
+		bn = code_gets();
+		size_t binSizes = strlen(bn);
 		cl_int binary_status,ret;
 		
 		cl_program program = clCreateProgramWithBinary(context[clsetdev], 1, &device_id[clsetdev], (const size_t*)&binSizes,
-			(const unsigned char**)&pathname, &binary_status, &ret);
+			(const unsigned char**)&bn, &binary_status, &ret);
 		if (binary_status != CL_SUCCESS)retmeserr15(binary_status);
 		if (binary_status != CL_SUCCESS)retmeserr16(ret);
 
@@ -1627,21 +1627,22 @@ static int cmdfunc(int cmd)
 	case 0x6B://HCLWriteIndex_dp
 	case 0x07://HCLWriteIndex_fp
 	{
-		if (cmd == 0x69) { global_szof = 4; }
-		if (cmd == 0x6A) { global_szof = 8; }
-		if (cmd == 0x6B) { global_szof = 8; }
-		if (cmd == 0x07) { global_szof = 4; }
+		void* ppttr;
+		int ii;
+		float ff;
+		double dd;
+		INT64 ll;
 
 		size_t memid = Code_getSzt();
 		size_t b = Code_getSzt();//idx
 
-		int chk = code_getprm();							// パラメーターを取得(型は問わない)
-		void* ppttr;
-		int sizeofff;
-		PrmChk1(sizeofff, ppttr);//どちらも参照わたし
+		if (cmd == 0x69) { global_szof = 4; ii = code_geti(); ppttr = &ii; }
+		if (cmd == 0x6A) { global_szof = 8; ll = Code_getint64(); ppttr = &ll; }
+		if (cmd == 0x6B) { global_szof = 8; dd = code_getd(); ppttr = &dd; }
+		if (cmd == 0x07) { global_szof = 4; ff = Code_getf(); ppttr = &ff; }
 
 		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE
-			, b * global_szof, global_szof, &ppttr, 0, NULL, NULL);
+			, b * global_szof, global_szof, ppttr, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
 	}
@@ -2637,58 +2638,58 @@ static int cmdfunc(int cmd)
 
 	case 0x9B://HCLDoXc
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXc(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0x9C://HCLDoXi
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXi(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0x9D://HCLDoXl
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXl(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0x9E://HCLDoXf
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXf(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0x9F://HCLDoXd
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXd(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0xA1://HCLDoXuc
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXuc(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0xA3://HCLDoXui
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXui(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 	case 0xA4://HCLDoXul
 	{
-		cl_mem m;
+		cl_mem m = NULL;
 		HCLDoXul(m);
-		MyReleaseBuffer(m);
+		if (m != NULL)MyReleaseBuffer(m);
 		break;
 	}
 

@@ -1,0 +1,59 @@
+//C=A*B
+//の行列積のサンプル
+#include "HSPCL64.as"
+	HCLinit
+	
+	
+	matA=HCLCreateBuffer(2*2*4)
+	HCLBLAS_Set2DShape matA,2,2
+		repeat 2*2
+		HCLWriteIndex_fp matA,cnt,float(1.0*rnd(10))
+		loop
+	
+	matB=HCLCreateBuffer(2*2*4)
+	HCLBLAS_Set2DShape matB,2,2
+		repeat 2*2
+		HCLWriteIndex_fp matB,cnt,float(1.0*rnd(10))
+		loop
+	
+	matC=HCLCreateBuffer(2*2*4)
+	HCLBLAS_Set2DShape matC,2,2
+
+	//これでA,B,Cの初期設定完了
+
+	//sgemm計算
+	HCLBLAS_sgemm matC,matA,matB,0,0,0
+	//おわり
+	
+	//A中身
+	HCLdim_fpFromBuffer h_matA,matA
+		repeat 2
+		ycnt=cnt
+			repeat 2
+			pos cnt*38+10,ycnt*32+10
+			mes strf("%3.1f",h_matA.(cnt+ycnt*2))
+			loop
+		loop
+	//B中身
+	HCLdim_fpFromBuffer h_matB,matB
+		repeat 2
+		ycnt=cnt
+			repeat 2
+			pos cnt*38+130,ycnt*32+10
+			mes strf("%3.1f",h_matB.(cnt+ycnt*2))
+			loop
+		loop
+	//C中身
+	HCLdim_fpFromBuffer h_matC,matC
+		repeat 2
+		ycnt=cnt
+			repeat 2
+			pos cnt*38+250,ycnt*32+10
+			mes strf("%3.1f",h_matC.(cnt+ycnt*2))
+			loop
+		loop
+
+	pos 97,26
+	mes "×"
+	pos 218,26
+	mes "＝"

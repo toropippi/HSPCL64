@@ -1,0 +1,20 @@
+//HCLCreateProgramWithBinaryでバイナリからcl_programを生成します。
+#include "HSPCL64.as"
+	HCLinit
+
+	sdim sbin,4096
+	bload "5_07VecAdd_Bin.txt",sbin
+
+	prg=HCLCreateProgramWithBinary(sbin)
+	krn=HCLCreateKernel(prg,"test")
+	
+	mes "カーネルid="+krn
+
+	a=HCLCreateBuffer(64*4)
+	b=HCLCreateBuffer(64*4)
+	c=HCLCreateBuffer(64*4)
+	HCLSetkrns krn,a,b,c
+	HCLDokrn1 krn,64,64
+	HCLFinish
+	mes "カーネル実行できた"
+	stop

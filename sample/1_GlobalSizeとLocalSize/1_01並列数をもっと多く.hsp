@@ -1,0 +1,42 @@
+//やってることはVecAdd.hspと同じ
+//並列数をもっともっと多くしてみましょう。
+//global_sizeが並列数です(ソースコードのn)。local_sizeは、global_sizeがlocal_sizeで割り切れる必要があります。
+#include "HSPCL64.as"
+	HCLinit
+	prg=HCLCreateProgram("VecAdd.cl")
+	krn=HCLCreateKernel(prg,"vecAdd")
+	
+	n=1024*1024
+	clmem_A=HCLCreateBuffer(n*4)
+	clmem_B=HCLCreateBuffer(n*4)
+	clmem_C=HCLCreateBuffer(n*4)
+	
+	dim host_A,n
+	dim host_B,n
+	dim host_C,n
+		repeat n
+		host_A.cnt=cnt
+		host_B.cnt=cnt
+		loop
+	
+	HCLWriteBuffer clmem_A,host_A,n*4,0,0//CPU→GPU
+	HCLWriteBuffer clmem_B,host_B,n*4,0,0//CPU→GPU
+	
+	HCLSetKernel krn,0,clmem_A
+	HCLSetKernel krn,1,clmem_B
+	HCLSetKernel krn,2,clmem_C
+	
+	HCLDoKrn1 krn,n,256,0//1024*1024がglobal_size。これは256で割り切れる。
+	HCLReadBuffer clmem_C,host_C,n*4,0,0//GPU→CPU
+	
+	//eventから時間情報を取得。返り値は64bit int
+	start_time=HCLGetEventLogs(0,6)//6はCL_PROFILING_COMMAND_STARTのtime
+	end_time=HCLGetEventLogs(0,7)//7はCL_PROFILING_COMMAND_ENDのtime
+	mes "計算start "+start_time
+	mes "計算end   "+end_time
+	
+		repeat 256
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	
+	stop

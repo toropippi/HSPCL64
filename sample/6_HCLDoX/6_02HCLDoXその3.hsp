@@ -1,0 +1,95 @@
+//Aは256要素のfloat型でランダムな初期値0～1.0を入れる。
+//部分的に総和を求めたい
+//Aを64要素刻みでshared memoryを使って総和を計算しB[0]～B[3]に結果を入れる
+#include "HSPCL64.as"
+	HCLinit
+
+	n=256//配列サイズ 256*4byte
+	clmem_a=HCLCreateBuffer(n*4)
+	clmem_b=HCLCreateBuffer(n/64*4)
+
+	//初期化
+	HCLDoXf "A[i]=(float)RND(i)/4294967296.0f;",clmem_a//ここで0～1.0までの適当なランダム値が代入される
+	HCLFillBuffer clmem_b,float(0)
+	
+	HCLDoXf {"
+		S6[li]=A[i];
+		int x=32;
+		REP(j,6){
+			BARRIER
+			if (li<x){
+				S6[li]+=S6[li+x];
+			}
+			x/=2;
+		}
+		if (li==0) B[i/64]=S6[0];
+	"},clmem_a,clmem_b
+
+	//CPU側で結果確認
+		repeat 4
+		mes HCLReadIndex_fp(clmem_b,cnt)
+		loop
+	stop
+
+
+//S0～S9という文字列も意味を持ちます。
+//SはShared memoryのSであり
+//	S0	:	1要素のShared memory
+//	S1	:	2要素のShared memory
+//	S2	:	4要素のShared memory
+//	S3	:	8要素のShared memory
+//	S4	:	16要素のShared memory
+//	S5	:	32要素のShared memory
+//	S6	:	64要素のShared memory
+//	S7	:	128要素のShared memory
+//	S8	:	256要素のShared memory
+//	S9	:	512要素のShared memory
+//
+//型はHCLDoXfなのでfloat型と決定されます。
+//今回はS6なので64要素のfloat型shared memoryを確保したことになります。
+//具体的には
+//	__local float S6[64];
+//というコードが追記されたことになっています。
+//
+//「li」という変数は
+//	int li = get_local_id(0);
+//と宣言されています。
+//
+//
+//またデフォルト設定されている関数があり
+//	uint RND(uint s) {
+//		s*=1847483629;
+//		s=(s^61)^(s>>16);
+//		s*=9;
+//		s=s^(s>>4);
+//		s*=0x27d4eb2d;
+//		s=s^(s>>15);
+//		return s;
+//	}
+//
+//これによりRND()関数をデフォルトで使うことができます。
+//
+//また#defineで下記文言が登録されており使うことができます。
+//	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+//	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+//
+//
+//コードの使い回しについて
+//HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+//文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+//ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+//
+//したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+//2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+//例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+//
+//
+//最後に
+//これらの規則、略語は全て個人的に決めたものであり、OpenCLコードをいかに簡便に書くかを独自に追求したものです。
+//したがって一般的な規則(略語)かのように理解するのはおやめください。
+//一応解説すると
+// RND : HSP標準命令からとった
+// REP : 競プロでよくある略し方
+// BARRIER : 独自
+// i,li : 独自
+// C,I,L,F,D,UC,UI,UL : FORTRANでは暗黙の了解でa～hとo～zは実数、i～nは整数みたいな規則があったのを応用したつもり
