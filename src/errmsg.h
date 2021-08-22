@@ -641,19 +641,8 @@ void mes(const char* strc, int val)
 
 
 
-
-
-
-std::string SGEMM_SOURCE0 = R"EOB(#define TSN 128
-#define TSM 128
-#define TSK 16
-#define WPTN 8
-#define WPTM 8
-#define RTSN (TSN/WPTN)
-#define RTSM (TSM/WPTM)
-#define LPTA ((TSK*TSN)/(RTSN*RTSM))
-#define LPTB ((TSK*TSM)/(RTSN*RTSM))
-__kernel void SGEMM_a(int M,int N,int K,__global float*A,__global float*B,__global float*C)
+std::string SGEMM_SOURCE0 = R"EOB(
+__kernel void floatGEMM_a(int M,int N,int K,__global float*A,__global float*B,__global float*C)
 {
 int threadIdxx=get_local_id(0);
 int threadIdxy=get_local_id(1);
@@ -719,17 +708,17 @@ acc[8+1]+=Areg.y*Breg[0].y;
 acc[8+2]+=Areg.y*Breg[0].z;
 acc[8+3]+=Areg.y*Breg[0].w;
 acc[8+4]+=Areg.y*Breg[1].x;
-acc[8+5]+=Areg.y*)EOB";
-
-
-std::string SGEMM_SOURCE1 = R"EOB(Breg[1].y;
+acc[8+5]+=Areg.y*Breg[1].y;
 acc[8+6]+=Areg.y*Breg[1].z;
 acc[8+7]+=Areg.y*Breg[1].w;
 acc[16+0]+=Areg.z*Breg[0].x;
 acc[16+1]+=Areg.z*Breg[0].y;
 acc[16+2]+=Areg.z*Breg[0].z;
 acc[16+3]+=Areg.z*Breg[0].w;
-acc[16+4]+=Areg.z*Breg[1].x;
+acc[16+4]+=A)EOB";
+
+
+std::string SGEMM_SOURCE1 = R"EOB(reg.z*Breg[1].x;
 acc[16+5]+=Areg.z*Breg[1].y;
 acc[16+6]+=Areg.z*Breg[1].z;
 acc[16+7]+=Areg.z*Breg[1].w;
@@ -788,16 +777,16 @@ Breg[0].y=B[BoffsetDmy]; BoffsetDmy=min(Boffset+32, maxBidx);
 Areg.z=A[Aoffset]; Aoffset+=16*K;
 Breg[0].z=B[BoffsetDmy]; BoffsetDmy=min(Boffset+48, maxBidx);
 Areg.w=A[Aoffset]; Aoffset+=16*K;
-Breg[0].w=B[BoffsetDmy]; Boffset=min(Boffset+8*N, maxBi)EOB";
-
-
-std::string SGEMM_SOURCE2 = R"EOB(dx);
+Breg[0].w=B[BoffsetDmy]; Boffset=min(Boffset+8*N, maxBidx);
 Asub[tidm][tidn]=Areg;
 Bsub[tidm][tidn]=Breg[0];
 Areg.x=A[Aoffset]; Aoffset+=16*K;
 Breg[0].x=B[Boffset]; BoffsetDmy=min(Boffset+16, maxBidx);
 Areg.y=A[Aoffset]; Aoffset+=16*K;
-Breg[0].y=B[BoffsetDmy]; BoffsetDmy=min(Boffset+32, maxBidx);
+Breg[0].y=B[Bof)EOB";
+
+
+std::string SGEMM_SOURCE2 = R"EOB(fsetDmy]; BoffsetDmy=min(Boffset+32, maxBidx);
 Areg.z=A[Aoffset]; Aoffset=min(Aoffset+16*K, maxAidx);
 Breg[0].z=B[BoffsetDmy]; BoffsetDmy=min(Boffset+48, maxBidx);
 Areg.w=A[Aoffset];
@@ -858,17 +847,17 @@ acc[40+4]+=Areg.y*Breg[1].x;
 acc[40+5]+=Areg.y*Breg[1].y;
 acc[40+6]+=Areg.y*Breg[1].z;
 acc[40+7]+=Areg.y*Breg[1].w;
-acc[48+0)EOB";
-
-
-std::string SGEMM_SOURCE3 = R"EOB(]+=Areg.z*Breg[0].x;
+acc[48+0]+=Areg.z*Breg[0].x;
 acc[48+1]+=Areg.z*Breg[0].y;
 acc[48+2]+=Areg.z*Breg[0].z;
 acc[48+3]+=Areg.z*Breg[0].w;
 acc[48+4]+=Areg.z*Breg[1].x;
 acc[48+5]+=Areg.z*Breg[1].y;
 acc[48+6]+=Areg.z*Breg[1].z;
-acc[48+7]+=Areg.z*Breg[1].w;
+)EOB";
+
+
+std::string SGEMM_SOURCE3 = R"EOB(acc[48+7]+=Areg.z*Breg[1].w;
 acc[56+0]+=Areg.w*Breg[0].x;
 acc[56+1]+=Areg.w*Breg[0].y;
 acc[56+2]+=Areg.w*Breg[0].z;
@@ -886,7 +875,7 @@ C[globalRow*N+globalCol]=acc[wm*8+wn];
 }
 }
 }
-__kernel void SGEMM_k(int M,int N,int K,__global float*A,__global float*B,__global float*C)
+__kernel void floatGEMM_k(int M,int N,int K,__global float*A,__global float*B,__global float*C)
 {
 int threadIdxx=get_local_id(0);
 int threadIdxy=get_local_id(1);
@@ -937,17 +926,17 @@ Bsub[tidm+16][tidn]=dt;
 Boffset+=8*N;
 barrier(CLK_LOCAL_MEM_FENCE);
 int tidnk=tidn;
-for (i)EOB";
-
-
-std::string SGEMM_SOURCE4 = R"EOB(nt k=0; k<TSK; k++) {
+for (int k=0; k<TSK; k++) {
 Breg[0]=Bsub[k*2][tidn];
 Areg=Asub[tidm][k];
 Breg[1]=Bsub[k*2+1][tidn];
 acc[0]+=Areg.x*Breg[0].x;
 acc[1]+=Areg.x*Breg[0].y;
 acc[2]+=Areg.x*Breg[0].z;
-acc[3]+=Areg.x*Breg[0].w;
+acc[3]+=Areg.x*Breg)EOB";
+
+
+std::string SGEMM_SOURCE4 = R"EOB([0].w;
 acc[4]+=Areg.x*Breg[1].x;
 acc[5]+=Areg.x*Breg[1].y;
 acc[6]+=Areg.x*Breg[1].z;
@@ -1012,10 +1001,7 @@ acc[56+7]+=Areg.w*Breg[1].w;
 }
 barrier(CLK_LOCAL_MEM_FENCE);
 }
-f)EOB";
-
-
-std::string SGEMM_SOURCE5 = R"EOB(or (int wn=0; wn<8; wn++) {
+for (int wn=0; wn<8; wn++) {
 int globalCol=offsetN+wn*RTSN;
 for (int wm=0; wm<8; wm++) {
 int globalRow=offsetM+wm*RTSM;
@@ -1023,7 +1009,10 @@ C[globalRow*N+globalCol]=acc[wm*8+wn];
 }
 }
 }
-__kernel void SGEMM_small(int M,int N,int K,__global float*A,__global float*B,__global float*C)
+__kernel void floatGEMM_sm)EOB";
+
+
+std::string SGEMM_SOURCE5 = R"EOB(all(int M,int N,int K,__global float*A,__global float*B,__global float*C)
 {
 int threadIdxx=get_local_id(0);
 int threadIdxy=get_local_id(1);
@@ -1072,17 +1061,17 @@ dtb.z=B[nowBoffset]; nowBoffset=min(Boffset+48, maxBidx);
 dta.w=A[nowAoffset]; Aoffset+=16; nowAoffset=min(Aoffset, maxAidx);
 dtb.w=B[nowBoffset]; Boffset+=8*N; nowBoffset=min(Boffset, maxBidx);
 Asub[tid+256]=dta;
-Bsub[ti)EOB";
-
-
-std::string SGEMM_SOURCE6 = R"EOB(d+256]=dtb;
+Bsub[tid+256]=dtb;
 barrier(CLK_LOCAL_MEM_FENCE);
 int tidnk=tidn;
 int tidmk=tidm*16;
 int kmin=min(K-t, 16);
 for (int k=0; k < kmin; k++) {
 Breg[0]=Bsub[tidnk]; tidnk+=16;
-Areg=Asub[tidmk]; tidmk+=256;
+Areg=Asub[tidmk]; tidmk+)EOB";
+
+
+std::string SGEMM_SOURCE6 = R"EOB(=256;
 Breg[1]=Bsub[tidnk]; tidnk+=16;
 acc[0]+=Areg.x*Breg[0].x;
 acc[1]+=Areg.x*Breg[0].y;
@@ -1145,10 +1134,7 @@ acc[56+0]+=Areg.w*Breg[0].x;
 acc[56+1]+=Areg.w*Breg[0].y;
 acc[56+2]+=Areg.w*Breg[0].z;
 acc[56+3]+=Areg.w*Breg[0].w;
-acc[56+4]+=Areg)EOB";
-
-
-std::string SGEMM_SOURCE7 = R"EOB(.w*Breg[1].x;
+acc[56+4]+=Areg.w*Breg[1].x;
 acc[56+5]+=Areg.w*Breg[1].y;
 acc[56+6]+=Areg.w*Breg[1].z;
 acc[56+7]+=Areg.w*Breg[1].w;
@@ -1156,7 +1142,10 @@ acc[56+7]+=Areg.w*Breg[1].w;
 barrier(CLK_LOCAL_MEM_FENCE);
 }
 for (int wn=0; wn < 8; wn++) {
-int globalRow=offsetN+wn*RTSN;
+int globalRow=offset)EOB";
+
+
+std::string SGEMM_SOURCE7 = R"EOB(N+wn*RTSN;
 if (globalRow >=N) break;
 for (int wm=0; wm < 8; wm++) {
 int globalCol=offsetM+wm*RTSM;
@@ -1165,7 +1154,7 @@ C[globalCol*N+globalRow]=acc[wm*8+wn];
 }
 }
 }
-__kernel void Trans(int M,int N,__global float*A,__global float*AT)
+__kernel void floatTrans(int M,int N,__global float*A,__global float*AT)
 {
 int threadIdxx=get_local_id(0);
 int threadIdxy=get_local_id(1);
@@ -1187,7 +1176,7 @@ sub[tidoffset+tidm*16]=A[offsetN+offsetM*N];
 barrier(CLK_LOCAL_MEM_FENCE);
 AT[woffsetN*M+woffsetM]=sub[tidoffset+tidn*16];
 }
-__kernel void SGEMV(__global float*A,__global float*X,__global float*Y,int col){
+__kernel void floatGEMV(__global float*A,__global float*X,__global float*Y,int col){
 int gi=get_group_id(0);
 int i=get_local_id(0);
 int li=i;
@@ -1204,15 +1193,6 @@ if (li<i)S[li]+=S[li+i];
 }
 if (li==0){Y[gi]=S[0];}
 }
-__kernel void SGEVM(__global float*A,__global float*X,__global float*Y,int col,int raw){
-int idx=get_global_id(0);
-if (idx>=col)return;
-float r=0.0;
-for(int j=0;j<raw;j++)
-{
-r+=A[idx+j*col]*X[j];
-}
-Y[idx]=r;
-})EOB";
+)EOB";
 
 

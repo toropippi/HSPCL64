@@ -22,9 +22,9 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 	stype[2] = "long";
 	stype[3] = "float";
 	stype[4] = "double";
-	stype[6] = "uchar";
-	stype[7] = "uint";
-	stype[8] = "ulong";
+	stype[5] = "uchar";
+	stype[6] = "uint";
+	stype[7] = "ulong";
 	std::string Aa = "A";
 
 	sor = " " + sor + "     ";
@@ -312,12 +312,15 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 
 static void HCLDoX(int typeflg)
 {
-	int sizelist[5];
+	int sizelist[8];
 	sizelist[0] = 1;
 	sizelist[1] = 4;
 	sizelist[2] = 8;
 	sizelist[3] = 4;
 	sizelist[4] = 8;
+	sizelist[5] = 1;
+	sizelist[6] = 4;
+	sizelist[7] = 8;
 	//まずは引数全部取得
 	cl_int ret;
 	char* c_source;
@@ -403,19 +406,7 @@ static void HCLDoX(int typeflg)
 	//コード生成して
 	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt);
 	size_t h = KrnToHash(s_sourse);
-	auto itr = codemap.find(h);// h が設定されているか？
-	if (itr != codemap.end()) {
-		//設定されている場合の処理
-		kernel = codemap[h];
-	}
-	else
-	{
-		//設定されていない場合の処理
-		program = WithSource_func(context[clsetdev], s_sourse, "");
-		ret = clCreateKernelsInProgram(program, 1, &kernel, NULL);//プログラムの中の最初にでてくるカーネルを取得
-		if (ret != CL_SUCCESS)retmeserr8(ret);
-		codemap[h] = kernel;
-	}
+	kernel = StrHashToKernel(s_sourse, h);
 
 	//これでkernelまで求まった。あとは引数指定
 	//global数を計算。Aに対応
@@ -433,7 +424,7 @@ static void HCLDoX(int typeflg)
 	
 	//あとは実行するだけ
 	//outevent関連
-	//cl_event* outevent = EventOutChk(prm2);
+	cl_event* outevent = EventOutChk2((size_t)kernel);
 	//wait event list関連
 	cl_event* ev_ = GetWaitEvlist();
 	size_t local_size = 64;
@@ -442,7 +433,7 @@ static void HCLDoX(int typeflg)
 
 	if (p4_1 != 0) {
 		ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			kernel, 1, NULL, &p4_1, &local_size, num_event_wait_list, ev_, NULL);//1回目は無事終わる
+			kernel, 1, NULL, &p4_1, &local_size, num_event_wait_list, ev_, outevent);//1回目は無事終わる
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 	}
 
@@ -456,28 +447,43 @@ static void HCLDoX(int typeflg)
 	return;
 }
 
-static void HCLDoXc(void)
+
+void HCLDoXc(void)
 {
 	HCLDoX(0);
 }
 
-
-static void HCLDoXi(void)
+void HCLDoXi(void)
 {
 	HCLDoX(1);
 }
 
-static void HCLDoXl(void)
+void HCLDoXl(void)
 {
 	HCLDoX(2);
 }
 
-static void HCLDoXf(void)
+void HCLDoXf(void)
 {
 	HCLDoX(3);
 }
 
-static void HCLDoXd(void)
+void HCLDoXd(void)
 {
 	HCLDoX(4);
+}
+
+void HCLDoXuc(void)
+{
+	HCLDoX(5);
+}
+
+void HCLDoXui(void)
+{
+	HCLDoX(6);
+}
+
+void HCLDoXul(void)
+{
+	HCLDoX(7);
 }

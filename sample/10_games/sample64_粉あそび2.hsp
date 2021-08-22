@@ -140,11 +140,11 @@
 	HCLSetkrns krnPsetp_vram,p_pos,p_vram
 	HCLSetkrns krnw3_to_w,w3_vram,w_vram
 
-	HCLFillBuffer_i32 d3_vram,0//‰Šú‰»
-	HCLFillBuffer_i32 vram_dmy0,-1//‰Šú‰»
-	HCLFillBuffer_i32 vram_dmy1,-1//‰Šú‰»
-	HCLFillBuffer_i32 vram_dmy2,-1//‰Šú‰»
-	HCLFillBuffer_i32 p_pos,(winy-1)*65536//‰ŠúÀ•W‚Íˆê”Ô‰º
+	HCLFillBuffer d3_vram,0//‰Šú‰»
+	HCLFillBuffer vram_dmy0,-1//‰Šú‰»
+	HCLFillBuffer vram_dmy1,-1//‰Šú‰»
+	HCLFillBuffer vram_dmy2,-1//‰Šú‰»
+	HCLFillBuffer p_pos,(winy-1)*65536//‰ŠúÀ•W‚Íˆê”Ô‰º
 	return
 
 *•Çî•ñİ’è

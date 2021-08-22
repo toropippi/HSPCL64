@@ -14,8 +14,8 @@
 	memA=HCLCreateBuffer(WX*WY*4)
 	memB=HCLCreateBuffer(WX*WY*4)
 	memvrm=HCLCreateBuffer(WX*WY*3)
-	HCLFillBuffer_i32 memA,0
-	HCLFillBuffer_i32 memB,0
+	HCLFillBuffer memA,0
+	HCLFillBuffer memB,0
 
 	gosub*重量級宇宙船
 	gosub*ダイハード

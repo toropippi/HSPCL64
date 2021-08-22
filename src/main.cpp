@@ -19,6 +19,7 @@
 
 #include "errmsg.h"
 
+const double PluginVersion = 1.1;
 
 const int MAX_PLATFORM_IDS = 32;//platform_idの最大値
 const int MAX_DEVICE_IDS = 2048;//一度に取得できるdeviceの最大値
@@ -37,10 +38,24 @@ cl_program program;
 cl_kernel kernel;
 cl_kernel* SGEMMkernel;//devごとに作る。a,k,small,transの4つ
 cl_kernel* DGEMMkernel;
-const int GEMMkernelNum = 6;//sgemm*3+trans+gemv+gevm
+const int GEMMkernelNum = 10;//sgemm*3+trans+sgemv+dgemm*3+trans+dgemv
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
 std::string SGEMM_SOURCE = "";
+int eventAutoProfilingSwitch = 0;
+int eventAutoProfilingcnt = 0;
+int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
+int clsetque = 0;//OpenCLで現在メインとなっているque
+int cmd_properties = CL_QUEUE_PROFILING_ENABLE;//OpenCLのコマンドキュー生成時に使うプロパティ番号
+int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
+int thread_start = 0;//0はEnqueueまちがない、1以降はthreadに投げたがまだEnqueueされてない数
+INT64 bufferAllSize = 0;//cl_memの総合サイズ
+
+int global_fl;
+int global_szof;
+int global_p1;
+int global_p2;
+void* global_voidptr;
 
 struct EventStruct
 {
@@ -50,15 +65,6 @@ struct EventStruct
 };
 EventStruct* evinfo;
 
-int clsetdev = 0;//OpenCLで現在メインとなっているデバイスno
-int clsetque = 0;//OpenCLで現在メインとなっているque
-int cmd_properties = CL_QUEUE_PROFILING_ENABLE;//OpenCLのコマンドキュー生成時に使うプロパティ番号
-int num_event_wait_list = 0;//NDRangeKernel とかで使うやつ。使う度に0になる
-int thread_start = 0;//0はEnqueueまちがない、1以降はthreadに投げたがまだEnqueueされてない数
-INT64 bufferAllSize = 0;//cl_memの総合サイズ
-
-//Codeのhashとkernelの紐付け
-std::map<size_t, cl_kernel> codemap;
 //clmem_idとshapeと生存フラグ紐付け
 struct ShapeHP
 {
@@ -66,7 +72,15 @@ struct ShapeHP
 	size_t col;
 	int HP;
 };
+
 std::map<cl_mem, ShapeHP> memmap;
+
+//Codeのhashとkernelの紐付け
+std::map<size_t, cl_kernel> codemap;
+
+
+
+
 
 
 
@@ -253,6 +267,36 @@ cl_event* EventOutChk(size_t k)
 		evinfo[eventid].devno = clsetdev;
 		evinfo[eventid].queno = clsetque;
 	}
+	if (eventid == -1) 
+	{
+		if (eventAutoProfilingSwitch == 1)
+		{
+			clReleaseEvent(cppeventlist[eventAutoProfilingcnt]);
+			outeventp = &cppeventlist[eventAutoProfilingcnt];
+			evinfo[eventAutoProfilingcnt].k = k;
+			evinfo[eventAutoProfilingcnt].devno = clsetdev;
+			evinfo[eventAutoProfilingcnt].queno = clsetque;
+			eventAutoProfilingcnt++;
+			if (eventAutoProfilingcnt == CL_EVENT_MAX) eventAutoProfilingcnt = 0;
+		}
+	}
+	return outeventp;
+}
+
+//DoXi系でイベント記録するか
+cl_event* EventOutChk2(size_t k)
+{
+	cl_event* outeventp = NULL;
+	if (eventAutoProfilingSwitch == 1) 
+	{
+		clReleaseEvent(cppeventlist[eventAutoProfilingcnt]);
+		outeventp = &cppeventlist[eventAutoProfilingcnt];
+		evinfo[eventAutoProfilingcnt].k = k;
+		evinfo[eventAutoProfilingcnt].devno = clsetdev;
+		evinfo[eventAutoProfilingcnt].queno = clsetque;
+		eventAutoProfilingcnt++;
+		if (eventAutoProfilingcnt == CL_EVENT_MAX) eventAutoProfilingcnt = 0;
+	}
 	return outeventp;
 }
 
@@ -304,18 +348,26 @@ void sgemminit()
 	if (SGEMMkernel[clsetdev * GEMMkernelNum] == NULL)
 	{
 		cl_program clp = WithSource_func(context[clsetdev], SGEMM_SOURCE, "");
-		char* p0 = "SGEMM_a";
-		char* p1 = "SGEMM_k";
-		char* p2 = "SGEMM_small";
-		char* p3 = "Trans";
-		char* p4 = "SGEMV";
-		char* p5 = "SGEVM";
+		char* p0 = "floatGEMM_a";
+		char* p1 = "floatGEMM_k";
+		char* p2 = "floatGEMM_small";
+		char* p3 = "floatTrans";
+		char* p4 = "floatGEMV";
+		char* p5 = "doubleGEMM_a";
+		char* p6 = "doubleGEMM_k";
+		char* p7 = "doubleGEMM_small";
+		char* p8 = "doubleTrans";
+		char* p9 = "doubleGEMV";
 		SGEMMkernel[clsetdev * GEMMkernelNum] = clCreateKernel(clp, p0, NULL);
 		SGEMMkernel[clsetdev * GEMMkernelNum + 1] = clCreateKernel(clp, p1, NULL);
 		SGEMMkernel[clsetdev * GEMMkernelNum + 2] = clCreateKernel(clp, p2, NULL);
 		SGEMMkernel[clsetdev * GEMMkernelNum + 3] = clCreateKernel(clp, p3, NULL);
 		SGEMMkernel[clsetdev * GEMMkernelNum + 4] = clCreateKernel(clp, p4, NULL);
 		SGEMMkernel[clsetdev * GEMMkernelNum + 5] = clCreateKernel(clp, p5, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 6] = clCreateKernel(clp, p6, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 7] = clCreateKernel(clp, p7, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 8] = clCreateKernel(clp, p8, NULL);
+		SGEMMkernel[clsetdev * GEMMkernelNum + 9] = clCreateKernel(clp, p9, NULL);
 	}
 }
 
@@ -351,11 +403,11 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 	memmap[tm].col = sh.raw;
 
 	//outevent関連
-	//cl_event* outevent = EventOutChk(prm2);
+	cl_event* outevent = EventOutChk2((size_t)kernel);
 	//wait event list関連
 	cl_event* ev_ = GetWaitEvlist();
 	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-		kernel, 2, NULL, global_size, local_size, num_event_wait_list, ev_, NULL);//1回目は無事終わる
+		kernel, 2, NULL, global_size, local_size, num_event_wait_list, ev_, outevent);//1回目は無事終わる
 	if (ret != CL_SUCCESS) { retmeserr(ret); }
 	num_event_wait_list = 0;
 	return;
@@ -494,11 +546,11 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	local_size[1] = 16;
 
 	//outevent関連
-	//cl_event* outevent = EventOutChk(prm2);
+	cl_event* outevent = EventOutChk2((size_t)gkernel);
 	//wait event list関連
 	cl_event* ev_ = GetWaitEvlist();
 	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-		gkernel, 2, NULL, global_size, local_size, num_event_wait_list, ev_, NULL);
+		gkernel, 2, NULL, global_size, local_size, num_event_wait_list, ev_, outevent);
 	if (ret != CL_SUCCESS) { retmeserr(ret); }
 	num_event_wait_list = 0;
 
@@ -557,62 +609,11 @@ void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg)
 	size_t global_size = 256 * raw;
 	size_t local_size = 256;
 	//outevent関連
-	//cl_event* outevent = EventOutChk(prm2);
+	cl_event* outevent = EventOutChk2((size_t)gkernel);
 	//wait event list関連
 	cl_event* ev_ = GetWaitEvlist();
 	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-		gkernel, 1, NULL, &global_size, &local_size, num_event_wait_list, ev_, NULL);
-	if (ret != CL_SUCCESS) { retmeserr(ret); }
-	num_event_wait_list = 0;
-}
-
-//関数型と命令形どちらにも対応できるように
-//retflgは0命令形、1関数型
-// //y=xA
-//global_size=(col+63)/64*64
-//local_size=64
-void MySGEVMmain(cl_mem& Y, cl_mem& A, cl_mem& X, int retflg)
-{
-	sgemminit();
-	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 5];
-
-	auto itr = memmap.find(A);
-	if (itr == memmap.end()) MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
-	int col = (int)memmap[A].col;
-	int raw = (int)memmap[A].raw;
-	if (retflg == 1)
-	{
-		Y = MyCreateBuffer(CL_MEM_READ_WRITE, col * 4, NULL);
-	}
-	//エラーチェック
-	if (GetMemSize(Y) != 4 * col)
-	{
-		std::string errs;
-		errs = "縦横サイズエラー：ベクトル行列積できません\nA.col=" + std::to_string(col) + "\nsize(Y)=" + std::to_string(GetMemSize(Y)) + "";
-		MessageBox(NULL, errs.c_str(), "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-	}
-	if (GetMemSize(X) != 4 * raw)
-	{
-		std::string errs;
-		errs = "縦横サイズエラー：ベクトル行列積できません\nA.raw=" + std::to_string(raw) + "\nsize(X)=" + std::to_string(GetMemSize(X)) + "";
-		MessageBox(NULL, errs.c_str(), "エラー", 0);
-		puterror(HSPERR_UNSUPPORTED_FUNCTION);
-	}
-	clSetKernelArg(gkernel, 0, sizeof(A), &A);
-	clSetKernelArg(gkernel, 1, sizeof(X), &X);
-	clSetKernelArg(gkernel, 2, sizeof(Y), &Y);
-	clSetKernelArg(gkernel, 3, sizeof(col), &col);
-	clSetKernelArg(gkernel, 4, sizeof(raw), &raw);
-
-	size_t global_size = (col + 63) / 64 * 64;
-	size_t local_size = 64;
-	//outevent関連
-	//cl_event* outevent = EventOutChk(prm2);
-	//wait event list関連
-	cl_event* ev_ = GetWaitEvlist();
-	cl_int ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-		gkernel, 1, NULL, &global_size, &local_size, num_event_wait_list, ev_, NULL);
+		gkernel, 1, NULL, &global_size, &local_size, num_event_wait_list, ev_, outevent);
 	if (ret != CL_SUCCESS) { retmeserr(ret); }
 	num_event_wait_list = 0;
 }
@@ -660,6 +661,65 @@ void PrmChk1(int& sizeofff, void*& ppttr)
 	return;
 }
 
+size_t* Lsz(size_t* local_size) 
+{
+	size_t l = *local_size;
+	if (l == 0)return NULL;
+	return local_size;
+}
+
+
+//hashがあればkernelを返す、なければ登録
+cl_kernel StrHashToKernel(std::string& s, size_t h) 
+{
+	cl_kernel k;
+	auto itr = codemap.find(h);// h が設定されているか？
+	if (itr != codemap.end()) {
+		//設定されている場合の処理
+		k = codemap[h];
+	}
+	else
+	{
+		//設定されていない場合の処理
+		program = WithSource_func(context[clsetdev], s, "");
+		cl_int ret = clCreateKernelsInProgram(program, 1, &k, NULL);//プログラムの中の最初にでてくるカーネルを取得
+		if (ret != CL_SUCCESS)retmeserr8(ret);
+		codemap[h] = k;
+	}
+	return k;
+}
+
+void GemmSourceStrInit() 
+{
+	//ソース
+	std::string header = R"EOB("#define TSN 128
+#define TSM 128
+#define TSK 16
+#define WPTN 8
+#define WPTM 8
+#define RTSN (TSN/WPTN)
+#define RTSM (TSM/WPTM)
+#define LPTA ((TSK*TSN)/(RTSN*RTSM))
+#define LPTB ((TSK*TSM)/(RTSN*RTSM))
+		")EOB";
+	SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5
+		+ SGEMM_SOURCE6 + SGEMM_SOURCE7;
+
+
+
+	std::string s = SGEMM_SOURCE;     // 置換対象の文字列
+	std::string target = "float";     // 検索文字列
+	std::string replacement = "doub;e"; // 置換文字列
+	if (!target.empty()) {
+		std::string::size_type pos = 0;
+		while ((pos = s.find(target, pos)) != std::string::npos) {
+			s.replace(pos, target.length(), replacement);
+			pos += replacement.length();
+		}
+	}
+	// s == "a-b-c"
+	SGEMM_SOURCE = header + SGEMM_SOURCE + "\n" + s;
+}
 ////////////自作関数ここまで
 #include "HCLDoX.h"
 
@@ -776,6 +836,14 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
+	case 0x64:	// HCLGetPluginVersion
+	{
+		fDouble = true;
+		ref_doubleval = PluginVersion;
+		break;
+	}
+
+
 	case 0x54://HCLGetDeviceCount
 	{
 		fInt = true;
@@ -874,35 +942,27 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 	
+
+	//////////////////////////////////////////////////HCLReadIndex_i32系
 	case 0x66://HCLReadIndex_i32
-	{
-		fInt = true;
-		size_t memid = Code_getSzt();
-		size_t b = Code_getSzt();//idx
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &ref_int32val, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
-
 	case 0x67://HCLReadIndex_i64
+	case 0x68://HCLReadIndex_dp
+	case 0x08://HCLReadIndex_fp
 	{
-		fInt64 = true;
+		if (cmd == 0x66) { global_fl = HSPVAR_FLAG_INT; global_szof = 4; global_voidptr = &ref_int32val; fInt = true; }
+		if (cmd == 0x67) { global_fl = HspVarInt64_typeid(); global_szof = 8; global_voidptr = &ref_int64val; fInt64 = true; }
+		if (cmd == 0x68) { global_fl = HSPVAR_FLAG_DOUBLE; global_szof = 8; global_voidptr = &ref_doubleval; fDouble = true; }
+		if (cmd == 0x08) { global_fl = HspVarFloat_typeid(); global_szof = 4; global_voidptr = &ref_floatval; fFloat = true; }
 		size_t memid = Code_getSzt();
 		size_t b = Code_getSzt();//idx
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_int64val, 0, NULL, NULL);
+		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE
+			, b * global_szof, global_szof, global_voidptr, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
 	}
 
-	case 0x68://HCLReadIndex_dp
-	{
-		fDouble = true;
-		size_t memid = Code_getSzt();
-		size_t b = Code_getSzt();//idx
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &ref_doubleval, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
+
+
 
 	case 0x75://HCLGetSettingCommandQueue
 	{
@@ -973,6 +1033,14 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
+	case 0x0A:	// HCLEventAutoProfilingEnd
+	{
+		fInt = true;
+		eventAutoProfilingSwitch = 0;
+		ref_int32val = eventAutoProfilingcnt;
+		break;
+	}
+
 	case 0x79:  //HCLGetKernelName
 	{
 		fStr = true;
@@ -985,24 +1053,18 @@ static void *reffunc( int *type_res, int cmd )
 	}
 
 	case 0x7F://Min64
-	{
-		INT64 a = Code_getint64();
-		INT64 b = Code_getint64();
-		ref_int64val = b;
-		fInt64 = true;
-		if (a < b)ref_int64val = a;
-		break;
-	}
-
 	case 0x80://Max64
 	{
 		INT64 a = Code_getint64();
 		INT64 b = Code_getint64();
 		ref_int64val = b;
 		fInt64 = true;
-		if (a > b)ref_int64val = a;
+		if (cmd == 0x7F) if (a < b)ref_int64val = a;
+		if (cmd == 0x80) if (a > b)ref_int64val = a;
 		break;
 	}
+
+	
 
 	case 0x88:	//HCLGet_NonBlocking_Status
 	{
@@ -1037,6 +1099,8 @@ static void *reffunc( int *type_res, int cmd )
 			ref_sztval = sh.col;
 		break;
 	}
+
+
 
 	case 0x97://HCLBLAS_sgemm
 	{
@@ -1096,23 +1160,7 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-	case 0xA1://HCLBLAS_sgevm
-	{
-		//引数1 buffer
-		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
-		cl_mem Y = 0;
-		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
-		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
-		MySGEVMmain(Y, A, X, 1);
-		ref_sztval = (size_t)Y;
-		fSzt = true;
-		break;
-	}
-
-	////////////////////////////////////////////////////////////ここまで
 
 	default:
 		puterror( HSPERR_UNSUPPORTED_FUNCTION );
@@ -1294,12 +1342,21 @@ static void *reffunc( int *type_res, int cmd )
 
 
 
+
+
+
+
+
+
+
+
 static int cmdfunc(int cmd)
 {
 	code_next();
 
 	switch (cmd) {
 
+	//////////////////////////////////////////////////////////////////////dim系
 	case 0x02://fdim
 	case 0x51://dim64
 	{
@@ -1309,7 +1366,7 @@ static int cmdfunc(int cmd)
 		int p2 = code_getdi(0);
 		int p3 = code_getdi(0);
 		int p4 = code_getdi(0);
-		int fl;
+		int fl = 0;
 
 		if (cmd == 0x51)
 		{
@@ -1323,7 +1380,7 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	////////////////////////////////////////////////////////////ここから自作
+	////////////////////////////////////////////////////////////HCLinit
 
 	case 0x50://HCLinit
 	{
@@ -1400,8 +1457,9 @@ static int cmdfunc(int cmd)
 			SGEMMkernel[k] = NULL;
 			DGEMMkernel[k] = NULL;
 		}
-		//ソース
-		SGEMM_SOURCE = SGEMM_SOURCE0 + SGEMM_SOURCE1 + SGEMM_SOURCE2 + SGEMM_SOURCE3 + SGEMM_SOURCE4 + SGEMM_SOURCE5 + SGEMM_SOURCE6 + SGEMM_SOURCE7;
+
+		//SGEMMソース生成
+		GemmSourceStrInit();
 
 		//型
 		if (sizeof(size_t) == 8) 
@@ -1415,27 +1473,17 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+	//////////////////////////////////////////////////HCLdim_i32FromBuffer系
 	case 0x8C://HCLdim_i32FromBuffer
-	{
-		//引数1
-		PVal* pval1;
-		APTR aptr1;
-		aptr1 = code_getva(&pval1);
-		//引数2
-		size_t prm2 = Code_getSzt();//パラメータ2:int64数値、memobj
-		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
-		int n = (int)min((INT64)(1 << 30), (INT64)sz);
-		//HSP変数初期化
-		exinfo->HspFunc_dim(pval1, HSPVAR_FLAG_INT, 0, (n + 3) / 4 * 4, 0, 0, 0);
-		//転送
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm2, CL_TRUE, 0,
-			n, pval1->pt, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
-
 	case 0x8D://HCLdim_i64FromBuffer
+	case 0x8E://HCLdim_dpFromBuffer
+	case 0x06://HCLdim_fpFromBuffer
 	{
+		if (cmd == 0x8C) { global_fl = HSPVAR_FLAG_INT; global_szof = 4; }
+		if (cmd == 0x8D) { global_fl = HspVarInt64_typeid(); global_szof = 8; }
+		if (cmd == 0x8E) { global_fl = HSPVAR_FLAG_DOUBLE; global_szof = 8; }
+		if (cmd == 0x06) { global_fl = HspVarFloat_typeid(); global_szof = 4; }
+
 		//引数1
 		PVal* pval1;
 		APTR aptr1;
@@ -1445,7 +1493,7 @@ static int cmdfunc(int cmd)
 		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
 		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSP変数初期化
-		exinfo->HspFunc_dim(pval1, HspVarInt64_typeid(), 0, (n + 7) / 8 * 8, 0, 0, 0);
+		exinfo->HspFunc_dim(pval1, global_fl, 0, (n + global_szof - 1) / global_szof * global_szof, 0, 0, 0);
 		//転送
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm2, CL_TRUE, 0,
 			n, pval1->pt, 0, NULL, NULL);
@@ -1453,24 +1501,37 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x8E://HCLdim_dpFromBuffer
+
+
+	//////////////////////////////////////////////////HCLWriteIndex_i32系
+	case 0x69://HCLWriteIndex_i32
+	case 0x6A://HCLWriteIndex_i64
+	case 0x6B://HCLWriteIndex_dp
+	case 0x07://HCLWriteIndex_fp
 	{
-		//引数1
-		PVal* pval1;
-		APTR aptr1;
-		aptr1 = code_getva(&pval1);
-		//引数2
-		size_t prm2 = Code_getSzt();//パラメータ2:int64数値、memobj
-		size_t sz = GetMemSize((cl_mem)prm2);//サイズ
-		int n = (int)min((INT64)(1 << 30), (INT64)sz);
-		//HSP変数初期化
-		exinfo->HspFunc_dim(pval1, HSPVAR_FLAG_DOUBLE, 0, (n + 7) / 8 * 8, 0, 0, 0);
-		//転送
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm2, CL_TRUE, 0,
-			n, pval1->pt, 0, NULL, NULL);
+		if (cmd == 0x69) { global_szof = 4; }
+		if (cmd == 0x6A) { global_szof = 8; }
+		if (cmd == 0x6B) { global_szof = 8; }
+		if (cmd == 0x07) { global_szof = 4; }
+
+		size_t memid = Code_getSzt();
+		size_t b = Code_getSzt();//idx
+
+		int chk = code_getprm();							// パラメーターを取得(型は問わない)
+		void* ppttr;
+		int sizeofff;
+		PrmChk1(sizeofff, ppttr);//どちらも参照わたし
+
+		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE
+			, b * global_szof, global_szof, &ppttr, 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr2(ret); }
 		break;
 	}
+
+
+
+
+
 
 	case 0x53:	// HCLSetDevice
 	{
@@ -1759,12 +1820,19 @@ static int cmdfunc(int cmd)
 	}
 
 	//GPU上で実行
-	case 0x63://HCLFillBuffer_i32
+	case 0x63://HCLFillBuffer
 	{
 		//引数1 buffer
 		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
+		
 		//引数2 pattern
-		int pattern = code_getdi(0);
+		int chk = code_getprm();							// パラメーターを取得(型は問わない)
+		void* ppttr;
+		int sizeofff;
+		PrmChk1(sizeofff, ppttr);//どちらも参照わたし
+		char cc[128];
+		memcpy(cc, ppttr, sizeofff);
+
 		//引数3、offset(byte)
 		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
 		//引数4、size(byte)
@@ -1777,56 +1845,7 @@ static int cmdfunc(int cmd)
 		cl_event* ev_ = GetWaitEvlist();
 
 		cl_int ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 4, prm4, prm5, num_event_wait_list, ev_, outevent);
-		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		num_event_wait_list = 0;
-		break;
-	}
-
-	case 0x64://HCLFillBuffer_i64
-	{
-		//引数1 buffer
-		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
-		//引数2 pattern
-		INT64 pattern = Code_getint64();
-		//引数3、offset(byte)
-		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
-		//引数4、size(byte)
-		size_t prm5 = Code_getSztd(0);//パラメータ5
-		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
-
-		//outevent関連
-		cl_event* outevent = EventOutChk(prm5);
-		//wait event list関連
-		cl_event* ev_ = GetWaitEvlist();
-
-		cl_int ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
-		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		num_event_wait_list = 0;
-		break;
-	}
-
-	//GPU上で実行
-	case 0x8B://HCLFillBuffer_dp
-	{
-		//引数1 buffer
-		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、memobj
-		//引数2 pattern
-		double pattern = code_getdd(0.0);
-		//引数3、offset(byte)
-		size_t prm4 = Code_getSztd(0);//パラメータ4:int64
-		//引数4、size(byte)
-		size_t prm5 = Code_getSztd(0);//パラメータ5
-		if (prm5 == 0)prm5 = GetMemSize((cl_mem)prm1);
-
-		//outevent関連
-		cl_event* outevent = EventOutChk(prm5);
-		//wait event list関連
-		cl_event* ev_ = GetWaitEvlist();
-
-		cl_int ret = clEnqueueFillBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_mem)prm1, &pattern, 8, prm4, prm5, num_event_wait_list, ev_, outevent);
+			(cl_mem)prm1, cc, sizeofff, prm4, prm5, num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
@@ -1839,35 +1858,6 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
-	case 0x69://HCLWriteIndex_i32
-	{
-		size_t memid = Code_getSzt();
-		size_t b = Code_getSzt();//idx
-		int data = code_geti();//内容
-		cl_int ret = clEnqueueWriteBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 4, 4, &data, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
-
-	case 0x6A://HCLWriteIndex_i64
-	{
-		size_t memid = Code_getSzt();
-		size_t b = Code_getSzt();//idx
-		INT64 data = Code_getint64();//内容
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
-
-	case 0x6B://HCLWriteIndex_dp
-	{
-		size_t memid = Code_getSzt();
-		size_t b = Code_getSzt();//idx
-		double data = code_getd();//内容
-		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)memid, CL_TRUE, b * 8, 8, &data, 0, NULL, NULL);
-		if (ret != CL_SUCCESS) { retmeserr2(ret); }
-		break;
-	}
 
 	// HCLCall
 	// str source,int global_size,int local_size,array a,array b,array c・・・・・
@@ -1879,19 +1869,7 @@ static int cmdfunc(int cmd)
 		std::string s_sourse = std::string(c_source);
 
 		size_t h = KrnToHash(s_sourse);
-		auto itr = codemap.find(h);// h が設定されているか？
-		if (itr != codemap.end()) {
-			//設定されている場合の処理
-			kernel = codemap[h];
-		}
-		else
-		{
-			//設定されていない場合の処理
-			program = WithSource_func(context[clsetdev], s_sourse, "");
-			ret = clCreateKernelsInProgram(program, 1, &kernel, NULL);//プログラムの中の最初にでてくるカーネルを取得
-			if (ret != CL_SUCCESS)retmeserr8(ret);
-			codemap[h] = kernel;
-		}
+		kernel = StrHashToKernel(s_sourse, h);
 
 		//次にglobal_sizeとlocal_size
 		size_t global_size = code_getdi(1);	//並列数
@@ -1913,7 +1891,6 @@ static int cmdfunc(int cmd)
 			int sizeofff;//②
 			//この①②があれば転送できる
 			int chk;
-			int type;
 			PVal* pval;
 
 			try
@@ -1980,16 +1957,8 @@ static int cmdfunc(int cmd)
 		//やっと引数設定が終わった↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
 
 		//次に関数の実行
-		if (local_size != 0)
-		{
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
-		}
-		else
-		{
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				kernel, 1, NULL, &global_size, NULL, 0, NULL, NULL);
-		}
+		ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+			kernel, 1, NULL, &global_size, Lsz(&local_size), 0, NULL, NULL);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 
 		//GPU→CPUに変数を戻してくる
@@ -2024,19 +1993,7 @@ static int cmdfunc(int cmd)
 		std::string s_sourse = std::string(c_source);
 
 		size_t h = KrnToHash(s_sourse);
-		auto itr = codemap.find(h);// h が設定されているか？
-		if (itr != codemap.end()) {
-			//設定されている場合の処理
-			kernel = codemap[h];
-		}
-		else
-		{
-			//設定されていない場合の処理
-			program = WithSource_func(context[clsetdev], s_sourse, "");
-			ret = clCreateKernelsInProgram(program, 1, &kernel, NULL);//プログラムの中の最初にでてくるカーネルを取得
-			if (ret != CL_SUCCESS)retmeserr8(ret);
-			codemap[h] = kernel;
-		}
+		kernel = StrHashToKernel(s_sourse, h);
 
 		//次にglobal_sizeとlocal_size
 		size_t global_size = code_getdi(1);	//並列数
@@ -2062,7 +2019,7 @@ static int cmdfunc(int cmd)
 		//次に関数の実行
 
 		//outevent関連
-		//cl_event* outevent = EventOutChk(prm2);
+		cl_event* outevent = EventOutChk2((size_t)kernel);
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
 
@@ -2072,7 +2029,7 @@ static int cmdfunc(int cmd)
 
 		if (p4_1 != 0) {
 			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				kernel, 1, NULL, &p4_1, &local_size, num_event_wait_list, ev_, NULL);//1回目は無事終わる
+				kernel, 1, NULL, &p4_1, &local_size, num_event_wait_list, ev_, outevent);//1回目は無事終わる
 			if (ret != CL_SUCCESS) { retmeserr(ret); }
 		}
 		if (p4_2 != 0) {
@@ -2085,65 +2042,22 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+
+	///////////////////////////////////////////////////////HCLDokrn1,2,3系
 	case 0x6D:	// HCLDoKrn1 int p1,int p2,int p3,int p4
-	{
-		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
-		size_t globalsize = code_getdi(1);
-		size_t localsize = code_getdi(0);
-
-		cl_int ret;
-		//outevent関連
-		cl_event* outevent = EventOutChk(prm1);
-		//wait event list関連
-		cl_event* ev_ = GetWaitEvlist();
-
-		if (localsize != 0) {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &globalsize, &localsize, num_event_wait_list, ev_, outevent);
-		}
-		else
-		{
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm1, 1, NULL, &globalsize, NULL, num_event_wait_list, ev_, outevent);
-		}
-		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		num_event_wait_list = 0;
-		break;
-	}
-
 	case 0x52:	// HCLDoKrn2 int p1,int p2,int p3,int p4,int p5,int p6
-	{
-		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
-		size_t globalsize[2];
-		size_t localsize[2];
-		globalsize[0] = code_geti();
-		globalsize[1] = code_geti();
-		localsize[0] = code_geti();
-		localsize[1] = code_geti();
-
-		cl_int ret;
-		//outevent関連
-		cl_event* outevent = EventOutChk(prm1);
-		//wait event list関連
-		cl_event* ev_ = GetWaitEvlist();
-		ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_kernel)prm1, 2, NULL, globalsize, localsize, num_event_wait_list, ev_, outevent);
-		if (ret != CL_SUCCESS) { retmeserr(ret); }
-		num_event_wait_list = 0;
-		break;
-	}
-
 	case 0x7E:	// HCLDoKrn3 int p1,int p2,int p3,int p4,int p5,int p6,int p7,int p8
 	{
+		if (cmd == 0x6D) global_p1 = 1;
+		if (cmd == 0x52) global_p1 = 2;
+		if (cmd == 0x7E) global_p1 = 3;
+
 		size_t prm1 = Code_getSzt();//パラメータ1:int64数値、カ－ネルid
 		size_t globalsize[3];
 		size_t localsize[3];
-		globalsize[0] = code_geti();
-		globalsize[1] = code_geti();
-		globalsize[2] = code_geti();
-		localsize[0] = code_geti();
-		localsize[1] = code_geti();
-		localsize[2] = code_geti();
+
+		for (int i = 0; i < global_p1; i++)  globalsize[i] = code_geti();
+		for (int i = 0; i < global_p1; i++)  localsize[i] = code_geti();
 
 		cl_int ret;
 		//outevent関連
@@ -2151,7 +2065,7 @@ static int cmdfunc(int cmd)
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
 		ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-			(cl_kernel)prm1, 3, NULL, globalsize, localsize, num_event_wait_list, ev_, outevent);
+			(cl_kernel)prm1, global_p1, NULL, globalsize, Lsz(localsize), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 		num_event_wait_list = 0;
 		break;
@@ -2206,16 +2120,8 @@ static int cmdfunc(int cmd)
 		cl_event* outevent = EventOutChk(prm2);
 		//wait event list関連
 		cl_event* ev_ = GetWaitEvlist();
-
-		if (ptryes[0] != 0)
-		{
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, p3, NULL, p4, ptryes, num_event_wait_list, ev_, outevent);
-		}
-		else {
-			ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
-				(cl_kernel)prm2, p3, NULL, p4, NULL, num_event_wait_list, ev_, outevent);
-		}
+		ret = clEnqueueNDRangeKernel(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque],
+			(cl_kernel)prm2, p3, NULL, p4, Lsz(&ptryes[0]), num_event_wait_list, ev_, outevent);
 		if (ret != CL_SUCCESS) { retmeserr(ret); }
 
 		num_event_wait_list = 0;
@@ -2380,6 +2286,13 @@ static int cmdfunc(int cmd)
 		break;
 	}
 
+	case 0x09:	// HCLEventAutoProfilingStart
+	{
+		eventAutoProfilingSwitch = 1;
+		eventAutoProfilingcnt = 0;
+		break;
+	}
+	
 
 
 	case 0x92://HCLGarbageCollectionNow int64 除外id1,int64 除外id2
@@ -2604,30 +2517,11 @@ static int cmdfunc(int cmd)
 		MySGEMVmain(Y, A, X, 0);
 		break;
 	}
-	case 0xA1://HCLBLAS_sgevm
-	{
-		//引数1 buffer
-		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
-		//引数3 buffer
-		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
-		//引数2 buffer
-		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
-
-		MySGEVMmain(Y, A, X, 0);
-		break;
-	}
 	case 0xA2://HCLBLAS_dgemv
 	{
 		//未実装
 		break;
 	}
-	case 0xA3://HCLBLAS_dgevm
-	{
-		//未実装
-		break;
-	}
-
-
 
 
 	case 0x9B://HCLDoXc
@@ -2645,8 +2539,15 @@ static int cmdfunc(int cmd)
 	case 0x9F://HCLDoXd
 		HCLDoXd();
 		break;
-
-	////////////////////////////////////////////////////////////ここまで
+	case 0xA1://HCLDoXuc
+		HCLDoXuc();
+		break;
+	case 0xA3://HCLDoXui
+		HCLDoXui();
+		break;
+	case 0xA4://HCLDoXul
+		HCLDoXul();
+		break;
 
 
 	default:

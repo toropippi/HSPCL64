@@ -44,7 +44,7 @@ __kernel void Sum(__global uint* A,__global uint* ans)
 
 	//ƒƒ‚ƒŠ‰Šú‰»
 	memA=HCLCreateBuffer(n*4)
-	HCLFillBuffer_i32 memA,1
+	HCLFillBuffer memA,1
 	memans=HCLCreateBuffer(4)//“š‚¦Ši”[—p
 	HCLWriteIndex_i32 memans,0,0//0‚É‰Šú‰»
 	

@@ -1,18 +1,6 @@
-#define TSN 128
-#define TSM 128
-#define TSK 16
-#define WPTN 8
-#define WPTM 8
-#define RTSN (TSN/WPTN)		// The reduced tile-size in dimension N
-#define RTSM (TSM/WPTM)		// The reduced tile-size in dimension M
-#define LPTA ((TSK*TSN)/(RTSN*RTSM)) // Loads-per-thread for A
-#define LPTB ((TSK*TSM)/(RTSN*RTSM)) // Loads-per-thread for B
-
-
-
 //[numthreads(16, 16, 1)]
 //C=A*B  only k%16!=0 n>=128 m>=128
-__kernel void SGEMM_a(int M,int N,int K,__global float* A,__global float* B,__global float* C)
+__kernel void floatGEMM_a(int M,int N,int K,__global float* A,__global float* B,__global float* C)
 {
 	int threadIdxx=get_local_id(0);
 	int threadIdxy=get_local_id(1);
@@ -297,7 +285,7 @@ __kernel void SGEMM_a(int M,int N,int K,__global float* A,__global float* B,__gl
 
 //[numthreads(16, 16, 1)]
 //C=A*B  only k%16==0 n>=128 m>=128
-__kernel void SGEMM_k(int M,int N,int K,__global float* A,__global float* B,__global float* C)
+__kernel void floatGEMM_k(int M,int N,int K,__global float* A,__global float* B,__global float* C)
 {
 	int threadIdxx=get_local_id(0);
 	int threadIdxy=get_local_id(1);
@@ -462,7 +450,7 @@ __kernel void SGEMM_k(int M,int N,int K,__global float* A,__global float* B,__gl
 
 //[numthreads(16, 16, 1)]
 //C=A*B  only n<128 or m<128
-__kernel void SGEMM_small(int M,int N,int K,__global float* A,__global float* B,__global float* C)
+__kernel void floatGEMM_small(int M,int N,int K,__global float* A,__global float* B,__global float* C)
 {
 	int threadIdxx=get_local_id(0);
 	int threadIdxy=get_local_id(1);
@@ -633,7 +621,7 @@ __kernel void SGEMM_small(int M,int N,int K,__global float* A,__global float* B,
 
 
 
-__kernel void Trans(int M,int N,__global float* A,__global float* AT)
+__kernel void floatTrans(int M,int N,__global float* A,__global float* AT)
 {
 	int threadIdxx=get_local_id(0);
 	int threadIdxy=get_local_id(1);
@@ -663,7 +651,7 @@ __kernel void Trans(int M,int N,__global float* A,__global float* AT)
 
 
 
-__kernel void SGEMV(__global float* A,__global float* X,__global float* Y,int col){
+__kernel void floatGEMV(__global float* A,__global float* X,__global float* Y,int col){
 	int gi=get_group_id(0);
 	int i=get_local_id(0);
 	int li=i;
@@ -683,13 +671,4 @@ __kernel void SGEMV(__global float* A,__global float* X,__global float* Y,int co
 
 
 
-__kernel void SGEVM(__global float* A,__global float* X,__global float* Y,int col,int raw){
-	int idx=get_global_id(0);
-	if (idx>=col)return;
-	float r=0.0;
-	for(int j=0;j<raw;j++)
-	{
-		r+=A[idx+j*col]*X[j];
-	}
-	Y[idx]=r;
-}
+

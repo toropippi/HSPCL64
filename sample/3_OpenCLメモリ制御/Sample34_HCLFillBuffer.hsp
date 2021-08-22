@@ -1,0 +1,21 @@
+#include "HSPCL64.as"
+	HCLinit
+	
+	n=1024*1024*32
+	clmem_A=HCLCreateBuffer(n*4)
+
+	//32bit int‚Åfill
+	pattern=12345
+	offset=0
+	size=16//size‚Íbyte‚ÅŽw’è‚·‚é‚±‚Æ
+	HCLFillBuffer clmem_A,pattern,offset,size
+
+	//64bit int‚Åfill
+	pattern=int64("99999999999999")
+	offset=16
+	size=16//size‚Íbyte‚ÅŽw’è‚·‚é‚±‚Æ
+	HCLFillBuffer clmem_A,pattern,offset,size
+	
+		repeat 17
+		mes HCLReadIndex_i32(clmem_A,cnt)
+		loop

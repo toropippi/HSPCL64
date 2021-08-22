@@ -30,7 +30,7 @@
 			repeat 3
 			HCLSetKernel krnmain,3+cnt,movexyz.cnt
 			loop
-		HCLFillBuffer_i32 tlen,0//0//float(0.0)
+		HCLFillBuffer tlen,float(0)
 		HCLDoKrn1_sub krnfirststep,win_x*win_y,64
 		HCLDoKrn1_sub krnmain,win_x*win_y,64
 		HCLDoKrn1_sub krnren,win_x*win_y,64

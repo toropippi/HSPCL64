@@ -1,187 +1,200 @@
-//粉あそびゲーム
-//各粉ずつGPGPUで処理
-//p_posは各ドットの座標が格納されている
-//p_vramは1要素1byteで、そのドットが粉かどうかを格納する
-//
-//d3_vramはgsel 0 画面のmrefで取得した変数h_vramに対応
-//w3_vramはgsel 1 画面のmrefで取得した変数h_wvramに対応
-//w_vramはw3_vramのグレースケール化
-//
-//各粉はp_vramの画面状態を参照して、下にいけるか左にいけるか右にいけるかを考える
-//CPUでの処理とは違いGPUの処理ではメモリ書き込みが競合する可能性があるので
-//例えばある瞬間左に移動した粉と右に移動した粉が同時に重なるという事態がおこってしまう
-//
-//それを回避するためにvram_dmy0～vram_dmy2で重ならないようなんとか処理している
+//GPUの計算はライフゲームの計算とmemvrmの計算
+//GPU→CPUでmemvrmから読み込むため、ライフゲームの計算とGPU(memvrm)→CPUがオーバーラップできるはずである
 #include "HSPCL64.as"
 	HCLinit
-	randomize
+#const WX 512
+#const WY 512
 
-	winx=512
-	winy=512
-	
-	screen 0,winx,winy
-	mref h_vram,66//host vram
-	
-	buffer 1,winx,winy
-	color 0,0,0:boxf
-	mref h_wvram,66//host vram
+	//HCLSetDevice 0
+	prg=HCLCreateProgram("LifeGame.cl","-D WX="+WX+" -D WY="+WY+"")
+	krnGameMain=HCLCreateKernel(prg,"GameMain")
+	krnCellView=HCLCreateKernel(prg,"CellView")
 
-	p_num=winx*winy/4 //パーティクル数
-	gosub*cl初期設定
-	gosub*壁情報設定
+	//メモリ初期化、カーネル設定
+	memA=HCLCreateBuffer(WX*WY*4)
+	memB=HCLCreateBuffer(WX*WY*4)
+	memvrm=HCLCreateBuffer(WX*WY*3)
+	HCLFillBuffer memA,0
+	HCLFillBuffer memB,0
+
+	gosub*重量級宇宙船
+	gosub*ダイハード
+	gosub*どんぐり
+
+	screen 1,640,480
+	screen 0,WX,WY
+	mref vrm,66
 
 
+	HCLSetCommandQueue 0
+	//ライフゲーム計算
+	HCLSetKrns krnGameMain,memA,memB
+	HCLDokrn1 krnGameMain,WX*WY,64
 
-	
+	event_id=0
 *main
-		repeat 7//粉計算は1フレーム7回やる。これは全部GPU内で完結するので速い
-		HCLSetkernel krnMove,5,rnd(32767)//seed設定
-		HCLSetkernel krnFixPosition,4,rnd(32767)//seed設定
-		HCLSetkernel krnp_pos_init,2,p_offset
-		
-		//p_vramを壁のみの情報に初期化。壁以外は0になっている。壁は255
-		HCLCopyBuffer p_vram,w_vram
-		HCLDoKrn1 krnPsetp_vram,p_num,0//パーティクルをドット情報p_vramに更新。これでパーティクルのあるドットも255になる。
-		HCLDoKrn1 krnMove,p_num,0//パーティクル仮移動
-		HCLDoKrn1 krnFixPosition,winx*winy,0//画面ドットからパーティクル移動の重なりを検出し修正
-		
-		HCLDokrn1 krnp_pos_init,32,32//p_pos座標一部を初期化
-		p_offset+=32
-		p_offset\=p_num
-		loop
+	//画像変換計算
+	HCLSetKrns krnCellView,memB,memvrm
+	HCLDokrn1 krnCellView,WX*WY,64,event_id
+	event_id++
 
-	//一旦画面初期化、壁のみに
-	HCLCopyBuffer d3_vram,w3_vram
-	//パーティクル描画
-	HCLDoKrn1 krnPsetParticle,p_num,0
-	HCLFlush
+	//GPU→CPU
+	HCLSetCommandQueue 1
+	HCLSetWaitEvent event_id-1//さっきのmemB→memvrmが終わらないと読み込んでほしくない
+	HCLReadBuffer memvrm,vrm,,,,0,event_id
+	lastReadBufferEventid=event_id
+	event_id++
 
-	//ここはGPUが計算している最中なのでCPU負荷適当にいれとく
-	gosub*sketch
-	await 16
+	HCLSetCommandQueue 0
+	//ライフゲーム計算、これをGPU→CPUの転送中に行いたい
+	tmp=memA//swap3行
+	memA=memB//swap3行
+	memB=tmp//swap3行
+	HCLSetKrns krnGameMain,memB,memA
+	HCLDokrn1 krnGameMain,WX*WY,64,event_id
+	event_id++
+
+	repeat -1//転送が終了したらループを抜ける
+		await 0
+		if HCLGetEventStatus(lastReadBufferEventid)==0:break
+	loop
+	redraw 1//描画
 	
-	HCLReadBuffer d3_vram,h_vram//ここでGPUの計算が全部おわる
+	if ((count\1024>1020)&(event_id>6)){
+		count=0
+		gsel 1
+		color 255,255,255:boxf:color 0,0,0
+		ViewEvents4 event_id-1
+		gsel 0
+	}
 	
-	gsel 0
-	redraw 1
-	gosub*viewFPS
+	gosub*fpsview
+	count++
+	
+	if event_id>=8:event_id=0
 	goto*main
 
-
-
-//gsel 1は壁情報を保存
-*sketch
-	getkey key,1
-	last_mx=mx
-	last_my=my
-	mx=mousex
-	my=mousey
-	flg=0//変更フラグ
-	if key{
-		gsel 1
-		color 255,255,200
-		leng=int(sqrt((last_mx-mx)*(last_mx-mx)+(last_my-my)*(last_my-my))*0.5+1)
-			repeat leng+1
-			xx=last_mx+(mx-last_mx)*cnt/leng
-			yy=last_my+(my-last_my)*cnt/leng
-			boxf xx-1,yy-1,xx+1,yy+1
-			loop
-		flg=1
-	}
-	getkey key,2
-	if key{
-		gsel 1
-		color 0,0,0
-		boxf mx-6,my-6,mx+7,my+7
-		flg=1
-		
-		gsel 0
-		color 200,200,255
-		boxf mx-6,my-6,mx+7,my+7
-		color 0,0,0
-		boxf mx-5,my-5,mx+6,my+6
-	}
-
-	if flg==1{
-		HCLWriteBuffer w3_vram,h_wvram,winx*winy*3,0,0,0//ブロッキングモードoff
-		HCLDoKrn1 krnw3_to_w,winx*winy,0//bgr→rへ
-	}
+*fpsview
+	flm++
+	if ms!gettime(6):ms=gettime(6):fps=flm:flm=0
+	pos 0,0:color 255,55,55:mes "fps="+fps+""
 	return
 
-
-
-
-*cl初期設定
-	if winx\4!=0{
-		dialog "winxは必ず4の倍数にして下さい",1
-		end
-	}
-	p_pos=HCLCreateBuffer(p_num*4);パーティクルの座標int型1つにx+65536*yで値が格納されている
-	d3_vram=HCLCreateBuffer(winx*winy*3);h_vramとやりとりするGPU側配列。画面のドット情報。1要素あたり3char bgr
-	p_vram=HCLCreateBuffer(winx*winy);パーティクルドット情報。1要素あたり1char
-	w3_vram=HCLCreateBuffer(winx*winy*3);壁情報。1要素あたり3char bgr
-	w_vram=HCLCreateBuffer(winx*winy);壁情報。1要素あたり1char。w3のbgrを1charにまとめた感じ
-	vram_dmy0=HCLCreateBuffer(winx*winy*4);パーティクルが下に1ドット動いたときの一時画面情報
-	vram_dmy1=HCLCreateBuffer(winx*winy*4);パーティクルが左に1ドット動いたときの一時画面情報
-	vram_dmy2=HCLCreateBuffer(winx*winy*4);パーティクルが右に1ドット動いたときの一時画面情報
-
-	prgid=HCLCreateProgram("konaasobi2.cl","-D WINX="+winx+" -D WINY="+winy+"")
-	krnMove=HCLCreateKernel(prgid,"Move")//パーティクル仮移動
-	krnFixPosition=HCLCreateKernel(prgid,"FixPosition")//パーティクル本移動
-	krnPsetParticle=HCLCreateKernel(prgid,"PsetParticle")//パーティクル描画
-	krnp_pos_init=HCLCreateKernel(prgid,"p_pos_init")//パーティクル座標、一定時間経過後初期化
-	krnPsetp_vram=HCLCreateKernel(prgid,"Psetp_vram")//パーティクル座標をp_vramにセット
-	krnw3_to_w=HCLCreateKernel(prgid,"w3_to_w")//w3の画像をwにグレースケール化
-
-	HCLSetkrns krnMove,p_pos,vram_dmy0,vram_dmy1,vram_dmy2,p_vram,12345678
-	HCLSetkrns krnFixPosition,p_pos,vram_dmy0,vram_dmy1,vram_dmy2,12345678
-	HCLSetkrns krnPsetParticle,p_pos,d3_vram
-	HCLSetkrns krnp_pos_init,p_pos,p_vram
-	HCLSetkrns krnPsetp_vram,p_pos,p_vram
-	HCLSetkrns krnw3_to_w,w3_vram,w_vram
-
-	HCLFillBuffer_i32 d3_vram,0//初期化
-	HCLFillBuffer_i32 vram_dmy0,-1//初期化
-	HCLFillBuffer_i32 vram_dmy1,-1//初期化
-	HCLFillBuffer_i32 vram_dmy2,-1//初期化
-	HCLFillBuffer_i32 p_pos,(winy-1)*65536//初期座標は一番下
+*重量級宇宙船
+	//重量級宇宙船をセット
+	idx=WX/2*WY+WX/2
+	HCLWriteIndex_i32 memA,idx+3,1
+	HCLWriteIndex_i32 memA,idx+4,1
+	HCLWriteIndex_i32 memA,idx+WX+1,1
+	HCLWriteIndex_i32 memA,idx+WX+6,1
+	HCLWriteIndex_i32 memA,idx+WX*2,1
+	HCLWriteIndex_i32 memA,idx+WX*3,1
+	HCLWriteIndex_i32 memA,idx+WX*3+6,1
+	HCLWriteIndex_i32 memA,idx+WX*4+0,1
+	HCLWriteIndex_i32 memA,idx+WX*4+1,1
+	HCLWriteIndex_i32 memA,idx+WX*4+2,1
+	HCLWriteIndex_i32 memA,idx+WX*4+3,1
+	HCLWriteIndex_i32 memA,idx+WX*4+4,1
+	HCLWriteIndex_i32 memA,idx+WX*4+5,1
 	return
-
-*壁情報設定
-	gsel 1
-	//ここでシャンパンタワーを描画
-	scale=88
-	scale2=scale*40/100
-	scale3=scale*34/100
 	
-		repeat 4
-		ccnt=cnt
-			repeat cnt+1
-			xx=256+cnt*scale-ccnt*scale/2
-			yy=150+ccnt*scale
-			color 255,255,200
-			boxf xx-scale2,yy-scale2,xx+scale2,yy+scale2
-			color 0,0,0
-			boxf xx-scale3,yy-scale2,xx+scale3,yy+scale3
-			loop
+*どんぐり
+	//どんぐりをセット
+	idx=WX/7*WY+WX*2/3
+	HCLWriteIndex_i32 memA,idx+1,1
+	HCLWriteIndex_i32 memA,idx+WX+3,1
+	HCLWriteIndex_i32 memA,idx+WX*2,1
+	HCLWriteIndex_i32 memA,idx+WX*2+1,1
+	HCLWriteIndex_i32 memA,idx+WX*2+4,1
+	HCLWriteIndex_i32 memA,idx+WX*2+5,1
+	HCLWriteIndex_i32 memA,idx+WX*2+6,1
+	return
+
+*ダイハード
+	idx=WX/2*WY+WX+WX/2-30
+	HCLWriteIndex_i32 memA,idx+6,1
+	HCLWriteIndex_i32 memA,idx+WX,1
+	HCLWriteIndex_i32 memA,idx+WX+1,1
+	HCLWriteIndex_i32 memA,idx+WX*2+1,1
+	HCLWriteIndex_i32 memA,idx+WX*2+5,1
+	HCLWriteIndex_i32 memA,idx+WX*2+6,1
+	HCLWriteIndex_i32 memA,idx+WX*2+7,1
+	return
+
+
+
+
+
+
+
+
+
+
+
+#module
+
+#deffunc ViewEvents4 int event_num
+	if event_num<=0:return
+	//まずはすべての計算時間を取得
+	dim64 kinfo,event_num
+	sdim kinfos,128,event_num
+	dim64 start_time,event_num
+	dim64 end_time,event_num
+	dim cmdq_no,event_num
+	offset=int64("9223372036854775807")
+		repeat event_num
+		start_time.cnt=HCLGetEventLogs(cnt,6)//6はCL_PROFILING_COMMAND_STARTのtime
+		end_time.cnt=HCLGetEventLogs(cnt,7)//7はCL_PROFILING_COMMAND_ENDのtime
+		cmdq_no.cnt=HCLGetEventLogs(cnt,3)//3は何番のcommand queで実行されたか取得
+		kinfo.cnt=HCLGetEventLogs(cnt,0)//0はeventがなんのコマンドだったか取得
+		if kinfo.cnt==CL_COMMAND_WRITE_BUFFER  :kinfos.cnt="WRITE_BUFFER"
+		if kinfo.cnt==CL_COMMAND_READ_BUFFER   :kinfos.cnt="READ_BUFFER"
+		if kinfo.cnt==CL_COMMAND_NDRANGE_KERNEL:kinfos.cnt=HCLGetKernelName(HCLGetEventLogs(cnt,1))
+		offset=MIN64(offset,start_time.cnt)
 		loop
-	
-	
-	HCLWriteBuffer w3_vram,h_wvram,winx*winy*3,0,0
-	HCLDoKrn1 krnw3_to_w,winx*winy,0//bgr→rへ
+
+	scalex=int64("-9223372036854775808")
+		repeat event_num
+		start_time.cnt-=offset
+		end_time.cnt-=offset
+		scalex=MAX64(scalex,end_time.cnt)
+		loop
+
+	//計算時間をグラフで表示
+	//軸
+	line 30,30,30,450
+	line 30,30,27,35
+	line 30,30,33,35
+	pos 0,240
+	font msgothic,12
+	mes "Queue\n番号"
+
+	line 30,450,620,450
+	line 620,450,615,447
+	line 620,450,615,453
+	pos 270,460
+	mes "時間(μs)"
+		repeat 9
+		line 30+cnt*580/8,450,30+cnt*580/8,445
+		pos 30+cnt*580/8,450
+		mes scalex*cnt/8000
+		loop
+
+	//実行単位で表示していく
+		repeat event_num
+			hsvcolor rnd(192),200,200
+			//まず実行時間を表示
+			lx=start_time.cnt*580/scalex+30
+			rx=end_time.cnt*580/scalex+30
+			yy=270-int(cmdq_no.cnt)*50
+			boxf int(lx),yy,int(rx),yy+30
+			
+			//文字表示
+			color 0,0,0
+			pos int(lx),yy-10
+			mes kinfos.cnt
+		loop
 	return
 
-*viewFPS
-	gsel 0
-	pos 0,0
-	color 255,0,0
-	mes ""+fps+"FPS"
-	
-	lastg6=g6
-	g6=gettime(6)
-	if gettime(6)!=lastg6{
-		fps=flmcnt
-		flmcnt=0
-	}
-	flmcnt++
-	return
+
+#global

@@ -79,9 +79,12 @@ ln=strlen(data)
 
 	repeat (ln+2047)/2048
 	outstr+={"std::string SGEMM_SOURCE"}+str(cnt)+{" = R"EOB("}
-	outstr+=strmid(data,cnt*2048,2048)
+	outstr+=strmid(data,cnt*2048,limit(ln-cnt*2048,0,2048))
 	outstr+={")EOB";\n\n\n"}
 	loop
 
 bsave "xxx.txt",outstr,strlen(outstr)
+
+delete "obj"
+delete "hsptmp"
 end

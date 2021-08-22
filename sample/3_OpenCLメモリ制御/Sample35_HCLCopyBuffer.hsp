@@ -8,7 +8,7 @@
 	pattern=12345
 	offset=0
 	size=n*4//sizeはbyteで指定すること
-	HCLFillBuffer_i32 clmem_A,pattern,offset,size
+	HCLFillBuffer clmem_A,pattern,offset,size
 	//これでAにデータがはいった
 
 	//これでBにコピー
