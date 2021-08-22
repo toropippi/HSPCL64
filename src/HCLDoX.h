@@ -14,7 +14,7 @@ int isupper_lower(unsigned char c)
 	return 0;
 }
 
-std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
+std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt,int &_OUT_)
 {
 	std::string stype[8];
 	stype[0] = "char";
@@ -64,66 +64,67 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 				}
 				else
 				{
-					// C??
-					if (sor[i] == 'C') 
+
+
+					switch (sor[i]) 
 					{
-						if ((isupper_lower(sor[i + 1]) == 4) &(isupper_lower(sor[i + 2]) == 0))
+					case 'C':
+					{
+						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							C[sor[i + 1] - 48]++;
 						}
+						break;
 					}
 
-					// I??
-					if (sor[i] == 'I')
+					case 'I':
 					{
 						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							I[sor[i + 1] - 48]++;
 						}
+						break;
 					}
 
-					// L??
-					if (sor[i] == 'L')
+					case 'L':
 					{
 						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							L[sor[i + 1] - 48]++;
 						}
+						break;
 					}
 
-					// F??
-					if (sor[i] == 'F')
+					case 'F':
 					{
 						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							F[sor[i + 1] - 48]++;
 						}
+						break;
 					}
 
-					// D??
-					if (sor[i] == 'D')
+					case 'D':
 					{
 						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							D[sor[i + 1] - 48]++;
 						}
+						break;
 					}
 
-					// S??
-					if (sor[i] == 'S')
+					case 'S':
 					{
 						if ((isupper_lower(sor[i + 1]) == 4) & (isupper_lower(sor[i + 2]) == 0))
 						{
 							S[sor[i + 1] - 48]++;
 						}
+						break;
 					}
-
-
-					// U??
-					if (sor[i] == 'U')
+					case 'U':
 					{
 						// UC??
-						if (sor[i + 1] == 'C') 
+						if (sor[i + 1] == 'C')
 						{
 							if ((isupper_lower(sor[i + 2]) == 4) & (isupper_lower(sor[i + 3]) == 0))
 							{
@@ -146,7 +147,23 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 								UL[sor[i + 2] - 48]++;
 							}
 						}
+						break;
 					}
+
+					case 'O':
+					{
+						if ((sor[i + 1] == 'U') & (sor[i + 2] == 'T'))
+						{
+							_OUT_++;
+						}
+						break;
+					}
+
+					default:
+						break;
+					}
+					
+
 				}
 			}
 		}
@@ -178,7 +195,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 
 	if (argcnt2 == 0)
 	{
-		MessageBox(NULL, "「A」などの大文字変数が一つもありません", "エラー", 0);
+		MessageBox(NULL, "「A」などの1文字大文字変数が一つもありません", "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
 
@@ -293,6 +310,12 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
 
+	//OUT処理
+	if (_OUT_ > 0) 
+	{
+		header += "__global " + stype[typeflg] + "* OUT ,";
+	}
+
 	//global id埋め込み処理
 	if (header[header.size() - 1] == ',')header[header.size() - 1] = ' ';
 	header += ")\n{\nint i = get_global_id(0);\nint li = get_local_id(0);\n";
@@ -309,8 +332,8 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 	return header + sor + "\n}";
 }
 
-
-static void HCLDoX(int typeflg)
+//cl_memは参照渡し
+void HCLDoX(int typeflg,cl_mem &newmem)
 {
 	int sizelist[8];
 	sizelist[0] = 1;
@@ -338,7 +361,8 @@ static void HCLDoX(int typeflg)
 	INT64 argi64[32];
 	double argdp[32];
 	float argfp[32];
-	for (int i = 0; i < 32; i++) {
+	for (int i = 0; i < 32; i++) 
+	{
 		argt[i] = 0; argi32[i] = 0; argi64[i] = 0; argdp[i] = 0.0; argfp[i] = 0.0;
 	}
 
@@ -404,7 +428,8 @@ static void HCLDoX(int typeflg)
 
 
 	//コード生成して
-	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt);
+	int _OUT_ = 0;
+	s_sourse = CodeRefine(s_sourse, typeflg, argt, argcnt, _OUT_);
 	size_t h = KrnToHash(s_sourse);
 	kernel = StrHashToKernel(s_sourse, h);
 
@@ -420,6 +445,12 @@ static void HCLDoX(int typeflg)
 		if (argt[i] == 3)ppttr = (float*)&argfp[i];
 		if (argt[i] == 4)ppttr = (double*)&argdp[i];
 		clSetKernelArg(kernel, i, sizelist[argt[i]], ppttr);
+	}
+	//OUTが機能するならば
+	if (_OUT_ > 0) 
+	{
+		newmem = MyCreateBuffer(CL_MEM_READ_WRITE, GetMemSize(baseMem), NULL);
+		clSetKernelArg(kernel, argcnt, sizeof(size_t), &newmem);
 	}
 	
 	//あとは実行するだけ
@@ -448,42 +479,42 @@ static void HCLDoX(int typeflg)
 }
 
 
-void HCLDoXc(void)
+void HCLDoXc(cl_mem& m)
 {
-	HCLDoX(0);
+	HCLDoX(0, m);
 }
 
-void HCLDoXi(void)
+void HCLDoXi(cl_mem& m)
 {
-	HCLDoX(1);
+	HCLDoX(1, m);
 }
 
-void HCLDoXl(void)
+void HCLDoXl(cl_mem& m)
 {
-	HCLDoX(2);
+	HCLDoX(2, m);
 }
 
-void HCLDoXf(void)
+void HCLDoXf(cl_mem& m)
 {
-	HCLDoX(3);
+	HCLDoX(3, m);
 }
 
-void HCLDoXd(void)
+void HCLDoXd(cl_mem& m)
 {
-	HCLDoX(4);
+	HCLDoX(4, m);
 }
 
-void HCLDoXuc(void)
+void HCLDoXuc(cl_mem& m)
 {
-	HCLDoX(5);
+	HCLDoX(5, m);
 }
 
-void HCLDoXui(void)
+void HCLDoXui(cl_mem& m)
 {
-	HCLDoX(6);
+	HCLDoX(6, m);
 }
 
-void HCLDoXul(void)
+void HCLDoXul(cl_mem &m)
 {
-	HCLDoX(7);
+	HCLDoX(7, m);
 }

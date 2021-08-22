@@ -372,7 +372,7 @@ void sgemminit()
 }
 
 //GEMM用関数。転置先bufferも指定
-void MySgemmTrans2(cl_mem m, cl_mem tm)
+void MySgemmTrans2(cl_mem m, cl_mem tm,int fdflg)
 {
 	sgemminit();
 
@@ -382,7 +382,7 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 		MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
 	}
 	ShapeHP sh = memmap[m];
-	kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3];
+	kernel = SGEMMkernel[clsetdev * GEMMkernelNum + 3 + fdflg * GEMMkernelNum / 2];
 	//これでmemとkernelはok
 
 	//あとは引数指定して実行
@@ -414,16 +414,16 @@ void MySgemmTrans2(cl_mem m, cl_mem tm)
 }
 
 //GEMM用関数。新しくbufferを確保し転置したものを返す
-cl_mem MySgemmTrans1(cl_mem m)
+cl_mem MySgemmTrans1(cl_mem m, int fdflg)
 {
 	cl_mem tm = MyCreateBuffer(CL_MEM_READ_WRITE, GetMemSize(m), NULL);
-	MySgemmTrans2(m, tm);
+	MySgemmTrans2(m, tm, fdflg);
 	return tm;
 }
 
 //関数型と命令形どちらにも対応できるように
 //retflgは0命令形、1関数型。Cを生成するかどうかの違い
-void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int retflg,cl_mem *inoutC)
+void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int retflg,cl_mem *inoutC,int fdflg)
 {
 	sgemminit();
 	cl_mem Cdmy;
@@ -447,13 +447,13 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	ShapeHP shb = memmap[B];
 	ShapeHP sha2 = sha;
 	ShapeHP shb2 = shb;
-	if (sha.raw * sha.col * 4 != GetMemSize(A))
+	if (sha.raw * sha.col * (fdflg * 4 + 4) != GetMemSize(A))
 	{
 		std::string errs = "第2引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 		MessageBox(NULL, errs.c_str(), "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
-	if (shb.raw * shb.col * 4 != GetMemSize(B))
+	if (shb.raw * shb.col * (fdflg * 4 + 4) != GetMemSize(B))
 	{
 		std::string errs = "第3引数のメモリサイズ(" + std::to_string(GetMemSize(B)) + ")と\nraw(" + std::to_string(shb.raw) + ")*col(" + std::to_string(shb.col) + ")の大きさが\n合いません";
 		MessageBox(NULL, errs.c_str(), "エラー", 0);
@@ -467,18 +467,18 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	}
 
 	if (aflag == 1) {
-		A = MySgemmTrans1(A);
+		A = MySgemmTrans1(A, fdflg);
 		std::swap(sha.raw, sha.col);
 	}
 
 	if (bflag == 1) {
-		B = MySgemmTrans1(B);
+		B = MySgemmTrans1(B, fdflg);
 		std::swap(shb.raw, shb.col);
 	}
 
 	if (retflg == 1) 
 	{
-		C = MyCreateBuffer(CL_MEM_READ_WRITE, sha.raw * shb.col * 4, NULL);
+		C = MyCreateBuffer(CL_MEM_READ_WRITE, sha.raw * shb.col * (fdflg * 4 + 4), NULL);
 		inoutC[0] = C;
 	}
 
@@ -504,7 +504,7 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	}
 
 	//gemm前エラーチェック2、Cの大きさチェック
-	if (GetMemSize(C) != sha.raw * shb.col * 4)
+	if (GetMemSize(C) != sha.raw * shb.col * (fdflg * 4 + 4))
 	{
 		std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(C)) + ")が\n行列行列積の結果の大きさと合いません";
 		MessageBox(NULL, errs.c_str(), "エラー", 0);
@@ -518,17 +518,17 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	cl_kernel gkernel;
 	if ((in < 128) | (im < 128))
 	{
-		gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 2];
+		gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 2 + fdflg * GEMMkernelNum / 2];
 	}
 	else
 	{
 		if (ik % 16 == 0)
 		{
-			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 1];
+			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 1 + fdflg * GEMMkernelNum / 2];
 		}
 		else
 		{
-			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum];
+			gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + fdflg * GEMMkernelNum / 2];
 		}
 	}
 
@@ -559,7 +559,7 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 	//sgemmおわり
 	if (cflag == 1)
 	{
-		MySgemmTrans2(C, Cdmy);
+		MySgemmTrans2(C, Cdmy, fdflg);
 	}
 
 	if (aflag != 0) MyReleaseBuffer(A);
@@ -573,10 +573,10 @@ void MySGEMMmain(cl_mem C, cl_mem A, cl_mem B, int c_t, int a_t, int b_t,int ret
 //y=Ax
 //global_size=256*raw
 //local_size=256
-void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg)
+void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg, int fdflg)
 {
 	sgemminit();
-	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 4];
+	cl_kernel gkernel = SGEMMkernel[clsetdev * GEMMkernelNum + 4 + fdflg * GEMMkernelNum / 2];
 
 	auto itr = memmap.find(A);
 	if (itr == memmap.end()) MessageBox(NULL, "そのmem idはおそらく存在しません", "警告", 0);
@@ -584,17 +584,17 @@ void MySGEMVmain(cl_mem &Y, cl_mem &A, cl_mem &X, int retflg)
 	int raw = (int)memmap[A].raw;
 	if (retflg == 1) 
 	{
-		Y = MyCreateBuffer(CL_MEM_READ_WRITE, raw * 4, NULL);
+		Y = MyCreateBuffer(CL_MEM_READ_WRITE, raw * (4 + fdflg * 4), NULL);
 	}
 	//エラーチェック
-	if (GetMemSize(Y) != 4 * raw)
+	if (GetMemSize(Y) != (4 + fdflg * 4) * raw)
 	{
 		std::string errs;
 		errs = "縦横サイズエラー：行列ベクトル積できません\nA.raw=" + std::to_string(raw) + "\nsize(Y)=" + std::to_string(GetMemSize(Y)) + "";
 		MessageBox(NULL, errs.c_str(), "エラー", 0);
 		puterror(HSPERR_UNSUPPORTED_FUNCTION);
 	}
-	if (GetMemSize(X) != 4 * col)
+	if (GetMemSize(X) != (4 + fdflg * 4) * col)
 	{
 		std::string errs;
 		errs = "縦横サイズエラー：行列ベクトル積できません\nA.col=" + std::to_string(col) + "\nsize(X)=" + std::to_string(GetMemSize(X)) + "";
@@ -1103,7 +1103,10 @@ static void *reffunc( int *type_res, int cmd )
 
 
 	case 0x97://HCLBLAS_sgemm
+	case 0x98://HCLBLAS_dgemm
 	{
+		int fdflg = 0;
+		if (cmd == 0x98)fdflg = 1;
 		//引数1 buffer
 		//cl_mem C = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem C = NULL;
@@ -1119,47 +1122,117 @@ static void *reffunc( int *type_res, int cmd )
 		//引数6 転置b
 		int b_t = code_getdi(0);
 
-		MySGEMMmain(Cdmy, A, B, c_t, a_t, b_t, 1, &C);
+		MySGEMMmain(Cdmy, A, B, c_t, a_t, b_t, 1, &C, fdflg);
 		ref_sztval = (size_t)C;
 		fSzt = true;
 		break;
 	}
 
 	case 0x99://HCLBLAS_sT
+	case 0x9A://HCLBLAS_dT
 	{
 		//引数1 buffer
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
+		int fdflg = 0;
+		if (cmd == 0x9A)fdflg = 1;
+
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
-		if (sha.raw * sha.col * 4 != GetMemSize(A))
+		if (sha.raw * sha.col * (4 + fdflg * 4) != GetMemSize(A))
 		{
 			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 			MessageBox(NULL, errs.c_str(), "エラー", 0);
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		}
 
-		ref_sztval = (size_t)MySgemmTrans1(A);
+		ref_sztval = (size_t)MySgemmTrans1(A, fdflg);
 		fSzt = true;
 		break;
 	}
 
 	case 0xA0://HCLBLAS_sgemv
+	case 0xA2://HCLBLAS_dgemv
 	{
-		//引数1 buffer
-		//cl_mem Y = (cl_mem)Code_getint64();//パラメータ1:int64数値、memobj
 		cl_mem Y = 0;
 		//引数2 buffer
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
 		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
-		MySGEMVmain(Y, A, X, 1);
+		int fdflg = 0;
+		if (cmd == 0xA2)fdflg = 1;
+
+		MySGEMVmain(Y, A, X, 1, fdflg);
 		ref_sztval = (size_t)Y;
 		fSzt = true;
 		break;
 	}
 
+	case 0x9B://HCLDoXc
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXc(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0x9C://HCLDoXi
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXi(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0x9D://HCLDoXl
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXl(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0x9E://HCLDoXf
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXf(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0x9F://HCLDoXd
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXd(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0xA1://HCLDoXuc
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXuc(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0xA3://HCLDoXui
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXui(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
+	case 0xA4://HCLDoXul
+	{
+		fSzt = true;
+		cl_mem m;
+		HCLDoXul(m);
+		ref_sztval = (size_t)m;
+		break;
+	}
 
 
 	default:
@@ -2448,7 +2521,10 @@ static int cmdfunc(int cmd)
 	}
 
 	case 0x97://HCLBLAS_sgemm
+	case 0x98://HCLBLAS_dgemm
 	{
+		int fdflg = 0;
+		if (cmd == 0x98)fdflg = 1;
 		//引数1 buffer
 		cl_mem C = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数2 buffer
@@ -2462,26 +2538,24 @@ static int cmdfunc(int cmd)
 		//引数6 転置b
 		int b_t = code_getdi(0);
 
-		MySGEMMmain(C, A, B, c_t, a_t, b_t, 0, NULL);
-		break;
-	}
-
-	case 0x98://HCLBLAS_dgemm
-	{
-		//未実装
+		MySGEMMmain(C, A, B, c_t, a_t, b_t, 0, NULL, fdflg);
 		break;
 	}
 
 	case 0x99://HCLBLAS_sT
+	case 0x9A://HCLBLAS_dT
 	{
 		//引数1 buffer
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数1 buffer
 		cl_mem AT = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 
+		int fdflg = 0;
+		if (cmd == 0x9A)fdflg = 1;
+
 		//転置前エラーチェック
 		ShapeHP sha = memmap[A];
-		if (sha.raw * sha.col * 4 != GetMemSize(A))
+		if (sha.raw * sha.col * (4 + 4 * fdflg) != GetMemSize(A))
 		{
 			std::string errs = "第1引数のメモリサイズ(" + std::to_string(GetMemSize(A)) + ")と\nraw(" + std::to_string(sha.raw) + ")*col(" + std::to_string(sha.col) + ")の大きさが\n合いません";
 			MessageBox(NULL, errs.c_str(), "エラー", 0);
@@ -2494,18 +2568,13 @@ static int cmdfunc(int cmd)
 			puterror(HSPERR_UNSUPPORTED_FUNCTION);
 		}
 
-		MySgemmTrans2(A, AT);
-		break;
-	}
-
-	case 0x9A://HCLBLAS_dT
-	{
-		//未実装
+		MySgemmTrans2(A, AT, fdflg);
 		break;
 	}
 
 
 	case 0xA0://HCLBLAS_sgemv
+	case 0xA2://HCLBLAS_dgemv
 	{
 		//引数1 buffer
 		cl_mem Y = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
@@ -2513,41 +2582,70 @@ static int cmdfunc(int cmd)
 		cl_mem A = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
 		//引数3 buffer
 		cl_mem X = (cl_mem)Code_getSzt();//パラメータ1:int64数値、memobj
+		int fdflg = 0;
+		if (cmd == 0xA2)fdflg = 1;
 
-		MySGEMVmain(Y, A, X, 0);
-		break;
-	}
-	case 0xA2://HCLBLAS_dgemv
-	{
-		//未実装
+		MySGEMVmain(Y, A, X, 0, fdflg);
 		break;
 	}
 
 
 	case 0x9B://HCLDoXc
-		HCLDoXc();
+	{
+		cl_mem m;
+		HCLDoXc(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0x9C://HCLDoXi
-		HCLDoXi();
+	{
+		cl_mem m;
+		HCLDoXi(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0x9D://HCLDoXl
-		HCLDoXl();
+	{
+		cl_mem m;
+		HCLDoXl(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0x9E://HCLDoXf
-		HCLDoXf();
+	{
+		cl_mem m;
+		HCLDoXf(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0x9F://HCLDoXd
-		HCLDoXd();
+	{
+		cl_mem m;
+		HCLDoXd(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0xA1://HCLDoXuc
-		HCLDoXuc();
+	{
+		cl_mem m;
+		HCLDoXuc(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0xA3://HCLDoXui
-		HCLDoXui();
+	{
+		cl_mem m;
+		HCLDoXui(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 	case 0xA4://HCLDoXul
-		HCLDoXul();
+	{
+		cl_mem m;
+		HCLDoXul(m);
+		MyReleaseBuffer(m);
 		break;
+	}
 
 
 	default:
