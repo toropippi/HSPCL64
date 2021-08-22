@@ -5,8 +5,6 @@ void HCLDoXf(void);
 void HCLDoXd(void);
 
 
-
-
 int isupper_lower(unsigned char c)
 {
 	if ((c >= 65) & (c <= 90)) return 1;
@@ -18,12 +16,15 @@ int isupper_lower(unsigned char c)
 
 std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt)
 {
-	std::string stype[5];
+	std::string stype[8];
 	stype[0] = "char";
 	stype[1] = "int";
 	stype[2] = "long";
 	stype[3] = "float";
 	stype[4] = "double";
+	stype[6] = "uchar";
+	stype[7] = "uint";
+	stype[8] = "ulong";
 	std::string Aa = "A";
 
 	sor = " " + sor + "     ";

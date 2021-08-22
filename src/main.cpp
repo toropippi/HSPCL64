@@ -40,7 +40,7 @@ cl_kernel* DGEMMkernel;
 const int GEMMkernelNum = 6;//sgemm*3+trans+gemv+gevm
 cl_event* cppeventlist;//c++で管理するevent object。HSPからいじれるのはここだけ。HCLinitで実体化。メモリリーク予防目的。ここの中にあるeventのみ情報を保持し、それ以外のeventは必ずreleaseして破棄する
 cl_event* event_wait_list;//HCLinitで実体化。次にeventでwaitしたいcl関数を使う際にあらかじめこれを設定しておいておくイメージ
-std::string SGEMM_SOURCE;
+std::string SGEMM_SOURCE = "";
 
 struct EventStruct
 {
@@ -1011,25 +1011,6 @@ static void *reffunc( int *type_res, int cmd )
 		break;
 	}
 
-	case 0x81:	//double to float
-	{
-		fInt = true;
-		double d = code_getd();
-		float ret = (float)d;
-		ref_int32val = (int)(*(int*)&ret);
-		break;
-	}
-
-	case 0x82:	//float to double
-	{
-		fDouble = true;
-		int fi = code_geti();
-		float f = (float)(*(float*)&fi);
-		double d = (double)f;
-		ref_doubleval = d;
-		break;
-	}
-
 	case 0x96://HCLBLAS_Get2DShape
 	{
 		//引数1 buffer
@@ -1319,21 +1300,26 @@ static int cmdfunc(int cmd)
 
 	switch (cmd) {
 
+	case 0x02://fdim
 	case 0x51://dim64
 	{
-		PVal* pval1;
-		APTR aptr1;
-		aptr1 = code_getva(&pval1);
-		exinfo->HspFunc_dim(pval1, HspVarInt64_typeid(), 0, code_getdi(0), 0, 0, 0);
-		break;
-	}
+		PVal* pval = code_getpval();
 
-	case 0x02://fdim
-	{
-		PVal* pval1;
-		APTR aptr1;
-		aptr1 = code_getva(&pval1);
-		exinfo->HspFunc_dim(pval1, HspVarFloat_typeid(), 0, code_getdi(0), 0, 0, 0);
+		int p1 = code_getdi(0);
+		int p2 = code_getdi(0);
+		int p3 = code_getdi(0);
+		int p4 = code_getdi(0);
+		int fl;
+
+		if (cmd == 0x51)
+		{
+			fl = HspVarInt64_typeid();
+		}
+		else if (cmd == 0x02)
+		{
+			fl = HspVarFloat_typeid();
+		}
+		exinfo->HspFunc_dim(pval, fl, 1, p1, p2, p3, p4);		// これでいいの？
 		break;
 	}
 
@@ -1341,6 +1327,7 @@ static int cmdfunc(int cmd)
 
 	case 0x50://HCLinit
 	{
+		if (SGEMM_SOURCE.size() != 0)break;
 		cl_int errcode_ret;
 		cl_platform_id platform_id[MAX_PLATFORM_IDS];
 		cl_uint ret_num_devices;

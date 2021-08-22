@@ -8,12 +8,12 @@
 	M=8//冪指数。多分9以降は共有メモリサイズオーバーでエラーになる
 	N=1<<M
 	
-	ddim hsp_dataD_r,N//実数double初期値
-	ddim hsp_dataD_i,N//虚数double初期値
-	ddim hsp_retD_i,N//実数double結果格納用
-	ddim hsp_retD_r,N//虚数double結果格納用
-	dim hsp_dataF,N*2//実数と虚数が交互にはいるfloat型配列、初期値
-	dim hsp_retF,N*2//実数と虚数が交互にはいるfloat型配列、結果格納用
+	fdim hsp_dataF_r,N//実数float初期値
+	fdim hsp_dataF_i,N//虚数float初期値
+	fdim hsp_retF_i,N//実数float結果格納用
+	fdim hsp_retF_r,N//虚数float結果格納用
+	fdim hsp_dataF,N*2//実数と虚数が交互にはいるfloat型配列、初期値
+	fdim hsp_retF,N*2//実数と虚数が交互にはいるfloat型配列、結果格納用
 	gosub*fftの初期値設定
 	
 	prgid=HCLCreateProgram("FFTlocal.cl")
@@ -34,7 +34,7 @@
 	mes "GPU\n実数		虚数"
 	pos 0,38
 		repeat limit(N,1,9)
-		mes ""+FloatToDouble(hsp_retF(cnt*2))+"	"+FloatToDouble(hsp_retF(cnt*2+1))
+		mes ""+hsp_retF(cnt*2)+"	"+hsp_retF(cnt*2+1)
 		loop
 
 	gosub*DFT検算
@@ -44,13 +44,13 @@
 
 *fftの初期値設定
 		repeat N//初期値
-		hsp_dataD_r.cnt=0.01*(rnd(101)-50)//虚数部
-		hsp_dataD_i.cnt=0.01*(rnd(101)-50)//実数部
+		hsp_dataF_r.cnt=float(0.01*(rnd(101)-50))//虚数部
+		hsp_dataF_i.cnt=float(0.01*(rnd(101)-50))//実数部
 		loop
 		
 		repeat N
-		hsp_dataF(cnt*2+0)=DoubleToFloat(hsp_dataD_r.cnt)//実数部
-		hsp_dataF(cnt*2+1)=DoubleToFloat(hsp_dataD_i.cnt)//虚数部
+		hsp_dataF(cnt*2+0)=float(hsp_dataF_r.cnt)//実数部
+		hsp_dataF(cnt*2+1)=float(hsp_dataF_i.cnt)//虚数部
 		loop
 	return
 
@@ -66,11 +66,11 @@
 			s=sin(w)
 			c=cos(w)
 
-			r=hsp_dataD_r.x
-			i=hsp_dataD_i.x
+			r=hsp_dataF_r.x
+			i=hsp_dataF_i.x
 
-			hsp_retD_r.t+=r*c-i*s
-			hsp_retD_i.t+=r*s+i*c
+			hsp_retF_r.t+=float(r*c-i*s)
+			hsp_retF_i.t+=float(r*s+i*c)
 			loop
 		loop
 	
@@ -78,6 +78,6 @@
 	mes "CPUで検算(DFT)\n実数		虚数"
 	pos 0,258
 		repeat limit(N,1,9)
-		mes ""+hsp_retD_r(cnt)+"	"+hsp_retD_i(cnt)
+		mes ""+hsp_retF_r(cnt)+"	"+hsp_retF_i(cnt)
 		loop
 	return

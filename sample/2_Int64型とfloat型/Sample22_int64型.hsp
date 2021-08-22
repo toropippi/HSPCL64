@@ -3,12 +3,8 @@
 //例えばHCLCreateBufferで作成したclmemの変数は64bit型になっています。
 #include "HSPCL64.as"
 
-fdim ff,2
-	mes vartype(ff)
-	
-	//HCLinit
 	dim64 test,2
-	test.0=int64("2100000000")
+	test.0=int64( 2100000000 )
 	test.1=int64("2200000000")
 	mes "\"2100000000\" = "+test.0
 	mes "\"2200000000\" = "+test.1
@@ -16,8 +12,8 @@ fdim ff,2
 
 	mes vartype(test.0)
 	mes vartype("int64")
+	mes
 
-	ff.0=float(0.01)
-	mes vartype(ff)
-	mes vartype("float")
+	dimtype test2,vartype("int64"),10
+	mes "int64型配列10個のサイズ(byte)="+varsize(test2)
 	

@@ -42,14 +42,14 @@
 	goto*main
 
 *syoki;çªÇÃèâä˙à íuÇåàÇﬂÇÈ
-	dim i,maxkz*3
+	fdim i,maxkz*3
 	w=0
 		repeat maxkz
-		i.w=DoubleToFloat((0.001*(rnd(6400)*100+rnd(100))-320.0)*0.71)
+		i.w=float((0.001*(rnd(6400)*100+rnd(100))-320.0)*0.71)
 		w+
-		i.w=DoubleToFloat((0.001*(rnd(4800)*100+rnd(100))-240.0)*0.71)
+		i.w=float((0.001*(rnd(4800)*100+rnd(100))-240.0)*0.71)
 		w+
-		i.w=DoubleToFloat(125.0)
+		i.w=float(125.0)
 		w+
 		loop
 	
@@ -59,11 +59,11 @@
 	HCLSetKernel krnidou,0,mema
 	HCLSetKernel krnidou,1,memb
 	HCLSetKernel krnidou,2,vram2
-	HCLSetKernel krnidou,3,DoubleToFloat(1.0*(mousex-320)+0.001*rnd(1000))
-	HCLSetKernel krnidou,4,DoubleToFloat(1.0*(240-mousey)+0.001*rnd(1000))
-	HCLSetKernel krnidou,5,DoubleToFloat(125.0)
+	HCLSetKernel krnidou,3,float(1.0*(mousex-320)+0.001*rnd(1000))
+	HCLSetKernel krnidou,4,float(1.0*(240-mousey)+0.001*rnd(1000))
+	HCLSetKernel krnidou,5,float(125.0)
 	HCLSetKernel krnidou,6,ipn
-	HCLSetKernel krnidou,7,DoubleToFloat(keyc)
+	HCLSetKernel krnidou,7,float(keyc)
 	HCLDoKernel krnidou,1,maxkz,local_item_size
 	return
 

@@ -15,12 +15,12 @@
 	memc=HCLCreateBuffer(n*4)
 
 	HCLCall2 {"
-__kernel void test(__global int* a,__global int* b,__global int* c,int d)
+__kernel void test(__global int* a,__global int* b,__global int* c,float d)
 {
 	int gid=get_global_id(0);
-	c[gid]=a[gid]+b[gid]+d;
+	c[gid]=a[gid]+b[gid]+(int)d;
 }
-	"},n,n,mema,memb,memc,10//10にあたるのがコードのd
+	"},n,n,mema,memb,memc,float(10.0)//10にあたるのがコードのd
 
 	HCLdim_i32FromBuffer c,memc
 		repeat n

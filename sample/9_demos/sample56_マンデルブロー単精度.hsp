@@ -16,9 +16,9 @@
 	
 	mref hspvram,66
 	flm=0
-	gtx=-1.0;‰æ–Ê‚Ì¶ãx
-	gty=-1.0;‰æ–Ê‚Ì¶ãy
-	gtz=2.0;‰æ–Ê‚Ì”ÍˆÍ
+	gtx=float(-1.0);‰æ–Ê‚Ì¶ãx
+	gty=float(-1.0);‰æ–Ê‚Ì¶ãy
+	gtz=float(2.0);‰æ–Ê‚Ì”ÍˆÍ
 
 	global_size=winx,winy
 	local_size=8,8
@@ -27,9 +27,9 @@
 *main
 	gosub*keymove
 
-	HCLSetKernel krn,1,DoubleToFloat(gtx)
-	HCLSetKernel krn,2,DoubleToFloat(gty)
-	HCLSetKernel krn,3,DoubleToFloat(gtz/winx)
+	HCLSetKernel krn,1,gtx
+	HCLSetKernel krn,2,gty
+	HCLSetKernel krn,3,gtz/winx
 
 	HCLDoKernel krn,2,global_size,local_size
 	HCLReadBuffer vram,hspvram;mref ‚Åæ“¾‚µ‚½•Ï”‚Évram‚ğƒRƒs[

@@ -1,0 +1,16 @@
+#include "HSPCL64.as"
+
+	fdim test,2
+	test.0=float( 2100000000 )
+	test.1=float("2200000000")
+	mes "\"2100000000\" = "+test.0
+	mes "\"2200000000\" = "+test.1
+	mes
+
+	mes vartype(test.0)
+	mes vartype("float")
+	mes
+
+	dimtype test2,vartype("float"),10
+	mes "float型配列10個のサイズ(byte)="+varsize(test2)
+	

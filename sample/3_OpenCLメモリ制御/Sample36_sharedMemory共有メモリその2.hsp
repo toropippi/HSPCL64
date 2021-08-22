@@ -1,0 +1,27 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//Shared memory 共有メモリのサンプル
+//とりあえず共有メモリを使ってみる。
+//カーネルに引数を渡さないでやるバージョン
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "HSPCL64.as"
+	HCLinit
+
+	source={"
+__kernel void local_test(int local_size) 
+{
+	__local float S[128];
+	S[get_local_id(0)]=1.0;
+	barrier(CLK_LOCAL_MEM_FENCE);
+}
+	"}
+
+	prg=HCLCreateProgramWithSource(source)
+	krn=HCLCreateKernel(prg,"local_test")
+	HCLSetKernel krn,0,128
+
+	HCLDoKrn1 krn,128,128
+	HCLFinish
+	mes "ローカルメモリにアクセスしました。"
+	mes "おわり"
+	stop

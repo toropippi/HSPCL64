@@ -1,0 +1,153 @@
+// このSAMPLEはHCLCallの使い方、特に引数関連のことについて何パターンかにわけて理解するためのものです。
+// HCLCall自体は、WriteBufferやReadBufferやCreateProgramなどの命令を内部で自動でやってくれる命令です。
+// 普通HSPで確保した変数をそのままOpnnCLのコードでいじれないですが、これを使うことで擬似的に直接いじれているように見えます。
+// ただパフォーマンスを出すにはちゃんとCreateProgramしてWriteBufferやReadBufferを駆使してコードを書くことをおすすめします。
+// HCLCallはあくまで「お試し」でOpenCLコードを動かすときに手軽にできるようにするためのものです。
+
+#include "HSPCL64.as"
+	HCLinit
+	gosub*test01
+	gosub*test02
+	gosub*test03
+	gosub*test04
+	gosub*test05
+	;gosub*test06 //エラーになります
+	gosub*test07 //エラーサンプルと見せかけて正常に動作するサンプル
+	stop
+
+
+
+//①
+//256並列でthread idを代入するコード
+*test01
+	screen 0,240,480:title "test01"
+	dim aa,256
+	HCLCall "__kernel void test(__global int* aa) { aa[get_global_id(0)] = get_global_id(0); }",256,256,aa
+		repeat 256
+		mes aa.cnt
+		loop
+	return
+
+//②
+// global_size=65536並列でlocal_size=256でc[i]=a[i]+b[i]
+// global_sizeが並列化したい数
+// local_sizeは、local_sizeの整数倍がglobal_sizeになるような値で、かつ1～1024の値を指定すること。わからなければ0を指定すると自動で決定される
+*test02
+	screen 1,240,480:title "test02"
+	dim aa,65536:repeat 65536:aa.cnt=cnt:loop
+	dim bb,65536:repeat 65536:bb.cnt=cnt:loop
+	dim cc,65536
+	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid];
+	}
+"},65536,256,aa,bb,cc
+		repeat 40//表示数
+		mes cc.cnt
+		loop
+	return
+
+//③
+//256並列でc[i]=a[i]+b[i]+10
+*test03
+	screen 2,240,480:title "test03"
+	dim aa,256:repeat 256:aa.cnt=cnt:loop
+	dim bb,256:repeat 256:bb.cnt=cnt:loop
+	dim cc,256
+	
+	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid] + dd;
+	}
+"},256,256,aa,bb,cc,10
+		repeat 256
+		mes cc.cnt
+		loop
+	return
+
+//④
+//256並列でc[i]=a[i]+b[i]+x
+*test04
+	screen 3,240,480:title "test04"
+	dim aa,256:repeat 256:aa.cnt=cnt:loop
+	dim bb,256:repeat 256:bb.cnt=cnt:loop
+	dim cc,256
+	xx=34
+	
+	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid] + dd;
+	}
+"},256,256,aa,bb,cc,xx
+		repeat 256
+		mes cc.cnt
+		loop
+	return
+
+//⑤
+//256並列でc[i]=a[i]+b[i]+x.12
+*test05
+	screen 4,240,480:title "test05"
+	dim aa,256:repeat 256:aa.cnt=cnt:loop
+	dim bb,256:repeat 256:bb.cnt=cnt:loop
+	dim cc,256
+	dim xx,100
+	xx.12=34//こんな感じに配列変数の一つをintとしてセットすることもできる
+	
+	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid] + dd;
+	}
+"},256,256,aa,bb,cc,xx.12
+		repeat 256
+		mes cc.cnt
+		loop
+	return
+
+
+//⑥エラーサンプル
+//256並列でc[i]=a[i]+b[i]+x.0
+*test06
+	screen 5,240,480:title "test06"
+	dim aa,256:repeat 256:aa.cnt=cnt:loop
+	dim bb,256:repeat 256:bb.cnt=cnt:loop
+	dim cc,256
+	dim xx,100
+	xx.0=34//こんな感じに配列変数の添字が0のときだけは例外で、xxという配列変数として認識されてしまう。→kernel内の「int dd」と整合性が合わない
+	
+	HCLCall {"__kernel void test(__global int* aa,__global int* bb,__global int* cc,int dd)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid] + dd;
+	}
+"},256,256,aa,bb,cc,xx.0 //エラー回避策としてはここをint(xx.0)にするとうまくいく
+		repeat 256
+		mes cc.cnt
+		loop
+	return
+
+
+//⑦エラーサンプルと見せかけて正常に動作するサンプル
+//256並列でc[i]=a[i]+b[i]+x.0
+*test07
+	screen 6,240,480:title "test07"
+	dim aa,256:repeat 256:aa.cnt=cnt:loop
+	dim bb,256:repeat 256:bb.cnt=cnt:loop
+	dim cc,256
+	dim xx,1
+	xx.0=34//こんな感じに配列変数の添字が0だけども配列の要素数がそもそも1のものは配列変数ではなくintとして認識する
+	
+	HCLCall {"__kernel void testo(__global int* aa,__global int* bb,__global int* cc,int dd)
+	{
+		int gid=get_global_id(0);
+		cc[gid] = aa[gid] + bb[gid] + dd;
+	}
+"},256,256,aa,bb,cc,xx.0
+		repeat 256
+		mes cc.cnt
+		loop
+	return
