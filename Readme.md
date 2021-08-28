@@ -108,7 +108,7 @@ see https://opensource.org/licenses/BSD-3-Clause
 	HCLCall2命令実装  
 	HCLDoXc,i,l,f,d,uc,ui,ul系命令実装  
 	HCLBLAS系命令実装  
-	HCLBLASのgemmとgemvとsT,dT命令を関数型でも使えるよう実装  
+	HCLBLASのgemmとgemvとsT,dTとdot,mrn命令を関数型でも使えるよう実装  
 	HCLEventAutoProfilingStart,HCLEventAutoProfilingEnd()命令実装  
 	HCLGetPluginVersion命令でプラグインバージョンを取得できるように  
 	HCLGetProgramBinary,HCLCreateProgramWithBinary命令でバイナリ形式でプログラムの入出力対応  
