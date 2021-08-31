@@ -1,0 +1,267 @@
+#include "hspcl64.as"
+#include "NNmodule.hsp"
+	randomize
+	HCLinit
+
+	alpha=0.02
+	trainN=60000
+	testN=10000
+	allN=trainN+testN
+	N=256//=1batch
+	mlpLayerNum=4
+	dim mlpLayerNode,mlpLayerNum
+	mlpLayerNode=28*28,128,32,10
+
+	gosub*教師テストデータ作成
+	gosub*Make_GPUbuffer
+	
+	gosub*テストデータXT
+	gosub*loadwv//WV作成ロード
+
+	if DEBUGLOAD!=0{
+		bsave "h_ansT",h_ansT
+		bufnum=(allpngnum*2+429)/430
+			repeat bufnum
+			gsel 10+cnt
+			bmpsave ""+(10+cnt)+".bmp"
+			loop
+	}
+	gsel 0
+
+
+	//メイン計算
+	//まいループでランダムにチョイスして256ミニバッチ学習
+
+	h_ce=float(0.0)
+		repeat 1199
+		maincnt=cnt
+		if h_ce<float(0.03){
+			gosub*make_rndchiceXT
+			//screen 3,128,22*256:pos 0,0:gcopy 9,0,0,128,22*256
+			gsel 0
+			title ""+maincnt+""
+			color 255,255,255
+			boxf
+			color 0,0,0
+			pos 0,0
+		}
+		//テスト
+		trainingflg=0
+		matX_=matXtest
+		gosub*FNNmain
+		matT_=matTtest
+		gosub*CE_FFN
+		ce_test=ce
+		//学習
+		trainingflg=1
+		matX_=matX
+		gosub*FNNmain
+		matT_=matT
+		gosub*CE_FFN
+		h_cetest=HCLReadIndex_fp(ce_test,0)
+		h_ce=HCLReadIndex_fp(ce,0)
+		mes ""+h_ce+"\t"+h_cetest+""
+		gosub*dCE_FNN
+		HCLGarbageCollectionNow
+		await 1
+		if maincnt<400:await 10
+		if maincnt<100:await 20
+
+		getkey key,27
+		if key:gosub*WVBNsave:end
+		if maincnt>230{
+			if h_cetest<float(0.00004):gosub*WVBNsave:stop
+		}
+		loop
+
+	end
+	stop
+
+*make_rndchoiceXT
+	//まず全体から256個の重複なしランダムを作成したいが重複なしは大変なので重複ありで
+	dim rn,256
+		repeat 256
+		rn.cnt=(rnd(8192)*8192+rnd(8192))\trainN
+		loop
+	//X
+		repeat 256
+		HCLCopyBuffer matX,trainX,28*28*4,28*28*4*cnt,28*28*4*rn.cnt
+		loop
+	//T
+		repeat 256
+		HCLCopyBuffer matT,trainT,10*4,10*4*cnt,10*4*rn.cnt
+		loop
+	return
+
+
+//matX_に好きなのを代入してgosubしてください
+*FNNmain
+	HCLBLAS_sgemm matB.0,matX_,matWV.0
+		repeat mlpLayerNum-2
+		BNforwrd BN.cnt,matB.cnt,matBNB.cnt,trainingflg
+		HCLDoXf "A[i]=max(B[i],0.0f);",matZ.cnt,matBNB.cnt
+		HCLBLAS_sgemm matB.(cnt+1),matZ.cnt,matWV.(cnt+1)
+		loop
+	AToY matB.(mlpLayerNum-2),matZ.(mlpLayerNum-2)
+	//matZがyに相当
+	//matBがaに相当
+	return
+
+//matT_に好きなのを代入してgosubしてください
+*CE_FFN
+	nplgy=HCLDoXf("float x=A[i];if (x<=0.0)x=0.0000000000001;OUT[i]=-log(x)/256;",matZ.(mlpLayerNum-2))
+	ce=HCLBLAS_sdot(nplgy,matT_)
+	return
+
+//この中でalpha補正もする
+*dCE_FNN
+	dim64 delta,mlpLayerNum-1
+	
+	delta.(mlpLayerNum-2) = HCLDoXf("OUT[i]=A[i]-B[i];",matZ.(mlpLayerNum-2),matT)
+	raw_ = HCLBLAS_Get2DShape(matZ.(mlpLayerNum-2),0)
+	col_ = HCLBLAS_Get2DShape(matZ.(mlpLayerNum-2),1)
+	HCLBLAS_Set2DShape delta.(mlpLayerNum-2),raw_,col_
+
+		repeat mlpLayerNum-2
+		ccnt2=mlpLayerNum-2-cnt
+		ccnt3=mlpLayerNum-3-cnt
+		
+		delta12_1 = HCLBLAS_sgemm(delta.ccnt2, matWV.ccnt2 ,0,0,1)
+		delta12_2 = HCLDoXf("OUT[i]=A[i]*(B[i]>0.0);",delta12_1,matBNB.ccnt3)
+		raw_ = HCLBLAS_Get2DShape(delta12_1,0)
+		col_ = HCLBLAS_Get2DShape(delta12_1,1)
+		HCLBLAS_Set2DShape delta12_2,raw_,col_
+		delta.ccnt3 = int64(BNbackward(BN.ccnt3,delta12_2))
+		HCLBLAS_Set2DShape delta.ccnt3,raw_,col_
+		loop
+
+		repeat mlpLayerNum-2
+		ccnt2=mlpLayerNum-2-cnt
+		ccnt3=mlpLayerNum-3-cnt
+		dv=HCLBLAS_sgemm(delta.ccnt2,matZ.ccnt3 ,1,1,0)//割るN
+		HCLDoXf "B[i]/=256;A[i]-=a*B[i];",matWV.ccnt2,dv,float(alpha)
+		loop
+	
+	dw=HCLBLAS_sgemm(delta.0,matX ,1,1,0)//割るN
+	HCLDoXf "B[i]/=256;A[i]-=a*B[i];",matWV.0,dw ,float(alpha)
+
+		repeat mlpLayerNum-2
+		BNmodyf BN.cnt,alpha
+		loop
+	return
+
+
+
+*Make_GPUbuffer
+	//b,zを作る
+	//a,yはb,zの最後の要素に対応
+	dim64 matB,mlpLayerNum-1
+	dim64 matZ,mlpLayerNum-1
+	dim64 matBNB,mlpLayerNum-2
+	//B,Z
+		repeat mlpLayerNum-1
+		matB.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matB.cnt,N,mlpLayerNode.(cnt+1)
+		matZ.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matZ.cnt,N,mlpLayerNode.(cnt+1)
+		HCLIncRefcntCLBufferId matZ.cnt,matB.cnt
+		loop
+	//Batch normの出力変数 BNB
+		repeat mlpLayerNum-2
+		matBNB.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matBNB.cnt,N,mlpLayerNode.(cnt+1)
+		HCLIncRefcntCLBufferId matBNB.cnt
+		loop
+	//Batch norm計算クラス＝モジュール変数
+		repeat mlpLayerNum-2
+		newmod BN,BatchNormalization,mlpLayerNode.(cnt+1),cnt+1,"学習後\\"
+		loop
+	return
+
+*loadwv
+	exist "学習後\\WV0.npy"
+	dim host_wv,strsize/4
+	bload "学習後\\WV0.npy",host_wv
+	
+	offsetread=0
+	dim64 matWV,mlpLayerNum-1
+		repeat mlpLayerNum-1
+		sz=mlpLayerNode.cnt*mlpLayerNode.(cnt+1)*4
+		matWV.cnt=HCLCreateBuffer(sz)
+		HCLWriteBuffer matWV.cnt,host_wv,sz,0,128+offsetread
+		HCLBLAS_Set2DShape matWV.cnt,mlpLayerNode.(cnt+1),mlpLayerNode.cnt
+		matWV.cnt=HCLBLAS_sT(matWV.cnt)
+		offsetread+=sz
+		HCLIncRefcntCLBufferId matWV.cnt
+		loop
+	return
+
+
+
+
+
+*教師テストデータ作成
+	//全画像データロード。X
+	buffer 1:picload "mnist.png"
+	allX=HCLCreateBuffer(mlpLayerNode.0*allN*4)
+	memG=HCLCreateBuffer(mlpLayerNode.0*4)
+	
+	buffer 2,28,28
+		repeat allN
+		gsel 2
+		pos 0,0
+		gcopy 1,cnt\700*28,cnt/700*28,28,28
+		gselToBufferFloat2 2,memG
+		HCLCopyBuffer allX,memG,mlpLayerNode.0*4,mlpLayerNode.0*4*cnt
+		loop
+	buffer 1,4,4
+	
+	//全答えロード。T
+	sdim allAns,allN
+	bload "ans.txt",allAns
+	allT=HCLCreateBuffer(10*allN*4)
+	HCLFillBuffer allT,float(0)
+	HCLDoXc "F0[(A[i]-48)+i*10]=1.0;",HCLCreateBufferFrom(allAns),allT
+
+	//教師/////////
+	//60000
+	//画像
+	trainX=HCLCreateBuffer(trainN*mlpLayerNode.0*4)
+	HCLCopyBuffer trainX,allX,mlpLayerNode.0*trainN*4,0,0
+	//答え
+	trainT=HCLCreateBuffer(trainN*mlpLayerNode.(mlpLayerNum-1)*4)
+	HCLCopyBuffer trainT,allT,mlpLayerNode.(mlpLayerNum-1)*trainN*4,0,0
+	
+	//1batchあたりの計算につかう256サイズ
+	//画像
+	matX=HCLCreateBuffer(N*mlpLayerNode.0*4)
+	HCLBLAS_Set2DShape matX,N,mlpLayerNode.0
+
+	//答え
+	matT=HCLCreateBuffer(N*mlpLayerNode.(mlpLayerNum-1)*4)
+	HCLBLAS_Set2DShape matT,N,mlpLayerNode.(mlpLayerNum-1)
+
+
+	//テスト/////////
+	//10000
+	//画像
+	testX=HCLCreateBuffer(testN*mlpLayerNode.0*4)
+	HCLCopyBuffer testX,allX,mlpLayerNode.0*testN*4,0,mlpLayerNode.0*trainN*4
+	//答え
+	testT=HCLCreateBuffer(testN*mlpLayerNode.(mlpLayerNum-1)*4)
+	HCLCopyBuffer testT,allT,mlpLayerNode.(mlpLayerNum-1)*testN*4,0,mlpLayerNode.(mlpLayerNum-1)*trainN*4
+	
+	//
+	HCLIncRefcntCLBufferId matX,matT,trainX,trainT,testX,testT
+	return
+
+
+#module
+#deffunc clmemgcopy var dst,var src,int x,int y,int ccnt
+	yy=720-22-y
+		repeat 22
+		HCLCopyBuffer dst,src,128*4,ccnt*128*22*4+cnt*128*4,((yy+cnt)*1280+x)*4
+		loop
+	return
+
+#global
