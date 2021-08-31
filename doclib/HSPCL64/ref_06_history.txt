@@ -1,4 +1,24 @@
 ■更新履歴
+	ver 1.1  
+	float型実装  
+	FloatToDouble削除  
+	DoubleToFloat削除  
+	HCLdim_fpFromBuffer命令実装  
+	HCLReadIndex_fp,HCLWriteIndex_fp命令実装  
+	HCLGetDeviceInfo_s,i,i64命令をモジュールからプラグインに埋め込み  
+	HCLFillBuffer_i32,i64,dp系命令を1つにまとめ  
+	HCLGetSize命令実装  
+	HCLGetAllBufferSize命令実装  
+	HCLGarbageCollectionNow命令実装  
+	HCLIncRefcntCLBufferId,HCLDecRefcntCLBufferId命令実装  
+	HCLCall2命令実装  
+	HCLDoXc,i,l,f,d,uc,ui,ul系命令実装  
+	HCLBLAS系命令実装  
+	HCLBLASのgemmとgemvとsT,dTとdot,mrn命令を関数型でも使えるよう実装  
+	HCLEventAutoProfilingStart,HCLEventAutoProfilingEnd()命令実装  
+	HCLGetPluginVersion命令でプラグインバージョンを取得できるように  
+	HCLGetProgramBinary,HCLCreateProgramWithBinary命令でバイナリ形式でプログラムの入出力対応  
+
 	ver 1.0  
 	HCLDokrn2,3実装  
 	HCLdim_i64FromBuffer命令実装  

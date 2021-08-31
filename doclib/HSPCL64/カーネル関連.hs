@@ -7,10 +7,10 @@
 HSPCL64.dll
 
 %ver
-1.0
+1.1
 
 %date
-2021/06/07
+2021/08/31
 
 %author
 toropippi
@@ -80,6 +80,45 @@ HCLCreateKernel
 HCLReleaseProgram
 
 ;--------
+%index
+HCLGetProgramBinary
+プログラムバイナリ作成
+
+%prm
+(int64 p1)
+int64 p1 : プログラムid		[in]
+
+%inst
+バイナリ文字列がstr型で返ります。
+
+改行コードがCR LFではなく、LFのみの文字列になっている点に注意してください。
+
+%href
+HCLCreateProgramWithSource
+HCLCreateProgramWithBinary
+;--------
+%index
+HCLCreateProgramWithBinary
+プログラムバイナリからプログラム作成
+
+%prm
+(str p1,str p2)
+str p1 : プログラムバイナリ文字列	[in]
+str p2 : ビルドオプション,省略可	[in]
+
+%inst
+プログラムidがint64型で返ります。
+p1にはソースのデータを入れて下さい。
+p2にはビルドオプションを入れてください。
+例："-D SCALE=111"
+
+コンパイルされたOpenCLカーネルプログラムは、そのデバイス上でしか使えません。
+２つ以上のデバイス上で同じカーネルを実行したいとき、それぞれのデバイスidをHCLSetDeviceでセットしなおしてHCLCreateProgramWithBinaryを実行して下さい。
+
+%href
+HCLGetProgramBinary
+HCLCreateProgramWithSource
+;------------
 
 %index
 HCLCreateKernel
@@ -244,25 +283,51 @@ p4以降の引数の数とOpenCLカーネル内の引数の数が合わないとエラーになります。
 HCLDoKernelと違い、タスクが完了するまで次の命令にうつりません。
 オーバーヘッドも大きいので、速度が求められる場合には向きません。
 
-■この命令を使う前に
-この命令はOpenCLの入門用として、また簡易にOpenCLを利用できることを目的に作成した命令です。
-（LV1_簡単に扱える）
-「HSPで用意した配列変数をVRAM等に移す処理、セット処理」などを自動化し、より初心者が簡易に扱えるようにしております。
+%href
+HCLDoKernel
+HCLCall2
+HCLDokrn1
+HCLDokrn2
+HCLDokrn3
+;--------
 
-この命令を利用するためには
+%index
+HCLCall2
+カーネル文字列実行
 
-1.OpenCL用の命令ソースを別個用意する。（簡易なC言語にて表記）
-2.処理対象のHSPの配列変数等を用意する。
-3.HCLCall実行後、HCLCallの引数として用意した変数がOpenCLによって処理された形で値が返る。
+%prm
+str p1,int p2,int p3,p4,p5,p6,,,,,
+str p1:カーネル文字列				[in]
+int p2:グローバルサイズ(1次元並列処理数)	[in]
+int p3:ローカルサイズ(1次元並列処理数)		[in]
+p4以降:引数に渡す実体(arrayやvar intなどの数値)	[in,out]
+%inst
 
-慣れてきたらHCLDoKernel、HCLDoKrn1,2,3へとステップアップしてください。
+HCLCreateProgram,HCLCreateKernel,HCLSetKernelをせずカーネルを実行して結果を得ます。
+今回のHCLCall2は引数を直接(?)指定できるので、より直観的に書くことができます。
+つまりHCLCallのHSP配列→cl mem版です。
 
-■使用注意
-この命令を使ってもある程度高速に計算を行うことができますが、同じソースで何度も繰り返し使うものではありません。上記のようオーバーヘッドが大きいからです。
+p1にはソースコードの文字列
+p2にはグローバルサイズ（実行したい並列処理数）
+p3にはローカルサイズ
+p4以降にはカーネルに渡す引数を指定して下さい。
 
+p4以降の引数の数とOpenCLカーネル内の引数の数が合わないとエラーになります。
+
+内部でHCLCreateProgram,HCLCreateKernel,HCLSetKernelを使用しています。
+HCLCallと違いタスクが完了する前に次の命令にうつります(ブロッキングモードoff)。
+
+HCLCallやHCLCall2では第一引数の入力文字列がプラグイン内部でハッシュ化され保存されており、全く同じ文字列の場合、前回のビルドを自動で使いまわすことができるようになっています。
+つまり毎回カーネルソースをコンパイルしているわけではないので高速です。
+ただHCLDokrn1,2,3命令のように引数指定と分離できてるわけではないので、細かいことを言えば引数指定の分オーバーヘッドはどうしてもあります。
 
 %href
 HCLDoKernel
+HCLCall
+HCLDokrn1
+HCLDokrn2
+HCLDokrn3
+
 ;--------
 
 %index
@@ -292,28 +357,8 @@ p5はevent_idで-1～65535の値を指定できます。省略時デフォルトでは-1です。
 この命令自体は実行が完了するまで待つ命令ではなく、OpenCLコマンドをキューに入れるだけであり、実際のカーネルの実行終了を待つにはeventを使うかHCLFinish等で待つことになります。
 これは一見複雑なように思えますが、GPUが計算している最中にCPUが別のタスクに処理を回せるという利点があります。
 
-■この命令を使う前に
-
-独特な処理が多いOpenCL（GPGPU）の初期理解を補助するために
-処理のレベルを３段階に分けております。
-
-LV1	HCLCall		を利用したOpenCL（簡単！）
-LV2	HCLDoKernel	を利用したOpenCL（中くらい！）
-LV3	HCLDoKrn1～3を利用したOpenCL（普通！）
-
-学習の理解度に併せて上位の命令を利用して頂ければ幸いです。
-当然処理速度はLV3の方が当然速いです。しかしそのためのより高度なメモリ管理、スレッド管理の知識等が必要となります。
-
-OpenCLの主な役割はホスト側（CPU側）とデバイス側（GPU側）の処理の橋渡しになります。
-しかしそれにはメモリの管理、カーネルの指定と引数のセットなどが必要となり処理が煩雑になりまた初心者には理解し辛いと考えております。
-
-そのためOpenCLをこれから利用しよう、学習しようとする方は
-使用者の処理を簡素化できるHCLCallからの利用をオススメいたします。
-
-
 ■HCLDoKernelについて
 この命令はOpenCLの入門用として、また簡易にOpenCLを利用できることを目的に作成した命令です。
-（LV２中くらい簡単に扱える）
 HCLCallでは自動的に処理していた「HSPで用意した配列変数をVRAM等に移す処理」「スレッドの次元」を
 自ら設定しなければなりません。
 しかし設定できる部分が少ないHCLCallと比較して処理の高速化や自由度の高いことが可能になります。
@@ -341,8 +386,7 @@ HSPユーザーとしてHCLDoKernel（OpneCLプラグイン）を利用する時、理解の上で躓きやす
 	6.そしてその結果を参照する時はHSP上の固有の命令（HCLReadBuffer）でデータを戻してこなければならない。
 
 このような処理が必要となるのはホスト側（CPU側）とデバイス側（GPU側）の処理/メモリ管理が別個となっているからです。
-なお便宜上GPU側と書いていますが、OpenCLデバイスがIntel CPUやAMD CPUの場合もありえます。その場合でもメモリ管理が別個であることは変わりないです。※つまりSVMは使えない(ver1.0時点)
-
+なお便宜上GPU側と書いていますが、OpenCLデバイスがIntel CPUやAMD CPUの場合もありえます。その場合でもメモリ管理が別個であることは変わりないです。※つまりSVMは使えない(ver1.x時点)
 
 
 ■インデクス空間について
@@ -778,12 +822,32 @@ HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
+HCLCall2
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+HCLBLAS_sT
+HCLBLAS_dT
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+HCLBLAS_sdot
+HCLBLAS_ddot
+HCLBLAS_snrm2
+HCLBLAS_dnrm2
+
 の命令で発行したものになります。
 
 %href
@@ -792,12 +856,31 @@ HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
+HCLCall2
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+HCLBLAS_sT
+HCLBLAS_dT
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+HCLBLAS_sdot
+HCLBLAS_ddot
+HCLBLAS_snrm2
+HCLBLAS_dnrm2
 HCLFlush
 ;--------
 
@@ -812,17 +895,37 @@ OpenCLコマンドを発行
 HCLSetDeviceで指定しているデバイスのすべてのコマンドキューに入れられた全てのOpenCLコマンドを発行します。
 
 ここで言うOpenCLコマンドとは
+
 HCLDoKernel
 HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
+HCLCall2
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+HCLBLAS_sT
+HCLBLAS_dT
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+HCLBLAS_sdot
+HCLBLAS_ddot
+HCLBLAS_snrm2
+HCLBLAS_dnrm2
 の命令で発行したものになります。
 
 %href
@@ -831,12 +934,31 @@ HCLDoKrn1
 HCLDoKrn1_sub
 HCLDoKrn2
 HCLDoKrn3
+HCLCall2
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+HCLBLAS_sT
+HCLBLAS_dT
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+HCLBLAS_sdot
+HCLBLAS_ddot
+HCLBLAS_snrm2
+HCLBLAS_dnrm2
 HCLFinish
 ;--------
 
@@ -862,9 +984,7 @@ HCLDoKrn3
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
 
 同じデバイスでも違うコマンドキューに入れられたOpenCLコマンドは、順不同で実行されます。
 例えば同じメモリにデータを書き込むカーネルを別々のコマンドキューにいれて実行すると、カーネルが同時に実行される可能性があり、メモリにはそれぞれのカーネルが書き込んだ値が混在している可能性があります。
@@ -879,9 +999,7 @@ HCLDoKrn3
 HCLCopyBuffer
 HCLWriteBuffer
 HCLReadBuffer
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
 HCLFlush
 HCLFinish
 HCLGetSettingCommandQueue
@@ -928,4 +1046,1451 @@ int64 p1 : プログラムid			[in]
 
 %href
 HCLCreateProgram
+;--------
+
+
+%index
+HCLDoXc
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXi
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXl
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXf
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXd
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXuc
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXui
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+;--------
+
+
+%index
+HCLDoXul
+短縮記法カーネル実行
+
+%prm
+str p1,p2,p3,p4,p5,,,,,
+str p1:短縮記法カーネル文字列		[in]
+p2以降:引数に渡す実体(arrayやvar intなどの数値)	[in]
+%inst
+
+カーネルを実行します。
+
+まずHCLDoXc,HCLDoXi,HCLDoXl,HCLDoXuc,HCLDoXui,HCLDoXul,HCLDoXf,HCLDoXdの8種類の違いですが
+c,i,l,uc,ui,ul,f,dがそれぞれchar,int,long,uchar,uint,ulong,float,doubleに対応しています。
+この型情報は、基本的にglobal変数の型の解釈として使われます。
+
+■HCLDoX系命令について
+第一引数の文字列はOpenCL カーネルコードになります。
+
+ただ普通と違うのは__global float *Aなどと宣言してないことです。
+文字列のコードをプラグイン内部で解釈し、1文字の大文字はglobal変数、1文字の小文字はprivate変数として自動的に宣言が追加されます。
+
+A,B,Cとaという1文字変数を短縮記カーネルで使うと
+	__global int *A,__global int *B,__global int *C,int a
+という宣言がプラグイン内部によって追加されていることになります。
+
+
+■型については
+global変数の場合、HCLDoXiはint型に決定されます。
+private変数の場合、HSP側で入力した引数の型がそのまま採用されます。
+
+■並列実行数
+global_sizeとlocal_sizeですが、local_sizeは64固定、global_sizeは
+グローバル変数Aに対応するBufferのサイズから決定されます。
+例えばHCLDoXi命令で、cl　memとしてサイズが256*4=1024byteのcl memをp2に指定した場合
+HCLDoXiなのでint型と解釈しておりsizeof(int)=4で割って
+global_size=1024/4=256
+ということになります。
+
+■小文字変数について(1文字)
+例外としては「i」「j」「k」「x」「y」「z」があります。
+iは
+	int i = get_global_id(0);
+というように宣言されており今回の「a」のような使い方はできません。
+j,k,x,y,zはprivate変数の宣言には使われず、普通にコード内で
+	float x=1.2;
+と使うことができます。
+
+■小文字変数について(2文字以上)
+「li」という変数は
+	int li = get_local_id(0);
+と宣言されています。
+
+
+■大文字変数について(2文字以上)
+1文字の大文字はglobal変数と解釈されますが、型については例えばHCLDoXdなら全てdoubleと決め打ちされてしまいます。
+そこでglobal変数の型を明示的に、簡単に記せるよう以下のような規則を設けています。
+	C0 ～C9 	:	global変数をchar型と解釈
+	UC0～UC9	:	global変数をunsigned char型と解釈
+	I0 ～I9 	:	global変数をint型と解釈
+	UI0～UI9	:	global変数をunsigned int型と解釈
+	L0 ～L9 	:	global変数をlong long型と解釈
+	UL0～UL9	:	global変数をunsigned long long型と解釈
+	F0 ～F9 	:	global変数をfloat型と解釈
+	D0 ～D9 	:	global変数をdouble型と解釈
+
+
+ただしコード内に必ず「A」や「B」などの半角1文字の大文字を使っていないといけません。
+それはglobal_sizeを決める際に、その1文字変数が基準になるからです。
+
+HCLDoX系命令に引数を与える順番ですが
+１ 半角1文字大文字変数A-Z
+２ C D F I L UC UI UL
+３ 半角1文字小文字変数a-z
+の順になります。
+
+
+またS0～S9という文字列も意味を持ちます。
+SはShared memoryのSであり
+	S0	:	1要素のShared memory
+	S1	:	2要素のShared memory
+	S2	:	4要素のShared memory
+	S3	:	8要素のShared memory
+	S4	:	16要素のShared memory
+	S5	:	32要素のShared memory
+	S6	:	64要素のShared memory
+	S7	:	128要素のShared memory
+	S8	:	256要素のShared memory
+	S9	:	512要素のShared memory
+
+型はHCLDoXfならfloat型と決定されます。
+
+
+OUTという文字も意味を持ちます。
+まずHCLDoX系命令は関数として使うこともでき、新しくcl_memを作成し返すことができます。
+カーネルコード側でOUTと書いてあるところが、出力メモリバッファにあたります。
+カーネルコード内ではHCLDoXfの場合OUTはfloat型でありメモリのサイズは「A※」と同じものが作られます。
+
+※1文字大文字変数でアルファベット順で最初にくるもの(つまりHCLDoX系命令の第2引数にあたるもの)と同じサイズ、型として作成されるという規則があります。
+
+もしカーネルコード中にOUTを使用していても、HCLDoX系命令を命令形(関数ではなく)として使った場合OUTは一度作成されますがプラグイン内部ですぐ破棄されます。
+
+■デフォルト関数
+デフォルト設定されている関数があり
+	uint RND(uint s) {
+		s*=1847483629;
+		s=(s^61)^(s>>16);
+		s*=9;
+		s=s^(s>>4);
+		s*=0x27d4eb2d;
+		s=s^(s>>15);
+		return s;
+	}
+
+これによりRND()関数をデフォルトで使うことができます。
+
+また#defineで下記文言が登録されており使うことができます。
+	#define REP(j, n) for(int j = 0; j < (int)(n); j++)
+	#define BARRIER barrier(CLK_LOCAL_MEM_FENCE);
+
+
+■コードの使い回しについて
+HCLDoX系命令もHCLCallもHCLCall2も、入力文字列はハッシュ化され、過去に同じ文字列でカーネルを実行したことがあるならば
+文字列のコンパイルをスキップしkernel idを使い回すことでオーバーヘッドを極力へらす仕様になっています。
+ただし、異なるデバイスidでコンパイルしたものは同じコード文字列であっても別物と解釈します。
+
+したがって同じデバイスで同じコード文字列を何度も実行しても、最初の1回のみ大きなオーバーヘッドがあるだけで
+2回目以降の実行はHCLDokrn1,2,3と同じくらい、気にならない程度のオーバーヘッドになるはずです。
+例えば1秒に10000回HCLDoX系命令を実行するなら別ですが・・・その場合HCLDokrn1,2,3系命令のほうが明らかにオーバーヘッドという観点では高速になるでしょう。(もちろんGPU上のカーネルコードの実行速度は変わらない)
+
+
+
+%href
+HCLDoXc
+HCLDoXi
+HCLDoXl
+HCLDoXf
+HCLDoXd
+HCLDoXuc
+HCLDoXui
+HCLDoXul
+
+;----------------
+
+%index
+HCLBLAS_sgemm
+sgemmカーネル実行 C=A*B
+
+%prm
+int64 p1,int64 p2,int64 p3,int p4,int p5,int p6
+int64 p1:[C]CL_mem_object id			[in]
+int64 p2:[A]CL_mem_object id			[in]
+int64 p3:[B]CL_mem_object id			[in]
+int p4:[C]転置フラグ,省略可			[in]
+int p5:[A]転置フラグ,省略可			[in]
+int p6:[B]転置フラグ,省略可			[in]
+
+%inst
+
+C=A×Bの行列行列積を行ないます。
+プラグイン内部に埋め込まれているカーネルで実行されます。
+
+転置フラグは0で転置なし、1で転置ありになります。
+A,BにはHCLBLAS_Set2DShape
+であらかじめcl memに行、列のサイズを設定しておく必要があります。
+
+命令として実行することもできますが、関数として実行することもできます。
+その際は
+C=HCLBLAS_sgemm(A,B,0,0,0)
+のように使います。
+この場合、Cには新たにHCLCreateBufferで確保されたmem idが返されます。
+
+
+%href
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+;----------------
+
+%index
+HCLBLAS_dgemm
+dgemmカーネル実行 C=A*B
+
+%prm
+int64 p1,int64 p2,int64 p3,int p4,int p5,int p6
+int64 p1:[C]CL_mem_object id			[in]
+int64 p2:[A]CL_mem_object id			[in]
+int64 p3:[B]CL_mem_object id			[in]
+int p4:[C]転置フラグ,省略可			[in]
+int p5:[A]転置フラグ,省略可			[in]
+int p6:[B]転置フラグ,省略可			[in]
+
+%inst
+
+C=A×Bの行列行列積を行ないます。
+プラグイン内部に埋め込まれているカーネルで実行されます。
+
+転置フラグは0で転置なし、1で転置ありになります。
+A,BにはHCLBLAS_Set2DShape
+であらかじめcl memに行、列のサイズを設定しておく必要があります。
+
+命令として実行することもできますが、関数として実行することもできます。
+その際は
+C=HCLBLAS_sgemm(A,B,0,0,0)
+のように使います。
+この場合、Cには新たにHCLCreateBufferで確保されたmem idが返されます。
+
+
+%href
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+;--------
+%index
+HCLBLAS_Set2DShape
+cl mem idに行と列を設定する
+
+%prm
+int64 p1,int p2,int p3
+int64 p1:CL_mem_object id			[in]
+int p2:行(raw)の数			[in]
+int p3:列(col)の数			[in]
+
+%inst
+cl memに行、列のサイズを設定します。
+HCLBLAS_sgemm命令やHCLBLAS_dgemm命令を使う際にあらかじめ行、列を正しく設定しておく必要があります。
+
+
+%href
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+;--------
+
+%index
+HCLBLAS_Get2DShape
+cl mem idに行or列を取得する
+
+%prm
+(int64 p1,int p2)
+int64 p1:CL_mem_object id			[in]
+int p2:0 or 1
+
+%inst
+cl memの行、列のサイズを取得します。
+p2が0なら行、1なら列が返されます。
+
+%href
+HCLBLAS_Set2DShape
+HCLBLAS_Get2DShape
+HCLBLAS_sgemm
+HCLBLAS_dgemm
+;--------
+
+%index
+HCLBLAS_sT
+cl mem idをfloat型で行列転置
+
+%prm
+int64 p1,int64 p2
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p1をソースとしてfloat型として解釈し、行列転置したものをp2に書き込みます。
+■関数として使った場合
+p1をソースとしてfloat型として解釈し、行列転置したメモリbufferを作成しメモリidを返します。
+p2は指定できません。
+
+%href
+HCLBLAS_dT
+;--------
+%index
+HCLBLAS_dT
+cl mem idをdouble型で行列転置
+
+%prm
+int64 p1,int64 p2
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p1をソースとしてdouble型として解釈し、行列転置したものをp2に書き込みます。
+■関数として使った場合
+p1をソースとしてdouble型として解釈し、行列転置したメモリbufferを作成しメモリidを返します。
+p2は指定できません。
+
+%href
+HCLBLAS_sT
+;--------
+%index
+HCLBLAS_sgemv
+sgemvカーネル実行 y=A*x
+
+%prm
+int64 p1,int64 p2,int64 p3,int p4,int p5,int p6
+int64 p1:[y]CL_mem_object id			[in]
+int64 p2:[A]CL_mem_object id			[in]
+int64 p3:[x]CL_mem_object id			[in]
+
+%inst
+
+y=A×xの行列ベクトル積を行ないます。
+プラグイン内部に埋め込まれているカーネルで実行されます。
+
+AにはHCLBLAS_Set2DShape
+であらかじめcl memに行、列のサイズを設定しておく必要があります。
+
+x,yはHCLBLAS_Set2DShapeでサイズ指定されていても無視されます。
+
+
+命令として実行することもできますが、関数として実行することもできます。
+その際は
+y=HCLBLAS_sgemm(A,x)
+のように使います。
+この場合、yには新たにHCLCreateBufferで確保されたmem idが返されます。
+
+
+%href
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+;--------
+%index
+HCLBLAS_dgemv
+dgemvカーネル実行 y=A*x
+
+%prm
+int64 p1,int64 p2,int64 p3,int p4,int p5,int p6
+int64 p1:[y]CL_mem_object id			[in]
+int64 p2:[A]CL_mem_object id			[in]
+int64 p3:[x]CL_mem_object id			[in]
+
+%inst
+
+y=A×xの行列ベクトル積を行ないます。
+プラグイン内部に埋め込まれているカーネルで実行されます。
+
+AにはHCLBLAS_Set2DShape
+であらかじめcl memに行、列のサイズを設定しておく必要があります。
+
+x,yはHCLBLAS_Set2DShapeでサイズ指定されていても無視されます。
+
+
+命令として実行することもできますが、関数として実行することもできます。
+その際は
+y=HCLBLAS_sgemm(A,x)
+のように使います。
+この場合、yには新たにHCLCreateBufferで確保されたmem idが返されます。
+
+
+%href
+HCLBLAS_sgemv
+HCLBLAS_dgemv
+;--------
+%index
+HCLBLAS_sdot
+x1・x2のドット積(ベクトル内積)を計算
+
+%prm
+int64 p1,int64 p2,int64 p3
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+int64 p3:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p2,p3をfloat型のベクトルとして解釈し内積計算したものをp1に書き込みます。
+■関数として使った場合
+p1,p2をfloat型のベクトルとして解釈し内積計算したものの結果が格納されているmem idを返します。
+p3は使いません。
+
+%href
+HCLBLAS_ddot
+;--------
+%index
+HCLBLAS_ddot
+x1・x2のドット積(ベクトル内積)を計算
+
+%prm
+int64 p1,int64 p2,int64 p3
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+int64 p3:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p2,p3をdouble型のベクトルとして解釈し内積計算したものをp1に書き込みます。
+■関数として使った場合
+p1,p2をdouble型のベクトルとして解釈し内積計算したものの結果が格納されているmem idを返します。
+p3は使いません。
+
+%href
+HCLBLAS_sdot
+;--------
+%index
+HCLBLAS_snrm2
+ベクトルxのL2ノルムを計算
+
+%prm
+int64 p1,int64 p2
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p2をfloat型のベクトルとして解釈しL2ノルムを計算したものをp1に書き込みます。
+■関数として使った場合
+p1をfloat型のベクトルとして解釈しL2ノルムを計算したものの結果が格納されているmem idを返します。
+p2は使いません。
+
+%href
+HCLBLAS_dnrm2
+;--------
+%index
+HCLBLAS_dnrm2
+ベクトルxのL2ノルムを計算
+
+%prm
+int64 p1,int64 p2
+int64 p1:CL_mem_object id			[in]
+int64 p2:CL_mem_object id			[in]
+
+%inst
+■命令として使った場合
+p2をdouble型のベクトルとして解釈しL2ノルムを計算したものをp1に書き込みます。
+■関数として使った場合
+p1をdouble型のベクトルとして解釈しL2ノルムを計算したものの結果が格納されているmem idを返します。
+p2は使いません。
+
+%href
+HCLBLAS_snrm2
 ;--------

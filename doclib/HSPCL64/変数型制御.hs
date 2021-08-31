@@ -7,10 +7,10 @@
 HSPCL64.dll
 
 %ver
-1.0
+1.1
 
 %date
-2021/06/07
+2021/08/31
 
 %author
 toropippi
@@ -60,43 +60,35 @@ dim64命令はスクリプト内のどこででも定義・再定義することが可能です。
 また、配列変数を作成すると内容はすべて0にクリアされます。
 
 %href
-FloatToDouble
-DoubleToFloat
-Min64
-Max64
+float
+int64
+int
 ;--------
-
 %index
-DoubleToFloat
-doubleをfloatにして4byteバイナリで出力
+fdim
+float型の配列変数を作成
 
 %prm
-(double p1)
-double p1：val [in]
+p1,p2...
+p1=変数 : 配列を割り当てる変数名	[in]
+p2=0～ : 要素の最大			[in]
 
 %inst
-p1をfloat型数値に変換し、その4byteバイナリをint型として返します。
-HSPでfloat型が扱えないものの、OpenCLとfloat型でやりとりする場合にこの命令を使います。
+任意の要素を持つfloat型の配列変数を作成します。
+
+例：
+	float a,20
+
+上の例では、変数aの要素を２０個、つまり「a(0)」～「a(19)」までをあらかじめ確保します。
+
+パラメータを増やすことで多次元配列を作成することも可能です。
 
 %href
-FloatToDouble
-;--------
+float
+dim64
 
-%index
-FloatToDouble
-4byteバイナリfloatをdoubleをにして出力
+;------------------
 
-%prm
-(int p1)
-int p1：val [in]
-
-%inst
-p1のビットパターンをfloat型として解釈した後、double型に数値を変換し返します。
-HSPでfloat型が扱えないものの、OpenCLとfloat型でやりとりする場合にこの命令を使います。
-
-%href
-DoubleToFloat
-;--------
 
 %index
 Min64
@@ -144,4 +136,25 @@ p1で指定された値を64bit整数にしたものを返します。
 
 %href
 int
+dim64
+float
+Min64
+Max64
+;--------
+%index
+float
+32bit浮動小数点数に変換
+
+%prm
+(p1)
+p1 : 変換元の値または変数 [in]
+
+%inst
+p1で指定された値を32bit浮動小数点数にしたものを返します。
+値が文字列の場合は、数値文字列の場合はその数値に、それ以外は0になります。
+
+%href
+int
+int64
+fdim
 ;--------

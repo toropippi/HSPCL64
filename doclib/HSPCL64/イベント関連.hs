@@ -7,10 +7,10 @@
 HSPCL64.dll
 
 %ver
-1.0
+1.1
 
 %date
-2021/06/07
+2021/08/31
 
 %author
 toropippi
@@ -51,9 +51,7 @@ HCLWriteBuffer
 HCLReadBuffer
 HCLWriteBuffer_NonBlocking
 HCLReadBuffer_NonBlocking
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
 
 
 Žg‚¢•û
@@ -91,9 +89,7 @@ HCLWriteBuffer
 HCLReadBuffer
 HCLWriteBuffer_NonBlocking
 HCLReadBuffer_NonBlocking
-HCLFillBuffer_i32
-HCLFillBuffer_i64
-HCLFillBuffer_dp
+HCLFillBuffer
 
 
 %href

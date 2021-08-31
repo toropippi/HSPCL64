@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------  
 【  ソフト名   】HSPCL64.dll  
-【 バージョン  】1.0  
+【 バージョン  】1.1  
 【    作者     】toropippi  
 【  必要環境１ 】Windows7 以降  
 【  必要環境２ 】HSP Ver3.5以降  
@@ -71,7 +71,7 @@ HSPインストールフォルダにHSPCL64.dllをコピー
   
 ## ■配布場所  
 http://toropippi.web.fc2.com/(まだです)  
-他HSPコンテストのページになる予定・・・  
+https://dev.onionsoft.net/seed/info.ax?id=2017  
   
 ## ■連絡先  
 efghiqippi@yahoo.co.jp  
