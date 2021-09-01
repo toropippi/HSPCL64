@@ -32,6 +32,8 @@
 	HCLDoKrn1_sub krngselToBufferFloat,ginfo(12)*ginfo(13),64
 	HCLReleaseBuffer vramchar3
 	gsel cg
+
+	gcopy
 	return
 	
 
@@ -84,7 +86,6 @@
 
 #module NNpartsmodule
 #deffunc NNpartsmodule_Init
-	
 	if prgAtoY==0{
 		prgAtoY=HCLCreateProgramWithSource({"
 		inline void atomic_maxf(volatile __global float *g_val, float myValue)
@@ -158,6 +159,123 @@
 	HCLReleaseBuffer maxvram
 	HCLReleaseBuffer sumexpvram
 	return
+
+
+#deffunc FNN array mlpLayerNode,var matX,array matWV,array BN,int trainingflg
+	N=HCLBLAS_Get2DShape(matX,0)
+	mlpLayerNum=length(mlpLayerNode)
+	
+	//b,zÇçÏÇÈ
+	//a,yÇÕb,zÇÃç≈å„ÇÃóvëfÇ…ëŒâû
+	dim64 matB,mlpLayerNum-1
+	dim64 matZ,mlpLayerNum-1
+	dim64 matBNB,mlpLayerNum-2
+	//B,Z
+		repeat mlpLayerNum-1
+		matB.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matB.cnt,N,mlpLayerNode.(cnt+1)
+		matZ.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matZ.cnt,N,mlpLayerNode.(cnt+1)
+		//HCLIncRefcntCLBufferId matZ.cnt,matB.cnt
+		loop
+	//Batch normÇÃèoóÕïœêî BNB
+		repeat mlpLayerNum-2
+		matBNB.cnt=HCLCreateBuffer(N*mlpLayerNode.(cnt+1)*4)
+		HCLBLAS_Set2DShape matBNB.cnt,N,mlpLayerNode.(cnt+1)
+		//HCLIncRefcntCLBufferId matBNB.cnt
+		loop
+	
+	HCLBLAS_sgemm matB.0,matX,matWV.0
+		repeat mlpLayerNum-2
+		BNforwrd BN.cnt,matB.cnt,matBNB.cnt,trainingflg
+		HCLDoXf "A[i]=max(B[i],0.0f);",matZ.cnt,matBNB.cnt
+		HCLBLAS_sgemm matB.(cnt+1),matZ.cnt,matWV.(cnt+1)
+		loop
+	AToY matB.(mlpLayerNum-2),matZ.(mlpLayerNum-2)
+	//matZÇ™yÇ…ëäìñ
+	//matBÇ™aÇ…ëäìñ
+	return
+
+#defcfunc CE_FFN var matT
+	N=HCLBLAS_Get2DShape(matT,0)
+	nplgy=HCLDoXf( "float x=A[i];if (x<=0.0)x=0.0000000000001;OUT[i]=-log(x)/a;",matZ.(mlpLayerNum-2),float(N) )
+	ce=HCLBLAS_sdot(nplgy,matT)
+	return str(ce)
+
+#deffunc dCE_FNN array mlpLayerNode,var matX,array matWV,array BN,array matT,double alpha,int trainingflg
+	N=HCLBLAS_Get2DShape(matX,1)
+	mlpLayerNum=length(mlpLayerNode)
+	
+	dim64 delta,mlpLayerNum-1
+	
+	delta.(mlpLayerNum-2) = HCLDoXf("OUT[i]=A[i]-B[i];",matZ.(mlpLayerNum-2),matT)
+	raw_ = HCLBLAS_Get2DShape(matZ.(mlpLayerNum-2),0)
+	col_ = HCLBLAS_Get2DShape(matZ.(mlpLayerNum-2),1)
+	HCLBLAS_Set2DShape delta.(mlpLayerNum-2),raw_,col_
+
+		repeat mlpLayerNum-2
+		ccnt2=mlpLayerNum-2-cnt
+		ccnt3=mlpLayerNum-3-cnt
+		
+		delta12_1 = HCLBLAS_sgemm(delta.ccnt2, matWV.ccnt2 ,0,0,1)
+		delta12_2 = HCLDoXf("OUT[i]=A[i]*(B[i]>0.0);",delta12_1,matBNB.ccnt3)
+		raw_ = HCLBLAS_Get2DShape(delta12_1,0)
+		col_ = HCLBLAS_Get2DShape(delta12_1,1)
+		HCLBLAS_Set2DShape delta12_2,raw_,col_
+		delta.ccnt3 = int64(BNbackward(BN.ccnt3,delta12_2))
+		HCLBLAS_Set2DShape delta.ccnt3,raw_,col_
+		loop
+
+		repeat mlpLayerNum-2
+		ccnt2=mlpLayerNum-2-cnt
+		ccnt3=mlpLayerNum-3-cnt
+		dv=HCLBLAS_sgemm(delta.ccnt2,matZ.ccnt3 ,1,1,0)//äÑÇÈN
+		HCLDoXf "B[i]/=256;A[i]-=a*B[i];",matWV.ccnt2,dv,float(alpha)
+		loop
+	
+	dw=HCLBLAS_sgemm(delta.0,matX ,1,1,0)//äÑÇÈN
+	HCLDoXf "B[i]/=256;A[i]-=a*B[i];",matWV.0,dw ,float(alpha)
+
+		repeat mlpLayerNum-2
+		BNmodyf BN.cnt,alpha
+		loop
+	return
+
+
+//ê≥âó¶
+#defcfunc GetAnsRate var matT
+	
+	N=int(HCLBLAS_Get2DShape(matT,0))
+	s1=int(HCLBLAS_Get2DShape(matT,1))
+	HCLdim_fpFromBuffer h_T,matT
+	HCLdim_fpFromBuffer h_Y,matZ.(mlpLayerNum-2)
+	
+	ans0=0//ê≥â
+	ans1=0//ïsê≥â
+		repeat N
+		ccnt=cnt
+		fmaxT=float(0.0)
+		maxiT=-1
+			repeat s1
+			v=h_T.(cnt+ccnt*s1)
+			if fmaxT<v:fmaxT=v:maxiT=cnt
+			loop
+			
+		fmaxY=float(0.0)
+		maxiY=-2
+			repeat s1
+			v=h_Y.(cnt+ccnt*s1)
+			if fmaxY<v:fmaxY=v:maxiY=cnt
+			loop
+
+		if maxiY==maxiT{
+			ans0++
+		}else{
+			ans1++
+		}
+		loop
+
+	return double(ans0)/double(ans0+ans1)
 #global
 
 
@@ -191,7 +309,7 @@
 	HCLReleaseBuffer xn
 	return
 
-#modinit int shape1_,int ccnt_,str loadpathname
+#modinit int shape1_,int ccnt_
 	shape1=shape1_
 	ccnt=ccnt_
 	momentum=float(0.9)
@@ -208,11 +326,17 @@
 	
 	
 	HCLIncRefcntCLBufferId gamma,beta,dgamma,dbeta,running_mean,running_var,xc,std,xn
-	
+
+	/*
 	npload ""+loadpathname+"bn"+str(ccnt)+"_gamma.npy",gamma
 	npload ""+loadpathname+"bn"+str(ccnt)+"_beta.npy" ,beta
 	npload ""+loadpathname+"bn"+str(ccnt)+"_running_mean.npy",running_mean
 	npload ""+loadpathname+"bn"+str(ccnt)+"_running_var.npy",running_var
+	*/
+	HCLFillBuffer gamma,float(1)
+	HCLFillBuffer beta,float(0)
+	HCLFillBuffer running_mean,float(0)
+	HCLFillBuffer running_var,float(0)
 
 	prg=HCLCreateProgramWithSource({"
 	__kernel void krn1(__global float *X,__global float *Xout
@@ -300,3 +424,6 @@
 	return
 
 #global
+
+
+
