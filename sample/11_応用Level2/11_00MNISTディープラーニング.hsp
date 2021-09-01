@@ -1,3 +1,7 @@
+//ゼロから作るディープラーニング本のコードに加えBatch normalizationを実装したもの
+//SGDのままだが今後Adamに変更予定
+//教師=60000枚、テスト=10000枚で現状、正解率97%達成可能できている
+
 #include "hspcl64.as"
 #include "NNmodule.hsp"
 	randomize
@@ -10,17 +14,17 @@
 	batchN=256//=1batch
 	mlpLayerNum=4
 	dim mlpLayerNode,mlpLayerNum
-	mlpLayerNode=28*28,128,32,10
+	mlpLayerNode=28*28,192,192,10
 
 	gosub*教師テストデータ作成
-	gosub*Make_GPUbuffer
+	gosub*Make_BNbuffer
 	gosub*WV作成//重み
 
 	//メイン計算
 	//まいループでランダムにチョイスして256ミニバッチ学習
 	h_ce=float(0.0)
-		repeat 1093
-		gosub*make_rndchiceXT
+		repeat 1441
+		gosub*Make_rndchiceXT
 		//学習
 		trainingflg=1
 		FNN mlpLayerNode,matX,matWV,BN,trainingflg
@@ -30,18 +34,27 @@
 		trainingflg=0
 		FNN mlpLayerNode,testX,matWV,BN,trainingflg
 		ce_test=int64(CE_FFN(testT))
-		
-		//h_cetest=HCLReadIndex_fp(ce_test,0):h_ce=HCLReadIndex_fp(ce,0)
-		mes ""+strf("%1.4f",HCLReadIndex_fp(ce,0))+"_"+strf("%1.4f",HCLReadIndex_fp(ce_test,0))+"_"+strf("%1.4f",GetAnsRate(testT))+""
+
+		if cnt\16==0:gosub*結果表示
 		HCLGarbageCollectionNow
 		await 1
-		if ginfo_cy>460:pos ginfo_cx+240,0
-		if ginfo_cx>640:color 255,255,255:boxf:color 0,0,0:pos 0,0
 		loop
 
 	stop
 
-*make_rndchiceXT
+*結果表示
+	if cnt==0{
+		outstr="試行回数(ミニバッチ)	Loss_train	Loss_test	正解率\n"
+		pos 0,0
+		mesbox outstr,636,476,5
+		mesboxid=stat
+	}
+
+	outstr+=""+cnt+"		"+strf("%1.4f",HCLReadIndex_fp(ce,0))+"	"+strf("%1.4f",HCLReadIndex_fp(ce_test,0))+"	"+strf("%1.4f",GetAnsRate(testT))+"\n"
+	objprm mesboxid,outstr
+	return
+
+*Make_rndchiceXT
 	//まず全体から256個の重複なしランダムを作成したいが重複なしは大変なので重複ありで
 	dim rn,256
 		repeat 256
@@ -57,7 +70,7 @@
 		loop
 	return
 
-*Make_GPUbuffer
+*Make_BNbuffer
 	//Batch norm計算クラス＝モジュール変数
 		repeat mlpLayerNum-2
 		newmod BN,BatchNormalization,mlpLayerNode.(cnt+1),cnt+1
@@ -157,18 +170,3 @@
 return z0
 
 #global
-
-
-
-/*
-
-		screen 44,800,1280
-		repeat 28*28
-		mes HCLReadIndex_fp(matT,cnt)
-		if ginfo_cy>1260:pos ginfo_cx+80,0
-		loop
-		stop
-
-
-
-*/
