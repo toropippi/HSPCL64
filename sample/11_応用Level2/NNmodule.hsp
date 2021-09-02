@@ -1,5 +1,3 @@
-//MatrixModuleと抱き合わせで使う前提のモジュール
-
 #module MatIOmodule
 #deffunc MatIOmodule_Init
 	if IMGprg==0{
