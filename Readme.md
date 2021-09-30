@@ -1,147 +1,147 @@
 --------------------------------------------------------------------------  
-【  ソフト名   】HSPCL64.dll  
-【 バージョン  】1.1  
-【    作者     】toropippi  
-【  必要環境１ 】Windows7 以降  
-【  必要環境２ 】HSP Ver3.5以降  
-【  必要環境３ 】OpenCL対応グラフィックボードまたはCPUまたはCellプロセッサー  
-			GeForce 400 Series以降  
-			RADEON HD 6xxx以降  
-			HD Graphics 2500/4000以降(Ivy Bridge以降)  
-【  取扱種別   】フリープラグイン  
-【    内容     】HSP3(64bit)用OpenCLプラグイン  
-【     HP      】http://toropippi.web.fc2.com/  
+�y  �\�t�g��   �zHSPCL64.dll  
+�y �o�[�W����  �z1.1  
+�y    ���     �ztoropippi  
+�y  �K�v���P �zWindows7 �ȍ~  
+�y  �K�v���Q �zHSP Ver3.5�ȍ~  
+�y  �K�v���R �zOpenCL�Ή��O���t�B�b�N�{�[�h�܂���CPU�܂���Cell�v���Z�b�T�[  
+			GeForce 400 Series�ȍ~  
+			RADEON HD 6xxx�ȍ~  
+			HD Graphics 2500/4000�ȍ~(Ivy Bridge�ȍ~)  
+�y  �戵���   �z�t���[�v���O�C��  
+�y    ���e     �zHSP3(64bit)�pOpenCL�v���O�C��  
+�y     HP      �zhttp://toropippi.web.fc2.com/  
 --------------------------------------------------------------------------  
   
-|サンプル実行画面|サンプル実行画面|サンプル実行画面|
+|�T���v�����s���|�T���v�����s���|�T���v�����s���|
 |---|---|---|
 |![sample73](https://user-images.githubusercontent.com/44022497/121392033-f733c600-c989-11eb-95ba-ec36d5a29dd8.jpg)|![Sample50_result_simpleOverlap](https://user-images.githubusercontent.com/44022497/121392041-f8fd8980-c989-11eb-9a99-cd376b9306b7.png)|![sample70](https://user-images.githubusercontent.com/44022497/121392264-319d6300-c98a-11eb-95a4-5228bc492bb1.png)|
 |![sample62](https://user-images.githubusercontent.com/44022497/121392331-3d892500-c98a-11eb-9770-768e0e3f1c16.png)|![sample57](https://user-images.githubusercontent.com/44022497/121392532-72957780-c98a-11eb-996e-af459b149cf9.png)|![sample26](https://user-images.githubusercontent.com/44022497/121392616-850fb100-c98a-11eb-81b2-63df8efe6564.png)|
 |![sample03](https://user-images.githubusercontent.com/44022497/121392785-a7a1ca00-c98a-11eb-9ef1-6ea6c6fa637d.png)|![sample64](https://user-images.githubusercontent.com/44022497/121392817-b12b3200-c98a-11eb-812e-1e829c68a3e2.png)|![sample71](https://user-images.githubusercontent.com/44022497/121392856-ba1c0380-c98a-11eb-9f4a-e4b2dc18375c.png)|
 |![sample55](https://user-images.githubusercontent.com/44022497/121392905-c607c580-c98a-11eb-876a-502b112be018.jpg)|![Sample52_result_NoOverlap](https://user-images.githubusercontent.com/44022497/121392936-cd2ed380-c98a-11eb-80d0-7a97ef16906b.png)|![Sample51_result_OverlapChain](https://user-images.githubusercontent.com/44022497/121392998-dc158600-c98a-11eb-9d64-96eb88c62a9c.png)|
 
-## ■使用方法  
-１、「HSPCL64.dll」をHSPインストールフォルダ「C:\hsp35」ないしは「C:\Program Files (x86)\hsp35」か「C:\Program Files\hsp35」へコピーして下さい。  
-２、「hspcl64.as」をHSPインストールフォルダの「common」フォルダの中へ入れて下さい。  
-３、ヘルプデータをコピーしたい場合は、「doclib」フォルダ自体をそのままHSPインストールフォルダの中へ上書きして下さい。  
+## ���g�p���@  
+�P�A�uHSPCL64.dll�v��HSP�C���X�g�[���t�H���_�uC:\hsp35�v�Ȃ����́uC:\Program Files (x86)\hsp35�v���uC:\Program Files\hsp35�v�փR�s�[���ĉ������B  
+�Q�A�uhspcl64.as�v��HSP�C���X�g�[���t�H���_�́ucommon�v�t�H���_�̒��֓���ĉ������B  
+�R�A�w���v�f�[�^���R�s�[�������ꍇ�́A�udoclib�v�t�H���_���̂����̂܂�HSP�C���X�g�[���t�H���_�̒��֏㏑�����ĉ������B  
   
   
-## ■概要  
-  OpenCLをHSPから簡単に触れるようにしたプラグインです。HSPは計算速度が遅いのが課題ですが、このプラグインがあればGPU上で計算(GPGPU)させることができ、とてつもない高速化が可能になります。  
-  現在HSPCLシリーズは3種類あります。  
+## ���T�v  
+  OpenCL��HSP����ȒP�ɐG���悤�ɂ����v���O�C���ł��BHSP�͌v�Z���x���x���̂��ۑ�ł����A���̃v���O�C���������GPU��Ōv�Z(GPGPU)�����邱�Ƃ��ł��A�ƂĂ��Ȃ����������\�ɂȂ�܂��B  
+  ����HSPCL�V���[�Y��3��ނ���܂��B  
   
 ### HSPCL64
-  ここで公開しているものです。  
-  HSPCL32Nの64bit版です。  
-  HSPCL32Nと比較し、GPU上で確保できるメモリサイズ4GBまでの制約がなくなりました。  
-  ほかOpenCL関連の機能が沢山ありサンプルも70近く用意してます。  
+  �����Ō��J���Ă�����̂ł��B  
+  HSPCL32N��64bit�łł��B  
+  HSPCL32N�Ɣ�r���AGPU��Ŋm�ۂł��郁�����T�C�Y4GB�܂ł̐��񂪂Ȃ��Ȃ�܂����B  
+  �ق�OpenCL�֘A�̋@�\����R����T���v����70�߂��p�ӂ��Ă܂��B  
   
-### HSPCL32 ver2.0(HSPコンテスト2013) → HSPCL32Nへ改名  
-  HSPCL32 ver2.0はOpenCL機能しかないプラグインです。  
+### HSPCL32 ver2.0(HSP�R���e�X�g2013) �� HSPCL32N�։���  
+  HSPCL32 ver2.0��OpenCL�@�\�����Ȃ��v���O�C���ł��B  
   https://github.com/toropippi/HSPCL32N  
-  youdaiさんによる修正を反映し下記点が更新されました。  
-  ・cliniの返り値の cldevcount が stat へ変更  
-  ・fdim が clfdim へ変更  
-  ・float() が clfloat() へ変更  
-  その後HSPCL64から命令を逆輸入して、互換性を保ちつつHSPCL64とほぼ同じような形で使えるようになりました。  
-  今後さらに更新を続ける予定です。  
+  youdai����ɂ��C���𔽉f�����L�_���X�V����܂����B  
+  �Eclini�̕Ԃ�l�� cldevcount �� stat �֕ύX  
+  �Efdim �� clfdim �֕ύX  
+  �Efloat() �� clfloat() �֕ύX  
+  ���̌�HSPCL64���疽�߂��t�A�����āA�݊�����ۂ���HSPCL64�Ƃقړ����悤�Ȍ`�Ŏg����悤�ɂȂ�܂����B  
+  ���コ��ɍX�V�𑱂���\��ł��B  
   
 ### HSPCL32 ver4.02  
-  HSPコンテスト2014版はコチラ  
+  HSP�R���e�X�g2014�ł̓R�`��  
   http://dev.onionsoft.net/seed/info.ax?id=929  
-  ただしこれは「varsize」関数がかち合ってhsp35以降ではエラーが出るようになりました。  
+  ����������́uvarsize�v�֐�������������hsp35�ȍ~�ł̓G���[���o��悤�ɂȂ�܂����B  
   
-  そこでyoudaiさんによりhspcl32.asの中身を修正して頂いた安定バージョンが公開されました。  
+  ������youdai����ɂ��hspcl32.as�̒��g���C�����Ē���������o�[�W���������J����܂����B  
   http://youdaizone.webcrow.jp/hsp3/hspcl32_fix.html  
-  現在はコチラを使用するのが良いでしょう。  
-  なおver4.02以降更新の予定はございません。  
+  ���݂̓R�`�����g�p����̂��ǂ��ł��傤�B  
+  �Ȃ�ver4.02�ȍ~�X�V�̗\��͂������܂���B  
   
-## ■インストール  
-HSPインストールフォルダにHSPCL64.dllをコピー  
-アンインストールはゴミ箱へ削除  
+## ���C���X�g�[��  
+HSP�C���X�g�[���t�H���_��HSPCL64.dll���R�s�[  
+�A���C���X�g�[���̓S�~���֍폜  
   
-## ■注意点  
-このプラグインではカーネルコードによるメモリアクセス違反に対して防護する機能がありません。  
-メモリアクセス違反によるエラーがシステムに影響を及ぼすことがあります。  
+## �����ӓ_  
+���̃v���O�C���ł̓J�[�l���R�[�h�ɂ�郁�����A�N�Z�X�ᔽ�ɑ΂��Ėh�삷��@�\������܂���B  
+�������A�N�Z�X�ᔽ�ɂ��G���[���V�X�e���ɉe�����y�ڂ����Ƃ�����܂��B  
   
-最悪、ブルースクリーンになったり、GPUからの信号が途絶え画面が落ちたり、GPUがフリーズしたりなどの現象が起こります。  
-これに関するいかなる損失も、責任を負えません。  
+�ň��A�u���[�X�N���[���ɂȂ�����AGPU����̐M�����r�₦��ʂ���������AGPU���t���[�Y������Ȃǂ̌��ۂ��N����܂��B  
+����Ɋւ��邢���Ȃ鑹�����A�ӔC�𕉂��܂���B  
   
-ただ私は100回以上ブルスクを出してきましたが、これでGPUが壊れたことは1回もありませんでした。  
+��������100��ȏ�u���X�N���o���Ă��܂������A�����GPU����ꂽ���Ƃ�1�������܂���ł����B  
   
-## ■配布場所  
-http://toropippi.web.fc2.com/(まだです)  
+## ���z�z�ꏊ  
+http://toropippi.web.fc2.com/(�܂��ł�)  
 https://dev.onionsoft.net/seed/info.ax?id=2017  
   
-## ■連絡先  
+## ���A����  
 efghiqippi@yahoo.co.jp  
   
-## ■免責  
-このプラグインの使用により発生した如何なる問題について当方は一切の責任を負いません。  
-商用問わず配布、転載、改造は無断かつ自由にして構いません（大歓迎）  
+## ���Ɛ�  
+���̃v���O�C���̎g�p�ɂ�蔭�������@���Ȃ���ɂ��ē����͈�؂̐ӔC�𕉂��܂���B  
+���p��킸�z�z�A�]�ځA�����͖��f�����R�ɂ��č\���܂���i�劽�}�j  
   
-## ■License  
+## ��License  
 The source for HSPCL64 is licensed under the Apache License, Version 2.0  
 see https://opensource.org/licenses/Apache-2.0  
   
-HSPで64bit int型が使える部分はinoviaさんから拝借いたしました。  
+HSP��64bit int�^���g���镔����inovia���񂩂�q�؂������܂����B  
 https://github.com/inovia/HSPInt64  
-ここから流用した部分に関してはBSD-3-Clause Licenseに準拠しています。  
+�������痬�p���������Ɋւ��Ă�BSD-3-Clause License�ɏ������Ă��܂��B  
 see https://opensource.org/licenses/BSD-3-Clause  
   
 ## TODO  
-・Ver2.0ではZeroCopyためす  
+�EVer2.0�ł�ZeroCopy���߂�  
   
-## ■更新履歴  
+## ���X�V����  
 	ver 1.1  
-	float型実装  
-	FloatToDouble削除  
-	DoubleToFloat削除  
-	HCLdim_fpFromBuffer命令実装  
-	HCLReadIndex_fp,HCLWriteIndex_fp命令実装  
-	HCLGetDeviceInfo_s,i,i64命令をモジュールからプラグインに埋め込み  
-	HCLFillBuffer_i32,i64,dp系命令を1つにまとめ  
-	HCLGetSize命令実装  
-	HCLGetAllBufferSize命令実装  
-	HCLGarbageCollectionNow命令実装  
-	HCLIncRefcntCLBufferId,HCLDecRefcntCLBufferId命令実装  
-	HCLCall2命令実装  
-	HCLDoXc,i,l,f,d,uc,ui,ul系命令実装  
-	HCLBLAS系命令実装  
-	HCLBLASのgemmとgemvとsT,dTとdot,mrn命令を関数型でも使えるよう実装  
-	HCLEventAutoProfilingStart,HCLEventAutoProfilingEnd()命令実装  
-	HCLGetPluginVersion命令でプラグインバージョンを取得できるように  
-	HCLGetProgramBinary,HCLCreateProgramWithBinary命令でバイナリ形式でプログラムの入出力対応  
+	float�^����  
+	FloatToDouble�폜  
+	DoubleToFloat�폜  
+	HCLdim_fpFromBuffer���ߎ���  
+	HCLReadIndex_fp,HCLWriteIndex_fp���ߎ���  
+	HCLGetDeviceInfo_s,i,i64���߂����W���[������v���O�C���ɖ��ߍ���  
+	HCLFillBuffer_i32,i64,dp�n���߂�1�ɂ܂Ƃ�  
+	HCLGetSize���ߎ���  
+	HCLGetAllBufferSize���ߎ���  
+	HCLGarbageCollectionNow���ߎ���  
+	HCLIncRefcntCLBufferId,HCLDecRefcntCLBufferId���ߎ���  
+	HCLCall2���ߎ���  
+	HCLDoXc,i,l,f,d,uc,ui,ul�n���ߎ���  
+	HCLBLAS�n���ߎ���  
+	HCLBLAS��gemm��gemv��sT,dT��dot,mrn���߂��֐��^�ł��g����悤����  
+	HCLEventAutoProfilingStart,HCLEventAutoProfilingEnd()���ߎ���  
+	HCLGetPluginVersion���߂Ńv���O�C���o�[�W�������擾�ł���悤��  
+	HCLGetProgramBinary,HCLCreateProgramWithBinary���߂Ńo�C�i���`���Ńv���O�����̓��o�͑Ή�  
 	
 	ver 1.0  
-	HCLDokrn2,3実装  
-	HCLdim_i64FromBuffer命令実装  
-	HCLdim_i32FromBuffer命令実装  
-	HCLdim_dpFromBuffer命令実装  
-	ソースリファクタリング&若干の高速化  
+	HCLDokrn2,3����  
+	HCLdim_i64FromBuffer���ߎ���  
+	HCLdim_i32FromBuffer���ߎ���  
+	HCLdim_dpFromBuffer���ߎ���  
+	�\�[�X���t�@�N�^�����O&�኱�̍�����  
 	
 	ver 0.9  
-	HCLReadBufferやHCLWriteBufferのノンブロッキングモードがNVIDIA GPUでつかえないため、同命令のみ別スレッドを立ち上げて強制的にノンブロッキングできるよう命令追加  
-	DoubleToFloat実装  
-	FloatToDouble実装  
-	HCLReadBufferやHCLWriteBufferでメモリアクセスチェックを行ってエラーを出すように  
-	HCLFillBuffer系とReadIndex、WriteIndexの型指定(i32 i64 dp)を共通に  
-	HCLFillBufferで引数省略できるよう修正  
-	サンプル多数追加  
-	他バグ多数修正  
+	HCLReadBuffer��HCLWriteBuffer�̃m���u���b�L���O���[�h��NVIDIA GPU�ł����Ȃ����߁A�����߂̂ݕʃX���b�h�𗧂��グ�ċ����I�Ƀm���u���b�L���O�ł���悤���ߒǉ�  
+	DoubleToFloat����  
+	FloatToDouble����  
+	HCLReadBuffer��HCLWriteBuffer�Ń������A�N�Z�X�`�F�b�N���s���ăG���[���o���悤��  
+	HCLFillBuffer�n��ReadIndex�AWriteIndex�̌^�w��(i32 i64 dp)�����ʂ�  
+	HCLFillBuffer�ň����ȗ��ł���悤�C��  
+	�T���v�������ǉ�  
+	���o�O�����C��  
 	
 	ver 0.3  
-	HCLCreateBufferFrom,HCLFlushなど実装  
-	HCLFillBuffer実装  
+	HCLCreateBufferFrom,HCLFlush�Ȃǎ���  
+	HCLFillBuffer����  
 	  
 	ver 0.2  
 	2021/5/6  
-	HCLCallを実装  
+	HCLCall������  
 	  
 	Ver 0.1  
 	2020/2/14  
-	HSPCL32からHSPCL64へ命令群を移行  
-	OpenGL関連は全部削除  
-	fdimは削除、それに伴いHSP側でfloat型が使えなくなった  
-	clEvent関連を実装  
-	CommandQueue関連を実装  
+	HSPCL32����HSPCL64�֖��ߌQ���ڍs  
+	OpenGL�֘A�͑S���폜  
+	fdim�͍폜�A����ɔ���HSP����float�^���g���Ȃ��Ȃ���  
+	clEvent�֘A������  
+	CommandQueue�֘A������  

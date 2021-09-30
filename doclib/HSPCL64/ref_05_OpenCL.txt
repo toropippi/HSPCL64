@@ -1,6 +1,7 @@
 ■■OpenCL デバイス
 
-■構成
+■構成
+
 OpenCL デバイスは 1 つ以上の計算ユニット Computation Unitまたはstreaming multiprocessor(SM) から構成されており、CU は 1 つ以上の処理エレメント Processing Element (PE) またはCUDA Coreから構成されている。
 
 大きさの比較
