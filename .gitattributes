@@ -69,4 +69,4 @@
 *.h         text eol=crlf
 *.cpp       text eol=crlf
 *.cl        text eol=crlf
-*.vcproj    text eol=crl
+*.vcproj    text eol=crlf
