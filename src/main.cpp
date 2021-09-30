@@ -129,7 +129,7 @@ size_t Code_getSzt() {
 	{
 		if (mpval->flag == HSPVAR_FLAG_INT)
 		{
-			return (size_t)(*(mpval->pt));
+			return (size_t)(*(size_t*)(mpval->pt));
 		}
 	}
 	INT64 t = *(INT64*)HspVarInt64_Cnv(mpval->pt, mpval->flag);
@@ -144,7 +144,7 @@ size_t Code_getSztd(size_t defval) {
 	{
 		if (mpval->flag == HSPVAR_FLAG_INT)
 		{
-			return (size_t)(*(mpval->pt));
+			return (size_t)(*(size_t*)(mpval->pt));
 		}
 	}
 	INT64 t = *(INT64*)HspVarInt64_Cnv(mpval->pt, mpval->flag);
@@ -808,6 +808,7 @@ static void *reffunc( int *type_res, int cmd )
 		cl_device_info devinfoi = code_getdi(0);
 		size_t szt = 0;
 		clGetDeviceInfo(device_id[clsetdev], devinfoi, sizeof(bufferout), bufferout, &szt);
+		szt = max(min(szt, 4095), 0);
 		bufferout[szt] = 0;
 		cptr = bufferout;
 		break;
