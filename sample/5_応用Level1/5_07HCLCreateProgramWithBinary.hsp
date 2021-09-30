@@ -3,7 +3,7 @@
 	HCLinit
 
 	sdim sbin,4096
-	bload "5_07VecAdd_Bin.txt",sbin
+	bload "5_07VecAdd_Bin.lftxt",sbin
 
 	prg=HCLCreateProgramWithBinary(sbin)
 	krn=HCLCreateKernel(prg,"test")

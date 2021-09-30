@@ -12,13 +12,13 @@ __kernel void test(__global int* a,__global int* b,__global int* c)
 	"})
 
 	bin=HCLGetProgramBinary(prg)
-	
+	//bsave "5_07VecAdd_Bin.lftxt",bin
+
+	//LFÅ®CRLF
 	sr=" "
 	poke sr,0,10
 	strrep bin,sr,"\n"
 	mes bin
-
-	//bsave "bin.txt",bin
 	stop
 
 
