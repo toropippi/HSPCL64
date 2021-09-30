@@ -52,7 +52,7 @@ uint reversebits(uint id)
 }
 
 
-//threadæ•°ã¯(N, 1, 1)
+//thread”‚Í(N, 1, 1)
 __kernel void BitRev(__global Complex *buffer,int M)
 {
 	uint id = get_global_id(0);
@@ -64,7 +64,7 @@ __kernel void BitRev(__global Complex *buffer,int M)
 	buffer[rid]=d2a;
 }
 
-//threadæ•°ã¯(N/2, 1, 1)
+//thread”‚Í(N/2, 1, 1)
 __kernel void CooleyTukey(__global Complex *buffer,int M,int loopidx)
 {
 	uint id = get_global_id(0);
@@ -77,7 +77,7 @@ __kernel void CooleyTukey(__global Complex *buffer,int M,int loopidx)
 	Complex c1 = buffer[t1];
 	Complex c0 = buffer[t0];
 	
-	double rad = -PI * t / dleng;//invã®å ´åˆã“ã‚Œã«-ã‚’ã‹ã‘ã‚‹
+	double rad = -PI * t / dleng;//inv‚Ìê‡‚±‚ê‚É-‚ğ‚©‚¯‚é
 	Complex rotate = radtow(rad);
 	
 	buffer[t0] = add(c0,c1);
@@ -89,7 +89,7 @@ __kernel void CooleyTukey(__global Complex *buffer,int M,int loopidx)
 
 
 
-//threadæ•°ã¯(N/2, 1, 1)
+//thread”‚Í(N/2, 1, 1)
 __kernel void Stockham(__global Complex *buffer,__global Complex *buffer2,int M,int loopidx)
 {
 	uint id = get_global_id(0);

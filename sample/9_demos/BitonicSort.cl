@@ -17,7 +17,7 @@ typedef struct
 #define B16V(x,a) { for (int i16=0;i16<8;i16++) { ORDERV(x,a+i16,a+i16+8) } B8V(x,a) B8V(x,a+8) }
 
 
-//邁｡譏薙Λ繝ｳ繝繝縲√Ρ繝ｳ繧ｰ繝上ャ繧ｷ繝･
+//簡易ランダム、ワングハッシュ
 uint wang_hash(uint seed)
 {
 	seed = (seed ^ 61) ^ (seed >> 16);
@@ -30,7 +30,7 @@ uint wang_hash(uint seed)
 
 
 
-//蛻晄悄蛟､繝ｩ繝ｳ繝繝逕滓��
+//初期値ランダム生成
 __kernel void GenerateRandom(__global data_t *buf) 
 {
 	uint id = get_global_id(0);

@@ -1,4 +1,4 @@
-//ã¼ãã®ã‹ã‚“ãŒãˆãŸã•ã„ãã‚‡ã†ã®SGEMMMMM
+//‚Ú‚­‚Ì‚©‚ñ‚ª‚¦‚½‚³‚¢‚«‚å‚¤‚ÌSGEMMMMM
 #define TSN 128
 #define TSM 128
 #define TSK 16
@@ -10,7 +10,7 @@
 #define LPTB ((TSK*TSM)/(RTSN*RTSM)) // Loads-per-thread for B
 
 
-//ç°¡æ˜“ãƒ©ãƒ³ãƒ€ãƒ ã€ãƒ¯ãƒ³ã‚°ãƒãƒƒã‚·ãƒ¥
+//ŠÈˆÕƒ‰ƒ“ƒ_ƒ€Aƒƒ“ƒOƒnƒbƒVƒ…
 uint wang_hash(uint seed)
 {
 	seed = (seed ^ 61) ^ (seed >> 16);
@@ -22,7 +22,7 @@ uint wang_hash(uint seed)
 }
 
 
-//åˆæœŸå€¤ãƒ©ãƒ³ãƒ€ãƒ ç”Ÿæˆ
+//‰Šú’lƒ‰ƒ“ƒ_ƒ€¶¬
 __kernel void GenerateRandom(__global float *buf,uint in_seed) 
 {
 	uint id = get_global_id(0);

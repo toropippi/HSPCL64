@@ -97,7 +97,7 @@ uint reversebits(uint id)
 
 //#define M (8)
 //#define N (1<<M)
-//threadæ•°ã¯(N/2, 1, 1)
+//thread”‚Í(N/2, 1, 1)
 __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *block)
 {
 	uint id = get_global_id(0);
@@ -115,7 +115,7 @@ __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *bloc
 		fComplex c1 = block[t1];
 		fComplex c0 = block[t0];
 		
-		float rad = -PI * t / dleng;//invã®å ´åˆã“ã‚Œã«-ã‚’ã‹ã‘ã‚‹
+		float rad = -PI * t / dleng;//inv‚Ìê‡‚±‚ê‚É-‚ğ‚©‚¯‚é
 		fComplex rotate = fcradtow(rad);
 		
 		block[t0] = fcadd(c0,c1);
@@ -123,7 +123,7 @@ __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *bloc
 	}
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
-	fComplex reim0 = block[reversebits(id * 2) >> (32 - M)];//32ã¯uint=32bitã®32
+	fComplex reim0 = block[reversebits(id * 2) >> (32 - M)];//32‚Íuint=32bit‚Ì32
 	fComplex reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
 	buffer[id * 2] = reim0;
 	buffer[id * 2 + 1] = reim1;
@@ -131,7 +131,7 @@ __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *bloc
 
 
 
-//threadæ•°ã¯(N/2, 1, 1)
+//thread”‚Í(N/2, 1, 1)
 __kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
 {
 	uint id = get_global_id(0);
@@ -149,7 +149,7 @@ __kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
 		Complex c1 = block[t1];
 		Complex c0 = block[t0];
 		
-		double rad = -PI * t / dleng;//invã®å ´åˆã“ã‚Œã«-ã‚’ã‹ã‘ã‚‹
+		double rad = -PI * t / dleng;//inv‚Ìê‡‚±‚ê‚É-‚ğ‚©‚¯‚é
 		Complex rotate = radtow(rad);
 		
 		block[t0] = add(c0,c1);
@@ -157,7 +157,7 @@ __kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
 	}
 	
 	barrier(CLK_LOCAL_MEM_FENCE);
-	Complex reim0 = block[reversebits(id * 2) >> (32 - M)];//32ã¯uint=32bitã®32
+	Complex reim0 = block[reversebits(id * 2) >> (32 - M)];//32‚Íuint=32bit‚Ì32
 	Complex reim1 = block[reversebits(id * 2 + 1) >> (32 - M)];
 	buffer[id * 2] = reim0;
 	buffer[id * 2 + 1] = reim1;

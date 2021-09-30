@@ -1,4 +1,4 @@
-//æ¼”ç®—å¾‹é€Ÿã‚’å†ç¾ã™ã‚‹ã‚³ãƒ¼ãƒ‰
+//‰‰Z—¥‘¬‚ğÄŒ»‚·‚éƒR[ƒh
 __kernel void SinDiv(__global int* a,__global int* b,int loopnum)
 {
 	uint gid = get_global_id(0);
