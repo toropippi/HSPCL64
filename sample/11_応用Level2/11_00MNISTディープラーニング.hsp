@@ -1,7 +1,6 @@
 //ゼロから作るディープラーニング本のコードに加えBatch normalizationを実装したもの
 //SGDのままだが今後Adamに変更予定
 //教師=60000枚、テスト=10000枚で現状、正解率97%達成可能できている
-
 #include "hspcl64.as"
 #include "NNmodule.hsp"
 	randomize
