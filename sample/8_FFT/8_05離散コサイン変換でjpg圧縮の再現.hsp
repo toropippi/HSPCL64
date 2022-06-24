@@ -1,0 +1,69 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//離散コサイン変換でjpg劣化の再現を行うコード
+//ブロックサイズ8*8 (これをshared memory内で共有する)
+//モノクロ限定
+//1ブロックあたり8*8成分の情報を4+3+2+1=10成分まで削ぎ落とす。残りの54成分を0とする
+//さらに10成分もfloat→half型に落として情報を削ぎ落とす。
+//最後に逆変換で画像にもどす
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include "HSPCL64.as"
+	HCLinit
+
+	WX=1440
+	WY=1080
+	sdim source,65536
+	bload "DCT.cl",source//ソースコード
+	
+	screen 0,WX,WY
+	mes source
+	circle WX-497,98,WX-107,404,1
+	color 255,255,255
+	circle WX-497+3,98+3,WX-107-3,404-3,1
+	//真っ白でない適当な画面をつくる
+	
+	mref i66,66
+	
+	blockSize=8//1辺のサイズ
+	datasize=4//sizeof(float)
+	
+	BlockX=WX/blockSize
+	BlockY=WY/blockSize
+
+	//kernel
+	prgid=HCLCreateProgramWithSource(source)
+	krndct_ii =HCLCreateKernel(prgid,"dct_ii")
+	krndct_iii=HCLCreateKernel(prgid,"dct_iii")
+
+	//メモリ作成
+	fftarrayA=HCLCreateBuffer(WX*WY*datasize)
+	fftarrayB=HCLCreateBuffer(WX*WY*datasize)
+	hspvram=HCLCreateBuffer(3*WX*WY)
+
+	HCLWriteBuffer hspvram,i66,3*WX*WY
+
+	//kernelセット
+	HCLSetKernel krndct_ii,0,blockSize
+	HCLSetKernel krndct_ii,1,hspvram
+	HCLSetKernel krndct_ii,2,fftarrayB
+	HCLSetKernel krndct_ii,3,0,blockSize*blockSize*datasize//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+	HCLSetKernel krndct_ii,4,WX
+
+	HCLSetKernel krndct_iii,0,blockSize
+	HCLSetKernel krndct_iii,1,fftarrayB
+	HCLSetKernel krndct_iii,2,hspvram
+	HCLSetKernel krndct_iii,3,0,blockSize*blockSize*datasize//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+	HCLSetKernel krndct_iii,4,0,blockSize*datasize//a0を格納するところ
+	HCLSetKernel krndct_iii,5,WX
+
+	//GPUでDCT順変換の部分
+	HCLDoKrn1 krndct_ii,BlockX*BlockY*blockSize*blockSize,blockSize*blockSize
+
+	//GPUでDCT逆変換の部分
+	HCLDoKrn1 krndct_iii,BlockX*BlockY*blockSize*blockSize,blockSize*blockSize
+
+
+	//結果取得
+	HCLReadBuffer hspvram,i66,3*WX*WY
+	redraw 1
+	stop
