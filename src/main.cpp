@@ -1659,7 +1659,7 @@ static int cmdfunc(int cmd)
 		size_t sz = GetMemSize((cl_mem)prm2);//ÉTÉCÉY
 		int n = (int)min((INT64)(1 << 30), (INT64)sz);
 		//HSPïœêîèâä˙âª
-		exinfo->HspFunc_dim(pval1, global_fl, 0, (n + global_szof - 1) / global_szof * global_szof, 0, 0, 0);
+		exinfo->HspFunc_dim(pval1, global_fl, 0, (n + global_szof - 1) / global_szof, 0, 0, 0);
 		//ì]ëó
 		cl_int ret = clEnqueueReadBuffer(command_queue[clsetdev * COMMANDQUEUE_PER_DEVICE + clsetque], (cl_mem)prm2, CL_TRUE, 0,
 			n, pval1->pt, 0, NULL, NULL);
