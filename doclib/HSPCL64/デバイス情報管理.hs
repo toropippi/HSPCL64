@@ -154,8 +154,6 @@ HCLFinish
 HCLFlush
 HCLWaitForEvent
 HCLWaitForEvents
-HCLEventAutoProfilingStart
-HCLEventAutoProfilingEnd
 HCLBLAS_Set2DShape
 HCLBLAS_sgemm
 HCLBLAS_dgemm
@@ -231,8 +229,6 @@ HCLFinish
 HCLFlush
 HCLWaitForEvent
 HCLWaitForEvents
-HCLEventAutoProfilingStart
-HCLEventAutoProfilingEnd
 HCLBLAS_Set2DShape
 HCLBLAS_sgemm
 HCLBLAS_dgemm
@@ -337,7 +333,7 @@ int p1	コマンドキューの最大数 [in]
 
 
 %inst
-HCLInitの実行前に指定することで、1つのデバイスあたりのコマンドキューの最大を増やすことができます。
+HCLinitの実行前に指定することで、1つのデバイスあたりのコマンドキューの最大を増やすことができます。
 デフォルトでは1つのデバイスあたりのコマンドキューは0～3までつかえます。
 
 %href
@@ -354,7 +350,7 @@ int p1
 int p1	properties [in]
 
 %inst
-HCLInitの実行前に指定することで、OpenCLのコマンドキューのプロパティの設定を変えることができます。
+HCLinitの実行前に指定することで、OpenCLのコマンドキューのプロパティの設定を変えることができます。
 コマンドキュープロパティはデフォルトではCL_QUEUE_PROFILING_ENABLEが指定されています。
 http://wiki.tommy6.net/wiki/clCreateCommandQueue
 を参考にして下さい。
@@ -373,7 +369,7 @@ int p1
 int p1	イベントの最大数 [in]
 
 %inst
-HCLInitの実行前に指定することで、記録可能イベントの最大を増やすことができます。
+HCLinitの実行前に指定することで、記録可能イベントの最大を増やすことができます。
 デフォルトでイベントidは0～65535番までつかえます。
 
 %href

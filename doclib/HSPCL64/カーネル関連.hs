@@ -172,7 +172,7 @@ HCLSetKernel p1,1,5	//引数2
 p2は、vector_addの引数の一番左を0番として考えます。
 
 １回セットすれば次セットし直すまで適応され続けます。
-p3には64bit int型、32bit int型、文字列型変数、double型変数が指定できます。
+p3には32bit int型、64bit int型、文字列型変数、double型、float型変数が指定できます。
 
 p4を0以外にすると、その引数はローカルメモリ（共有メモリ）として登録されます。ローカルメモリはグローバルメモリより容量が少ない分高速にアクセスが可能な書込読取可能メモリです。
 一つのワークグループ内でしか値を保持できません。初期値は設定不可で0または不定です。
@@ -2285,6 +2285,7 @@ int p3:列(col)の数			[in]
 %inst
 cl memに行、列のサイズを設定します。
 HCLBLAS_sgemm命令やHCLBLAS_dgemm命令を使う際にあらかじめ行、列を正しく設定しておく必要があります。
+この設定した行と列の値はcl memと一緒にプラグイン内部に記録され、HCLBLAS_Get2DShapeで取り出すことができます。
 
 
 %href
@@ -2332,6 +2333,7 @@ p2は指定できません。
 
 %href
 HCLBLAS_dT
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_dT
@@ -2351,6 +2353,7 @@ p2は指定できません。
 
 %href
 HCLBLAS_sT
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_sgemv
@@ -2383,6 +2386,7 @@ y=HCLBLAS_sgemm(A,x)
 %href
 HCLBLAS_sgemv
 HCLBLAS_dgemv
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_dgemv
@@ -2415,6 +2419,7 @@ y=HCLBLAS_sgemm(A,x)
 %href
 HCLBLAS_sgemv
 HCLBLAS_dgemv
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_sdot
@@ -2435,6 +2440,7 @@ p3は使いません。
 
 %href
 HCLBLAS_ddot
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_ddot
@@ -2455,6 +2461,7 @@ p3は使いません。
 
 %href
 HCLBLAS_sdot
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_snrm2
@@ -2474,6 +2481,7 @@ p2は使いません。
 
 %href
 HCLBLAS_dnrm2
+HCLBLAS_Set2DShape
 ;--------
 %index
 HCLBLAS_dnrm2
@@ -2493,4 +2501,5 @@ p2は使いません。
 
 %href
 HCLBLAS_snrm2
+HCLBLAS_Set2DShape
 ;--------
