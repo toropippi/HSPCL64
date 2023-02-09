@@ -52,7 +52,7 @@
   ただしこれは「varsize」関数がかち合ってhsp35以降ではエラーが出るようになりました。  
   
   そこでyoudaiさんによりhspcl32.asの中身を修正して頂いた安定バージョンが公開されました。  
-  http://youdaizone.webcrow.jp/hsp3/hspcl32_fix.html  
+  http://youdaizone.starfree.jp/hsp3/hspcl32m_42/index.html  
   現在はコチラを使用するのが良いでしょう。  
   なおver4.02以降更新の予定はございません。  
   
