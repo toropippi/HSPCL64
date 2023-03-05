@@ -81,7 +81,7 @@ efghiqippi@yahoo.co.jp
 商用問わず配布、転載、改造は無断かつ自由にして構いません（大歓迎）  
   
 ## ■License  
-Copyright (c) 2022 toropippi  
+Copyright (c) 2021 toropippi  
 Released under the MIT license  
 see https://opensource.org/licenses/mit-license.php  
 
