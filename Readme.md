@@ -81,9 +81,10 @@ efghiqippi@yahoo.co.jp
 商用問わず配布、転載、改造は無断かつ自由にして構いません（大歓迎）  
   
 ## ■License  
-The source for HSPCL64 is licensed under the Apache License, Version 2.0  
-see https://opensource.org/licenses/Apache-2.0  
-  
+Copyright (c) 2022 toropippi  
+Released under the MIT license  
+see https://opensource.org/licenses/mit-license.php  
+
 HSPで64bit int型が使える部分はinoviaさんから拝借いたしました。  
 https://github.com/inovia/HSPInt64  
 ここから流用した部分に関してはBSD-3-Clause Licenseに準拠しています。  
