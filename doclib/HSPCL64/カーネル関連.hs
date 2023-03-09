@@ -634,7 +634,7 @@ NVIDIA‚ÌGPU‚ğ—á‚É‚¾‚µ‚Ü‚·BGPU‚ÍSM(streaming multiprocessor)‚Æ‚¢‚¤’PˆÊ‚Ì‰ñ˜H‚ğ‘å
 (https://pc.watch.impress.co.jp/docs/column/kaigai/318463.html‚æ‚è“]Ú)
 
 html{
-<img src="./doclib/HSPCL64/fermioverview.jpg">
+<img src="./doclib/HSPCL64/thumbs/fermioverview.jpg">
 }html
 
 
@@ -643,7 +643,7 @@ html{
 
 (https://en.wikipedia.org/wiki/Fermi_%28microarchitecture%29‚æ‚è“]Ú)
 html{
-<img src="./doclib/HSPCL64/fermistreamingmultiprocessor.png">
+<img src="./doclib/HSPCL64/thumbs/fermistreamingmultiprocessor.png">
 }html
 
 
