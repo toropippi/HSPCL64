@@ -39,13 +39,13 @@ int64 p1 : 確保するbyte数	[in]
 
 %inst
 HCLSetDeviceで指定されたグラフィックボードなどのデバイス上にメモリを確保します。
-CL_mem_object idが返ります。
+cl_mem_idが返ります。
 これは64bit int型です。
 主にGDDR5,6などのメモリのあるグラボ上に、指定したサイズのメモリが確保されることになります。
 HCLReleaseBufferで解放することができます。
 
-このCL_mem_object idを解放前にロストすると、GPU側のメモリにアクセスできないことになり、メモリリークに近い状態になってしまいます。
-CL_mem_object idを変数で保持している場合上書きにはご注意下さい。
+このcl_mem_idを解放前にロストすると、GPU側のメモリにアクセスできないことになり、メモリリークに近い状態になってしまいます。
+cl_mem_idを変数で保持している場合上書きにはご注意下さい。
 
 
 %href
@@ -59,7 +59,7 @@ VRAM破棄
 
 %prm
 int64 p1
-int64 p1 : CL_mem_object id			[in]
+int64 p1 : cl_mem_id			[in]
 %inst
 デバイス上のメモリを解放します。
 
@@ -73,7 +73,7 @@ HSP配列情報をVRAMに書込
 
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
-int64 p1 : コピー先CL_mem_object id		[in]
+int64 p1 : コピー先cl_mem_id		[in]
 array p2:コピー元配列変数			[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
@@ -102,7 +102,7 @@ VRAMからHSP配列情報に読込
 
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
-int64 p1 : コピー元CL_mem_object id		[in]
+int64 p1 : コピー元cl_mem_id		[in]
 array p2:コピー先配列変数			[out]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー元のオフセット,省略可		[in]
@@ -131,8 +131,8 @@ VRAM同士コピー
 
 %prm
 int64 p1,int64 p2,int64 p3,int64 p4,int64 p5,int p6
-int64 p1 : コピー先CL_mem_object id		[in]
-int64 p2 : コピー元CL_mem_object id		[in]
+int64 p1 : コピー先cl_mem_id		[in]
+int64 p2 : コピー元cl_mem_id		[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
 int64 p5 : コピー元のオフセット,省略可		[in]
@@ -161,7 +161,7 @@ array p1 : HSP側の配列変数		[in]
 
 %inst
 dim命令などで確保したHSPの配列変数を、そのままコピーしてVRAMの作成をします。
-CL_mem_object idが返ります。
+cl_mem_idが返ります。
 これは64bit int型です。
 
 %href
@@ -174,7 +174,7 @@ HSP配列情報をVRAMに書込、強制ノンブロッキングモード
 
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
-int64 p1 : コピー先CL_mem_object id		[in]
+int64 p1 : コピー先cl_mem_id		[in]
 array p2:コピー元配列変数			[in]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー先のオフセット,省略可		[in]
@@ -212,7 +212,7 @@ VRAMからHSP配列情報に読込、強制ノンブロッキングモード
 
 %prm
 int64 p1,array p2,int64 p3,int64 p4,int64 p5,int p6,int p7
-int64 p1 : コピー元CL_mem_object id		[in]
+int64 p1 : コピー元cl_mem_id		[in]
 array p2:コピー先配列変数			[out]
 int64 p3 : コピーサイズbyte,省略可		[in]
 int64 p4 : コピー元のオフセット,省略可		[in]
@@ -276,7 +276,7 @@ VRAMからint型を1要素読み込み
 %prm
 (int64 p1,int64 p2)
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 
 %inst
@@ -303,7 +303,7 @@ VRAMから64bit int型を1要素読み込み
 %prm
 (int64 p1,int64 p2)
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 
 %inst
@@ -330,7 +330,7 @@ VRAMからdouble型を1要素読み込み
 %prm
 (int64 p1,int64 p2)
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 
 %inst
@@ -357,7 +357,7 @@ VRAMからfloat型を1要素読み込み
 %prm
 (int64 p1,int64 p2)
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 
 %inst
@@ -384,7 +384,7 @@ VRAMに1要素書き込み
 %prm
 int64 p1,int64 p2,int p3
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 int p3 : 内容				[in]
 
@@ -408,7 +408,7 @@ VRAMに1要素書き込み
 %prm
 int64 p1,int64 p2,int64 p3
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 int64 p3 : 内容				[in]
 
@@ -432,7 +432,7 @@ VRAMに1要素書き込み
 %prm
 int64 p1,int64 p2,double p3
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 double p3: 内容				[in]
 
@@ -456,7 +456,7 @@ VRAMに1要素書き込み
 %prm
 int64 p1,int64 p2,float p3
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 int64 p2 : 配列の要素(index)		[in]
 float p3: 内容				[in]
 
@@ -480,7 +480,7 @@ VRAMを指定の型と数値で埋める
 %prm
 int64 p1,var p2,int64 p3,int64 p4,int p5
 
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 var p2 : pattern			[in]
 int64 p3 : offset,省略可		[in]
 int64 p4 : size,省略可			[in]
@@ -506,7 +506,7 @@ HSP配列変数確保しVRAMからコピー
 %prm
 array p1,int64 p2
 array p1 : HSP側の配列変数			[out]
-int64 p2 : コピー元CL_mem_object id		[in]
+int64 p2 : コピー元cl_mem_id		[in]
 
 %inst
 p1で指定した変数をint型配列変数として初期化し、内容をp2からコピーします。
@@ -526,7 +526,7 @@ HSP配列変数確保しVRAMからコピー
 %prm
 array p1,int64 p2
 array p1 : HSP側の配列変数			[out]
-int64 p2 : コピー元CL_mem_object id		[in]
+int64 p2 : コピー元cl_mem_id		[in]
 
 %inst
 p1で指定した変数を64bit int型配列変数として初期化し、内容をp2からコピーします。
@@ -546,7 +546,7 @@ HSP配列変数確保しVRAMからコピー
 %prm
 array p1,int64 p2
 array p1 : HSP側の配列変数			[out]
-int64 p2 : コピー元CL_mem_object id		[in]
+int64 p2 : コピー元cl_mem_id		[in]
 
 %inst
 p1で指定した変数をdouble型配列変数として初期化し、内容をp2からコピーします。
@@ -566,7 +566,7 @@ HSP配列変数確保しVRAMからコピー
 %prm
 array p1,int64 p2
 array p1 : HSP側の配列変数			[out]
-int64 p2 : コピー元CL_mem_object id		[in]
+int64 p2 : コピー元cl_mem_id		[in]
 
 %inst
 p1で指定した変数をfloat型配列変数として初期化し、内容をp2からコピーします。
@@ -603,7 +603,7 @@ HCLGetSize
 
 %prm
 (int64 p1)
-int64 p1 : CL_mem_object id		[in]
+int64 p1 : cl_mem_id		[in]
 
 %inst
 HCLCreateBuffer等で作成したbufferのサイズをbyteで返します。
@@ -621,9 +621,9 @@ VRAM一括解放
 
 %prm
 int64 p1,int64 p2,int64 p3・・・・
-int64 p1 : 除外CL_mem_object id,省略可	[in]
-int64 p2 : 除外CL_mem_object id,省略可	[in]
-int64 p3 : 除外CL_mem_object id,省略可	[in]
+int64 p1 : 除外cl_mem_id,省略可	[in]
+int64 p2 : 除外cl_mem_id,省略可	[in]
+int64 p3 : 除外cl_mem_id,省略可	[in]
 int64 p4 : ・・・・
 
 %inst
@@ -657,7 +657,7 @@ VRAM参照カウンタインクリメント
 
 %prm
 int64 p1
-int64 p1 : CL_mem_object id	[in]
+int64 p1 : cl_mem_id	[in]
 
 %inst
 メモリidの参照カウンタを1増やします。
@@ -678,7 +678,7 @@ VRAM参照カウンタデクリメント
 
 %prm
 int64 p1
-int64 p1 : CL_mem_object id	[in]
+int64 p1 : cl_mem_id	[in]
 
 %inst
 メモリidの参照カウンタを1減らします。
