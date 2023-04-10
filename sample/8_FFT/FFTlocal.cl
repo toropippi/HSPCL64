@@ -96,6 +96,27 @@ uint reversebits(uint id)
 
 
 
+__kernel void preFFT(__global fComplex *buffer,int N)
+{
+	uint id = get_global_id(0);
+	fComplex w2;
+	w2.r = cos(PI * id / N);
+	w2.i = sin(PI * id / N);
+	buffer[id] = fcmul(buffer[id],w2);
+}
+
+
+__kernel void postFFT(__global fComplex *buffer,int N)
+{
+	uint id = get_global_id(0);
+	fComplex w2;
+	w2.r = cos(-PI * id / N);
+	w2.i = sin(-PI * id / N);
+	buffer[id] = fcmul(buffer[id],w2);
+}
+
+
+
 __kernel void HADAMARD(__global fComplex *buffer,__global fComplex *buffer2)
 {
 	uint id = get_global_id(0);
