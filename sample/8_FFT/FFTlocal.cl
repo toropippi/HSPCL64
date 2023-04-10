@@ -95,10 +95,18 @@ uint reversebits(uint id)
 }
 
 
+
+__kernel void HADAMARD(__global fComplex *buffer,__global fComplex *buffer2)
+{
+	uint id = get_global_id(0);
+	buffer[id] = fcmul(buffer[id],buffer2[id]);
+}
+
+
 //#define M (8)
 //#define N (1<<M)
 //thread”‚Í(N/2, 1, 1)
-__kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *block)
+__kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *block,float inv)
 {
 	uint id = get_global_id(0);
 	block[id * 2] = buffer[id * 2];
@@ -115,7 +123,7 @@ __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *bloc
 		fComplex c1 = block[t1];
 		fComplex c0 = block[t0];
 		
-		float rad = -PI * t / dleng;//inv‚Ìê‡‚±‚ê‚É-‚ð‚©‚¯‚é
+		float rad = -PI * t / dleng * inv;//IFFT‚Ìê‡inv=-1
 		fComplex rotate = fcradtow(rad);
 		
 		block[t0] = fcadd(c0,c1);
@@ -132,7 +140,7 @@ __kernel void fp_FFTlocal(__global fComplex *buffer,int M,__local fComplex *bloc
 
 
 //thread”‚Í(N/2, 1, 1)
-__kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
+__kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block,double inv)
 {
 	uint id = get_global_id(0);
 	block[id * 2] = buffer[id * 2];
@@ -149,7 +157,7 @@ __kernel void dp_FFTlocal(__global Complex *buffer,int M,__local Complex *block)
 		Complex c1 = block[t1];
 		Complex c0 = block[t0];
 		
-		double rad = -PI * t / dleng;//inv‚Ìê‡‚±‚ê‚É-‚ð‚©‚¯‚é
+		double rad = -PI * t / dleng * inv;
 		Complex rotate = radtow(rad);
 		
 		block[t0] = add(c0,c1);

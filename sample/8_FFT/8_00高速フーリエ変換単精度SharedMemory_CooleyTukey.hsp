@@ -24,7 +24,7 @@
 	HCLSetKernel krnfft,0,fftarray
 	HCLSetKernel krnfft,1,M
 	HCLSetKernel krnfft,2,0,N*8//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
-
+	HCLSetKernel krnfft,3,float(1.0)
 	//GPUでFFTの部分/////////////////////////////////////////////////////////
 	HCLDoKrn1 krnfft,N/2,N/2//共有メモリにおさまるサイズなら一括で計算できる。カーネル内でビット逆順もしてる
 	//GPUでFFTの部分/////////////////////////////////////////////////////////

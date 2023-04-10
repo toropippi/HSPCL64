@@ -1,0 +1,85 @@
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//畳み込み乗算サンプル
+//a1*a2を計算したい。a1,a2は多倍長整数を想定
+//a1=1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+//a2=0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+//これは
+//111*100の計算をしていることになる(メモリが先頭に近いほど下位桁)
+//答えは11100になるため
+//0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0...
+//と表示されるのが正しい
+/////////////////////////////////////////////////////////////////////////////////////////////////
+#include "HSPCL64.as"
+	HCLinit
+	randomize
+	M=4//冪指数。多分9以降は共有メモリサイズオーバーでエラーになる
+	N=1<<M
+	
+	fdim hsp_dataF1,N*2//実数と虚数が交互にはいるfloat型配列、初期値
+	fdim hsp_dataF2,N*2//実数と虚数が交互にはいるfloat型配列、初期値
+	fdim hsp_retF,N*2//実数と虚数が交互にはいるfloat型配列、結果格納用
+	
+	
+	prgid=HCLCreateProgram("FFTlocal.cl")
+	krnfft=HCLCreateKernel(prgid,"fp_FFTlocal")
+	krnhdm=HCLCreateKernel(prgid,"HADAMARD")
+	fftarray1=HCLCreateBuffer(N*2*4)//1要素当たり実数と虚数があり、1つの数字は4byte
+	fftarray2=HCLCreateBuffer(N*2*4)//1要素当たり実数と虚数があり、1つの数字は4byte
+	gosub*fftの初期値設定
+	HCLWriteBuffer fftarray1,hsp_dataF1,N*2*4
+	HCLWriteBuffer fftarray2,hsp_dataF2,N*2*4
+
+
+	HCLSetKernel krnfft,0,fftarray1
+	HCLSetKernel krnfft,1,M
+	HCLSetKernel krnfft,2,0,N*8//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+	HCLSetKernel krnfft,3,float(1)
+	HCLDoKrn1 krnfft,N/2,N/2//共有メモリにおさまるサイズなら一括で計算できる。カーネル内でビット逆順もしてる
+
+	HCLSetKernel krnfft,0,fftarray2
+	HCLSetKernel krnfft,1,M
+	HCLSetKernel krnfft,2,0,N*8//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+	HCLSetKernel krnfft,3,float(1)
+	HCLDoKrn1 krnfft,N/2,N/2//共有メモリにおさまるサイズなら一括で計算できる。カーネル内でビット逆順もしてる
+
+	HCLSetKernel krnhdm,0,fftarray1
+	HCLSetKernel krnhdm,1,fftarray2
+	HCLDoKrn1 krnhdm,N,N
+
+	HCLSetKernel krnfft,0,fftarray1
+	HCLSetKernel krnfft,1,M
+	HCLSetKernel krnfft,2,0,N*8//ローカルメモリ作成。第4引数に0以外を指定することが必須。１ワークグループにつきN*sizeof(float2)
+	HCLSetKernel krnfft,3,float(-1)
+	HCLDoKrn1 krnfft,N/2,N/2//共有メモリにおさまるサイズなら一括で計算できる。カーネル内でビット逆順もしてる
+
+	HCLDoXf "A[i]/=n;",fftarray1,N
+	
+	HCLReadBuffer fftarray1,hsp_retF,N*2*4//結果取得
+
+
+	pos 0,0
+	mes "GPU\n実数		虚数"
+	pos 0,38
+		repeat limit(N,1,16)
+		mes ""+hsp_retF(cnt*2)+"	"+hsp_retF(cnt*2+1)
+		loop
+
+	stop
+
+
+
+*fftの初期値設定
+	a1=1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+	a2=0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0	
+	
+		repeat N
+		hsp_dataF1(cnt*2+0)=float(a1.cnt)//実数部
+		hsp_dataF1(cnt*2+1)=float(0)//虚数部
+		loop
+		
+		repeat N
+		hsp_dataF2(cnt*2+0)=float(a2.cnt)//実数部
+		hsp_dataF2(cnt*2+1)=float(0)//虚数部
+		loop
+	return
+
