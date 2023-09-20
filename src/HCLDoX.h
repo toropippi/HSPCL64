@@ -245,7 +245,7 @@ std::string CodeRefine(std::string sor, int typeflg,int* argt,int argcnt,int &_O
 	{
 		if (UC[i] != 0)
 		{
-			header += "__global unssigned char* UC" + std::to_string(i) + " ,";
+			header += "__global unsigned char* UC" + std::to_string(i) + " ,";
 			argcnt2++;
 		}
 	}
