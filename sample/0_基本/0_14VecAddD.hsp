@@ -1,0 +1,38 @@
+// vecAddD sample for double buffers.
+#include "HSPCL64.as"
+	HCLinit
+
+	if HCLGetDeviceInfo_i64(CL_DEVICE_DOUBLE_FP_CONFIG,0)==0 : dialog "This device does not support double precision.",1 : end
+
+	prg=HCLCreateProgram("VecAdd.cl")
+	krn=HCLCreateKernel(prg,"vecAddD")
+
+	n=256
+	clmem_A=HCLCreateBuffer(n*8)
+	clmem_B=HCLCreateBuffer(n*8)
+	clmem_C=HCLCreateBuffer(n*8)
+
+	ddim host_A,n
+	ddim host_B,n
+	ddim host_C,n
+		repeat n
+		host_A.cnt=double(cnt)*0.5
+		host_B.cnt=double(cnt)*1.5
+		loop
+
+	HCLWriteBuffer clmem_A,host_A,n*8,0,0
+	HCLWriteBuffer clmem_B,host_B,n*8,0,0
+
+	HCLSetKernel krn,0,clmem_A
+	HCLSetKernel krn,1,clmem_B
+	HCLSetKernel krn,2,clmem_C
+
+	mes "calc start"
+	HCLDoKrn1 krn,n,n
+	HCLReadBuffer clmem_C,host_C,n*8,0,0
+	mes "calc end"
+
+		repeat n
+		mes ""+host_A.cnt+" + "+host_B.cnt+" = "+host_C.cnt
+		loop
+	stop
