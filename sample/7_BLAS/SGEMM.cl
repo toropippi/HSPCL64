@@ -641,33 +641,3 @@ __kernel void SGEMM_small(int M,int N,int K,__global float* A,__global float* B,
 
 
 
-//[numthreads(16, 16, 1)]
-//A=A.T (not bank conflict and no padding)
-__kernel void Trans(int M,int N,__global float* A,__global float* AT)
-{
-	int threadIdxx=get_local_id(0);
-	int threadIdxy=get_local_id(1);
-	int blockIdxx=get_group_id(0);
-	int blockIdxy=get_group_id(1);
-	
-	int tidn = threadIdxx;
-	int tidm = threadIdxy;
-	int tidoffset = (tidn + tidm) % 16;
-	int offsetN = 16 * blockIdxx + tidn;
-	int offsetM = 16 * blockIdxy + tidm;
-	offsetN = min(offsetN, N - 1);
-	offsetM = min(offsetM, M - 1);
-	int woffsetN = 16 * blockIdxx + tidm;
-	int woffsetM = 16 * blockIdxy + tidn;
-	woffsetN = min(woffsetN, N - 1);
-	woffsetM = min(woffsetM, M - 1);
-	
-	__local float sub[256];
-	// load Global to Local
-	//Asub[tidn+tidm*16]=A[offsetN+offsetM*N];
-	sub[tidoffset + tidm * 16] = A[offsetN + offsetM * N];
-	barrier(CLK_LOCAL_MEM_FENCE);
-	// Store to AT
-	//AT[woffsetN*M+woffsetM]=Asub[tidm+tidn*16];
-	AT[woffsetN * M + woffsetM] = sub[tidoffset + tidn * 16];
-}
