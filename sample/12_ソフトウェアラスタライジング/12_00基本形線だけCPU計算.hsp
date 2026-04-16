@@ -1,0 +1,111 @@
+//点の位置から変換をCPUで計算してline命令で描画
+//頂点shaderをHSPで実装した形
+#const width_  640
+#const height_ 480
+#const pixelCount  width_ * height_
+// テスト用の簡単な四角形 (2 tri)
+vertexCount = 4
+triCount    = 2
+
+ddim host_pos, vertexCount * 3
+dim host_idx, triCount * 3
+// MVP
+ddim host_mvp, 16
+
+// ------------------------------------------------------------
+// 頂点データ生成
+// ------------------------------------------------------------
+// v0 ---- v1
+//  |    / |
+//  |  /   |
+// v2 ---- v3
+host_pos.0 = -0.84, -0.8, 3.2
+host_pos.3 =  0.8, -0.81, 3.92
+host_pos.6 = -0.8,  0.9, 2.91
+host_pos.9 =  0.83,  0.8, 1.9
+
+host_idx.0 = 0, 1, 2
+host_idx.3 = 2, 1, 3
+
+mat_identity host_mvp
+
+// ------------------------------------------------------------
+// 頂点shader
+// 上のワールド座標をスクリーン座標に変換
+// ------------------------------------------------------------
+
+ddim host_screenClip, vertexCount * 4
+gosub*vshader
+
+// ------------------------------------------------------------
+// 簡易描画 (line)
+// ------------------------------------------------------------
+screen 0, width_, height_
+
+	repeat triCount
+	tcnt=cnt
+		repeat 3
+		basecnt=cnt+tcnt*3
+		basecnt1=(cnt+1)\3+tcnt*3
+		p0 = host_idx.basecnt
+		p1 = host_idx.basecnt1
+		p0x = host_screenClip.(p0*4)
+		p0y = host_screenClip.(p0*4+1)
+		p1x = host_screenClip.(p1*4)
+		p1y = host_screenClip.(p1*4+1)
+		line int(p0x),int(p0y),int(p1x),int(p1y)
+		loop
+	loop
+redraw 1
+stop
+
+*vshader
+	ddim pos4,4
+	ddim clip,4
+
+		repeat vertexCount
+		pos4.0 = host_pos.(cnt*3+0)
+		pos4.1 = host_pos.(cnt*3+1)
+		pos4.2 = host_pos.(cnt*3+2)
+		pos4.3 = 1.0
+		
+	    mul_mat4_vec4 clip, host_mvp, pos4
+	    
+	    invW = 1.0 / clip.3
+	    ndcX = clip.0 * invW
+	    ndcY = clip.1 * invW
+	
+	    sx = (ndcX * 0.5 + 0.5) * width_
+	    sy = (1.0 - (ndcY * 0.5 + 0.5)) * height_
+	    
+	    host_screenClip.(cnt*4+0) = sx
+	    host_screenClip.(cnt*4+1) = sy
+	    host_screenClip.(cnt*4+2) = clip.z
+	    host_screenClip.(cnt*4+3) = clip.w
+	    loop
+	return
+
+#module 
+#deffunc mat_identity array m
+//[ fx   0    0                0 )
+//[  0  fy    0                0 )
+//[  0   0   zf/(zf-zn)  -zn*zf/(zf-zn) )
+//[  0   0    1                0 )
+	aspect = double(width_@) / double(height_@)
+	fy = 1.0 / tan(3.14159 / 3 / 2)
+	fx = fy / aspect
+	zn = 0.12
+	zf = 120.0
+
+    m(0)  = fx
+    m(5)  = fy
+    m(10) = zf/(zf-zn)
+	m(11) = -zn*zf/(zf-zn)
+    m(14) = 1.0
+    return
+
+
+#deffunc mul_mat4_vec4 array out, array m, array v
+	out = m(0) * v(0) + m(1) * v(1) + m(2) * v.z + m(3) * v(3),    m(4) * v(0) + m(5) * v(1) + m(6) * v(2) + m(7) * v(3),    m(8) * v(0) + m(9) * v(1) + m(10) * v(2) + m(11) * v(3),    m(12) * v(0) + m(13) * v(1) + m(14) * v(2) + m(15) * v(3)
+	return
+#global

@@ -1,0 +1,507 @@
+goto*end2
+	
+*立方体初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 立方体 (12 tri)
+	// 法線:
+	//   共有頂点のままなので各面ごとの鋭い法線分離はできない。
+	//   ここでは立方体中心から各頂点へ向かうベクトルを頂点法線として使う。
+	//   そのため見た目はやや丸めの補間になる。
+	// ------------------------------------------------------------
+	vertexCount = 8
+	triCount    = 12
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	// 前面 z=3.2、背面 z=4.8
+	// x,y は -0.8 ～ +0.8
+	host_pos.0  = -0.8, -0.8, 3.2   // 0 front-left-bottom
+	host_pos.3  =  0.8, -0.8, 3.2   // 1 front-right-bottom
+	host_pos.6  =  0.8,  0.8, 3.2   // 2 front-right-top
+	host_pos.9  = -0.8,  0.8, 3.2   // 3 front-left-top
+
+	host_pos.12 = -0.8, -0.8, 4.8   // 4 back-left-bottom
+	host_pos.15 =  0.8, -0.8, 4.8   // 5 back-right-bottom
+	host_pos.18 =  0.8,  0.8, 4.8   // 6 back-right-top
+	host_pos.21 = -0.8,  0.8, 4.8   // 7 back-left-top
+
+	// front
+	host_idx.0  = 0, 1, 2
+	host_idx.3  = 0, 2, 3
+
+	// back
+	host_idx.6  = 5, 4, 7
+	host_idx.9  = 5, 7, 6
+
+	// left
+	host_idx.12 = 4, 0, 3
+	host_idx.15 = 4, 3, 7
+
+	// right
+	host_idx.18 = 1, 5, 6
+	host_idx.21 = 1, 6, 2
+
+	// bottom
+	host_idx.24 = 4, 5, 1
+	host_idx.27 = 4, 1, 0
+
+	// top
+	host_idx.30 = 3, 2, 6
+	host_idx.33 = 3, 6, 7
+
+	cx = 0.0
+	cy = 0.0
+	cz = 4.0
+	repeat vertexCount
+		vid = cnt
+		base = vid * 3
+		nx = host_pos(base + 0) - cx
+		ny = host_pos(base + 1) - cy
+		nz = host_pos(base + 2) - cz
+		len = sqrt(nx * nx + ny * ny + nz * nz)
+		if len == 0.0 : len = 1.0
+		host_nrm(base + 0) = nx / len
+		host_nrm(base + 1) = ny / len
+		host_nrm(base + 2) = nz / len
+	loop
+	return
+
+*円錐初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 円錐
+	// 頂点  : apex 1 + base center 1 + ring seg
+	// 三角形: 側面 seg + 底面 seg
+	//
+	// 法線:
+	//   - apex       : 軸方向に近い法線
+	//   - base center: 底面法線
+	//   - base ring  : 側面の滑らか法線を優先
+	//
+	// 共有頂点のため、底面リング頂点は底面法線と側面法線を分離できない。
+	// そのため底面外周は少し丸く見える。
+	// ------------------------------------------------------------
+	seg = 16
+	vertexCount = seg + 2
+	triCount    = seg * 2
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	PI = 3.141592653589793
+	r  = 0.9
+	zApex = 2.8
+	zBase = 4.7
+	h = zBase - zApex
+
+	// 0 : apex
+	host_pos(0) = 0.0
+	host_pos(1) = 0.0
+	host_pos(2) = zApex
+	host_nrm(0) = 0.0
+	host_nrm(1) = 0.0
+	host_nrm(2) = -1.0
+
+	// 1 : base center
+	host_pos(3) = 0.0
+	host_pos(4) = 0.0
+	host_pos(5) = zBase
+	host_nrm(3) = 0.0
+	host_nrm(4) = 0.0
+	host_nrm(5) = 1.0
+
+	// 2.. : base ring
+	repeat seg
+		i = cnt
+		ang = 2.0 * PI * double(i) / double(seg)
+		ca = cos(ang)
+		sa = sin(ang)
+
+		base = (2 + i) * 3
+		host_pos(base + 0) = r * ca
+		host_pos(base + 1) = r * sa
+		host_pos(base + 2) = zBase
+
+		nx = ca
+		ny = sa
+		nz = -r / h
+		len = sqrt(nx * nx + ny * ny + nz * nz)
+		if len == 0.0 : len = 1.0
+		host_nrm(base + 0) = nx / len
+		host_nrm(base + 1) = ny / len
+		host_nrm(base + 2) = nz / len
+	loop
+
+	// 側面 + 底面
+	repeat seg
+		i = cnt
+		ni = i + 1
+		if ni >= seg : ni = 0
+
+		v0 = 2 + i
+		v1 = 2 + ni
+
+		base = i * 6
+
+		// side
+		host_idx(base + 0) = 0
+		host_idx(base + 1) = v0
+		host_idx(base + 2) = v1
+
+		// base
+		host_idx(base + 3) = 1
+		host_idx(base + 4) = v1
+		host_idx(base + 5) = v0
+	loop
+	return
+
+*球初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 球
+	// north pole 1 + south pole 1 + 中間リング
+	//
+	// 法線:
+	//   球中心から各頂点へ向かう単位ベクトル
+	// ------------------------------------------------------------
+	lonDiv = 16
+	latDiv = 8    // 縦分割
+	ringCount = latDiv - 1
+
+	vertexCount = 2 + ringCount * lonDiv
+	triCount    = lonDiv * 2 * (latDiv - 1)
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	PI = 3.141592653589793
+	r  = 0.9
+	cz = 3.9
+
+	// 0 : near pole
+	host_pos(0) = 0.0
+	host_pos(1) = 0.0
+	host_pos(2) = cz - r
+	host_nrm(0) = 0.0
+	host_nrm(1) = 0.0
+	host_nrm(2) = -1.0
+
+	// 1 : far pole
+	host_pos(3) = 0.0
+	host_pos(4) = 0.0
+	host_pos(5) = cz + r
+	host_nrm(3) = 0.0
+	host_nrm(4) = 0.0
+	host_nrm(5) = 1.0
+
+	// 中間リング
+	repeat ringCount
+		ry = cnt
+		phi = PI * double(ry + 1) / double(latDiv)
+		rr = r * sin(phi)
+		zv = cz - r * cos(phi)
+
+		repeat lonDiv
+			rx = cnt
+			ang = 2.0 * PI * double(rx) / double(lonDiv)
+			ca = cos(ang)
+			sa = sin(ang)
+			vid = 2 + ry * lonDiv + rx
+			base = vid * 3
+
+			x = rr * ca
+			y = rr * sa
+			z = zv
+
+			host_pos(base + 0) = x
+			host_pos(base + 1) = y
+			host_pos(base + 2) = z
+
+			nx = x
+			ny = y
+			nz = z - cz
+			len = sqrt(nx * nx + ny * ny + nz * nz)
+			if len == 0.0 : len = 1.0
+			host_nrm(base + 0) = nx / len
+			host_nrm(base + 1) = ny / len
+			host_nrm(base + 2) = nz / len
+		loop
+	loop
+
+	idxp = 0
+
+	// top cap
+	repeat lonDiv
+		i = cnt
+		ni = i + 1
+		if ni >= lonDiv : ni = 0
+
+		v0 = 0
+		v1 = 2 + i
+		v2 = 2 + ni
+
+		host_idx(idxp + 0) = v0
+		host_idx(idxp + 1) = v1
+		host_idx(idxp + 2) = v2
+		idxp += 3
+	loop
+
+	// middle bands
+	repeat ringCount - 1
+		ry = cnt
+		row0 = 2 + ry * lonDiv
+		row1 = 2 + (ry + 1) * lonDiv
+
+		repeat lonDiv
+			i = cnt
+			ni = i + 1
+			if ni >= lonDiv : ni = 0
+
+			a = row0 + i
+			b = row0 + ni
+			c = row1 + i
+			d = row1 + ni
+
+			host_idx(idxp + 0) = a
+			host_idx(idxp + 1) = c
+			host_idx(idxp + 2) = b
+			idxp += 3
+
+			host_idx(idxp + 0) = b
+			host_idx(idxp + 1) = c
+			host_idx(idxp + 2) = d
+			idxp += 3
+		loop
+	loop
+
+	// bottom cap
+	lastRow = 2 + (ringCount - 1) * lonDiv
+	repeat lonDiv
+		i = cnt
+		ni = i + 1
+		if ni >= lonDiv : ni = 0
+
+		v0 = lastRow + i
+		v1 = 1
+		v2 = lastRow + ni
+
+		host_idx(idxp + 0) = v0
+		host_idx(idxp + 1) = v1
+		host_idx(idxp + 2) = v2
+		idxp += 3
+	loop
+	return
+
+*八面体初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 八面体 (8 tri)
+	// 法線:
+	//   中心から各頂点へ向かうベクトル
+	// ------------------------------------------------------------
+	vertexCount = 6
+	triCount    = 8
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	cz = 3.9
+	rxy = 0.9
+	zn = 2.9
+	zf = 4.9
+
+	// 0 : near apex
+	host_pos(0)  =  0.0,  0.0, zn
+	host_nrm(0)  =  0.0,  0.0, -1.0
+
+	// 1 : far apex
+	host_pos(3)  =  0.0,  0.0, zf
+	host_nrm(3)  =  0.0,  0.0,  1.0
+
+	// equator
+	host_pos(6)  =  rxy,  0.0, cz
+	host_pos(9)  =  0.0,  rxy, cz
+	host_pos(12) = -rxy,  0.0, cz
+	host_pos(15) =  0.0, -rxy, cz
+
+	host_nrm(6)  =  1.0,  0.0,  0.0
+	host_nrm(9)  =  0.0,  1.0,  0.0
+	host_nrm(12) = -1.0,  0.0,  0.0
+	host_nrm(15) =  0.0, -1.0,  0.0
+
+	// near side
+	host_idx(0)  = 0, 2, 3
+	host_idx(3)  = 0, 3, 4
+	host_idx(6)  = 0, 4, 5
+	host_idx(9)  = 0, 5, 2
+
+	// far side
+	host_idx(12) = 1, 3, 2
+	host_idx(15) = 1, 4, 3
+	host_idx(18) = 1, 5, 4
+	host_idx(21) = 1, 2, 5
+	return
+
+*四角錐初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 四角錐 (6 tri)
+	// 法線:
+	//   共有頂点のままなので、重心から各頂点へ向かうベクトルを使う。
+	//   そのため面ごとの鋭いエッジは出ない。
+	// ------------------------------------------------------------
+	vertexCount = 5
+	triCount    = 6
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	// 0 : apex
+	host_pos(0)  =  0.0,  0.0, 2.8
+
+	// 1..4 : base
+	host_pos(3)  = -0.9, -0.9, 4.7
+	host_pos(6)  =  0.9, -0.9, 4.7
+	host_pos(9)  =  0.9,  0.9, 4.7
+	host_pos(12) = -0.9,  0.9, 4.7
+
+	// side
+	host_idx(0)  = 0, 1, 2
+	host_idx(3)  = 0, 2, 3
+	host_idx(6)  = 0, 3, 4
+	host_idx(9)  = 0, 4, 1
+
+	// base
+	host_idx(12) = 1, 3, 2
+	host_idx(15) = 1, 4, 3
+
+	cx = 0.0
+	cy = 0.0
+	cz = (2.8 + 4.7 * 4.0) / 5.0
+	repeat vertexCount
+		vid = cnt
+		base = vid * 3
+		nx = host_pos(base + 0) - cx
+		ny = host_pos(base + 1) - cy
+		nz = host_pos(base + 2) - cz
+		len = sqrt(nx * nx + ny * ny + nz * nz)
+		if len == 0.0 : len = 1.0
+		host_nrm(base + 0) = nx / len
+		host_nrm(base + 1) = ny / len
+		host_nrm(base + 2) = nz / len
+	loop
+	return
+
+*円柱初期設定
+	// ------------------------------------------------------------
+	// 頂点データ生成 : 円柱
+	// top center 1 + bottom center 1 + top ring seg + bottom ring seg
+	// tri = top seg + bottom seg + side seg*2
+	//
+	// 法線:
+	//   - center 頂点は各 cap 法線
+	//   - ring 頂点は側面法線を優先
+	//
+	// 共有頂点のため、cap 外周は少し丸く見える。
+	// ------------------------------------------------------------
+	seg = 16
+	vertexCount = 2 + seg * 2
+	triCount    = seg * 4
+
+	ddim host_pos, vertexCount * 3
+	ddim host_nrm, vertexCount * 3
+	dim host_idx, triCount * 3
+
+	PI = 3.141592653589793
+	r  = 0.8
+	zTop = 3.0
+	zBot = 4.8
+
+	// 0 : top center
+	host_pos(0) = 0.0
+	host_pos(1) = 0.0
+	host_pos(2) = zTop
+	host_nrm(0) = 0.0
+	host_nrm(1) = 0.0
+	host_nrm(2) = -1.0
+
+	// 1 : bottom center
+	host_pos(3) = 0.0
+	host_pos(4) = 0.0
+	host_pos(5) = zBot
+	host_nrm(3) = 0.0
+	host_nrm(4) = 0.0
+	host_nrm(5) = 1.0
+
+	// top ring : 2 .. 2+seg-1
+	// bot ring : 2+seg .. 2+seg*2-1
+	repeat seg
+		i = cnt
+		ang = 2.0 * PI * double(i) / double(seg)
+		x = r * cos(ang)
+		y = r * sin(ang)
+
+		baseT = (2 + i) * 3
+		host_pos(baseT + 0) = x
+		host_pos(baseT + 1) = y
+		host_pos(baseT + 2) = zTop
+
+		baseB = (2 + seg + i) * 3
+		host_pos(baseB + 0) = x
+		host_pos(baseB + 1) = y
+		host_pos(baseB + 2) = zBot
+
+		len = sqrt(x * x + y * y)
+		if len == 0.0 : len = 1.0
+		nx = x / len
+		ny = y / len
+		nz = 0.0
+
+		host_nrm(baseT + 0) = nx
+		host_nrm(baseT + 1) = ny
+		host_nrm(baseT + 2) = nz
+
+		host_nrm(baseB + 0) = nx
+		host_nrm(baseB + 1) = ny
+		host_nrm(baseB + 2) = nz
+	loop
+
+	idxp = 0
+	repeat seg
+		i = cnt
+		ni = i + 1
+		if ni >= seg : ni = 0
+
+		t0 = 2 + i
+		t1 = 2 + ni
+		b0 = 2 + seg + i
+		b1 = 2 + seg + ni
+
+		// top cap
+		host_idx(idxp + 0) = 0
+		host_idx(idxp + 1) = t0
+		host_idx(idxp + 2) = t1
+		idxp += 3
+
+		// bottom cap
+		host_idx(idxp + 0) = 1
+		host_idx(idxp + 1) = b1
+		host_idx(idxp + 2) = b0
+		idxp += 3
+
+		// side tri 1
+		host_idx(idxp + 0) = t0
+		host_idx(idxp + 1) = b0
+		host_idx(idxp + 2) = t1
+		idxp += 3
+
+		// side tri 2
+		host_idx(idxp + 0) = t1
+		host_idx(idxp + 1) = b0
+		host_idx(idxp + 2) = b1
+		idxp += 3
+	loop
+	return
+*end2

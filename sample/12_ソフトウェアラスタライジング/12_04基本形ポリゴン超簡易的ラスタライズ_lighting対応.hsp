@@ -1,0 +1,328 @@
+// 点の位置から変換を GPU で計算し、OpenCL 内部で描画する版
+// 2pass 化して、
+//   pass1: 各ピクセルの最前面三角形IDを決定
+//   pass2: 三角形IDから頂点法線を取り出して補間し、Lambert ライティングする
+//
+// 重要:
+// - 各頂点に対応する法線 host_nrm を、host_pos と同じ頂点順で必ず用意してください
+// - host_nrm は 1頂点あたり xyz の double 配列です
+// - ここでは法線を object space で受け取り、HSP 側で作った 3x3 回転行列で view space に回しています
+// - ライト方向も HSP 側で設定して GPU に送ります
+
+#const width_  640
+#const height_ 480
+#const pixelCount  width_ * height_
+
+#include "HSPCL64.as"
+#include "手動設定ポリゴン2.hsp"
+HCLinit
+
+vertexCount = 1
+
+// MVP
+// host_nmat : 法線用 3x3 回転行列
+// host_light: ライト設定
+//   0..2   = ライト方向 (view space, surface -> light)
+//   4..6   = ambient RGB
+//   8..10  = diffuse RGB
+
+ddim host_mvp, 16
+ddim host_nmat, 9
+ddim host_light, 12
+
+// ------------------------------------------------------------
+// OpenCL プログラム / カーネル作成
+// ------------------------------------------------------------
+prg = HCLCreateProgram("raster_lighting_2pass.cl")
+krn_RasterizeTriId = HCLCreateKernel(prg, "RasterizeTriId")
+krn_ShadeFromTriId = HCLCreateKernel(prg, "ShadeFromTriId")
+
+// ------------------------------------------------------------
+// 初期ライト設定
+// ------------------------------------------------------------
+// 斜め手前上から当てる白色ライトの例
+set_directional_light host_light, 0.35, 0.55, 0.75, 0.12, 0.12, 0.12, 0.88, 0.88, 0.88
+
+// ------------------------------------------------------------
+// CL バッファ作成
+// ------------------------------------------------------------
+// 注意: host_pos / host_idx / host_nrm は include 先、または geometry 初期化側で用意しておくこと
+clmem_pos   = int64(HCLCreateBufferFromd2f(host_pos))
+clmem_nrm   = int64(HCLCreateBufferFromd2f(host_nrm))
+clmem_idx   = HCLCreateBufferFrom(host_idx)
+clmem_mvp   = int64(HCLCreateBufferFromd2f(host_mvp))
+clmem_nmat  = int64(HCLCreateBufferFromd2f(host_nmat))
+clmem_light = int64(HCLCreateBufferFromd2f(host_light))
+
+setting_sw = 0
+gosub *setting3D
+
+// ------------------------------------------------------------
+// main 描画
+// ------------------------------------------------------------
+screen 0, width_, height_
+mref host1_vram, 66
+clmem_host1_vram = HCLCreateBufferFrom(host1_vram)
+clmem_triId      = HCLCreateBuffer(pixelCount * 4)
+
+fpscount = 0
+lastfpscount = 0
+lastsec = -1
+
+*main
+    // 視点計算
+    mx = ginfo_mx
+    my = ginfo_my
+    yaw   = (double(mx) / double(width_)  - 0.5) * 3.141592653589793 * 2.0
+    pitch = (double(my) / double(height_) - 0.5) * 1.2
+
+    cx = 0.0
+    cy = 0.0
+    cz = 3.9
+
+    build_mouse_mvp host_mvp, yaw, pitch, cx, cy, cz
+    build_mouse_normal_matrix host_nmat, yaw, pitch
+
+    // GPU に最新行列を送る
+    HCLReleaseBuffer clmem_mvp
+    HCLReleaseBuffer clmem_nmat
+    clmem_mvp  = int64(HCLCreateBufferFromd2f(host_mvp))
+    clmem_nmat = int64(HCLCreateBufferFromd2f(host_nmat))
+
+    // pass1: 三角形IDを書き出す
+    HCLFillBuffer clmem_triId, -1
+    HCLSetKrns krn_RasterizeTriId, clmem_pos, clmem_mvp, clmem_idx, clmem_triId, vertexCount, triCount, width_, height_
+    HCLDoKrn1 krn_RasterizeTriId, width_ * height_, 64
+
+    // pass2: 三角形IDから法線補間してライティング
+    HCLSetKrns krn_ShadeFromTriId, clmem_pos, clmem_nrm, clmem_mvp, clmem_nmat, clmem_idx, clmem_triId, clmem_light, clmem_host1_vram, triCount, width_, height_
+    HCLDoKrn1 krn_ShadeFromTriId, width_ * height_, 64
+
+    HCLReadBuffer clmem_host1_vram, host1_vram
+
+    redraw 1
+    await 16
+
+    fpscount++
+    if lastsec != gettime(6) {
+        lastsec = gettime(6)
+        lastfpscount = fpscount
+        fpscount = 0
+        title "fps " + lastfpscount
+        setting_sw = lastsec \ 6
+        gosub *setting3D
+    }
+    goto *main
+
+stop
+
+// ------------------------------------------------------------
+// 形状切り替え
+// ここで host_pos / host_idx / host_nrm を更新すること
+// ------------------------------------------------------------
+
+*setting3D
+	switch setting_sw
+	case 0
+		gosub*立方体初期設定
+		swbreak
+	case 1
+		gosub*円錐初期設定
+		swbreak
+	case 2
+		gosub*球初期設定
+		swbreak
+	case 3
+		gosub*八面体初期設定
+		swbreak
+	case 4
+		gosub*四角錐初期設定
+		swbreak
+	case 5
+		gosub*円柱初期設定
+		swbreak
+	default
+		swbreak
+	swend
+
+    // host_nrm は上の各初期設定ルーチンの中で、host_pos と同じ頂点順で構築しておくこと
+    // 例:
+    //   ddim host_nrm, vertexCount * 3
+    //   host_nrm(vid*3+0) = nx
+    //   host_nrm(vid*3+1) = ny
+    //   host_nrm(vid*3+2) = nz
+
+    HCLReleaseBuffer clmem_pos
+    HCLReleaseBuffer clmem_nrm
+    HCLReleaseBuffer clmem_idx
+
+    clmem_pos = int64(HCLCreateBufferFromd2f(host_pos))
+    clmem_nrm = int64(HCLCreateBufferFromd2f(host_nrm))
+    clmem_idx = HCLCreateBufferFrom(host_idx)
+    return
+
+#module
+
+#deffunc mat_identity4 array m
+    repeat 16
+        m(cnt) = 0.0
+    loop
+    m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+    return
+
+#deffunc mat_copy array dst, array src
+    repeat 16
+        dst(cnt) = src(cnt)
+    loop
+    return
+
+#deffunc mat_mul array out, array a, array b
+    ddim tmp, 16
+    repeat 4
+        r = cnt
+        repeat 4
+            c = cnt
+            tmp(r*4+c) = 0.0
+            repeat 4
+                k = cnt
+                tmp(r*4+c) += a(r*4+k) * b(k*4+c)
+            loop
+        loop
+    loop
+    repeat 16
+        out(cnt) = tmp(cnt)
+    loop
+    return
+
+#deffunc mat_translate array m, double tx, double ty, double tz
+    repeat 16
+        m(cnt) = 0.0
+    loop
+    m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+    m(3)  = tx
+    m(7)  = ty
+    m(11) = tz
+    return
+
+#deffunc mat_rotx array m, double ang
+    repeat 16
+        m(cnt) = 0.0
+    loop
+    m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+
+    c = cos(ang)
+    s = sin(ang)
+    m(5)  = c
+    m(6)  = -s
+    m(9)  = s
+    m(10) = c
+    return
+
+#deffunc mat_roty array m, double ang
+    repeat 16
+        m(cnt) = 0.0
+    loop
+    m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+
+    c = cos(ang)
+    s = sin(ang)
+    m(0)  = c
+    m(2)  = s
+    m(8)  = -s
+    m(10) = c
+    return
+
+#deffunc mat_proj array m
+    aspect = double(width_@) / double(height_@)
+    fy = 1.0 / tan(3.14159 / 3 / 2)
+    fx = fy / aspect
+    zn = 0.12
+    zf = 120.0
+
+    repeat 16
+        m(cnt) = 0.0
+    loop
+
+    m(0)  = fx
+    m(5)  = fy
+    m(10) = zf / (zf - zn)
+    m(11) = -zn * zf / (zf - zn)
+    m(14) = 1.0
+    return
+
+#deffunc set_directional_light array light, double lx, double ly, double lz, double ar, double ag, double ab, double dr, double dg, double db
+    len = sqrt(lx*lx + ly*ly + lz*lz)
+    if len == 0.0 : len = 1.0
+
+    light(0) = lx / len
+    light(1) = ly / len
+    light(2) = lz / len
+    light(3) = 0.0
+
+    light(4) = ar
+    light(5) = ag
+    light(6) = ab
+    light(7) = 0.0
+
+    light(8)  = dr
+    light(9)  = dg
+    light(10) = db
+    light(11) = 0.0
+    return
+
+// geometry 初期化側で使う簡易ヘルパ
+#deffunc set_vertex_normal_xyz array nrm, int vid, double nx, double ny, double nz
+    nrm(vid*3 + 0) = nx
+    nrm(vid*3 + 1) = ny
+    nrm(vid*3 + 2) = nz
+    return
+
+#defcfunc HCLCreateBufferFromd2f array host_double_data
+    tmp = HCLCreateBufferFrom(host_double_data)
+    clmem_out = HCLCreateBuffer(length(host_double_data) * 4)
+    HCLDoXd "F0[i]=(float)A[i];", tmp, clmem_out
+    HCLFinish
+    HCLReleaseBuffer tmp
+    return str(clmem_out)
+#global
+
+#module build_mouse
+#deffunc build_mouse_mvp array mvp, double yaw, double pitch, double cx, double cy, double cz
+    ddim P,16
+    ddim T0,16
+    ddim T1,16
+    ddim RX,16
+    ddim RY,16
+    ddim R,16
+    ddim M0,16
+    ddim M1,16
+
+    mat_proj P
+
+    // 物体中心へ移動 -> 回転 -> 戻す
+    mat_translate T0, -cx, -cy, -cz
+    mat_translate T1,  cx,  cy,  cz
+    mat_rotx RX, -pitch
+    mat_roty RY, -yaw
+
+    mat_mul R, RX, RY
+    mat_mul M0, R, T0
+    mat_mul M1, T1, M0
+    mat_mul mvp, P, M1
+    return
+
+#deffunc build_mouse_normal_matrix array nmat, double yaw, double pitch
+    ddim RX,16
+    ddim RY,16
+    ddim R,16
+
+    mat_rotx RX, pitch
+    mat_roty RY, yaw
+    mat_mul R, RX, RY
+
+    // row-major 3x3 で取り出す
+    nmat(0) = R(0) : nmat(1) = R(1) : nmat(2) = R(2)
+    nmat(3) = R(4) : nmat(4) = R(5) : nmat(5) = R(6)
+    nmat(6) = R(8) : nmat(7) = R(9) : nmat(8) = R(10)
+    return
+#global

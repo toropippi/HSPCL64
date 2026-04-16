@@ -1,0 +1,234 @@
+//点の位置から変換をGPUで計算してOpenCL内部で描画
+//簡易頂点shaderと簡易ピクセルシェーダーを1kernelに統合
+#const width_  640
+#const height_ 480
+#const pixelCount  width_ * height_
+
+#include "HSPCL64.as"
+#include "手動設定ポリゴン1.hsp"
+HCLinit
+
+vertexCount = 1
+// MVP
+ddim host_mvp, 16
+
+// ------------------------------------------------------------
+// OpenCL プログラム/カーネル作成
+// ------------------------------------------------------------
+prg = HCLCreateProgram("raster_1.cl")
+krn_Transform_vertices_And_Raster = HCLCreateKernel(prg, "Transform_vertices_And_Raster")
+
+// ------------------------------------------------------------
+// CL バッファ作成
+// ------------------------------------------------------------
+clmem_pos=int64(HCLCreateBufferFromd2f(host_pos))
+clmem_idx=HCLCreateBufferFrom(host_idx)
+clmem_mvp=int64(HCLCreateBufferFromd2f(host_mvp))
+
+setting_sw = 0
+gosub*setting3D
+
+// ------------------------------------------------------------
+// main描画
+// ------------------------------------------------------------
+screen 0, width_, height_
+mref host1_vram,66
+clmem_host1_vram = HCLCreateBufferFrom(host1_vram)
+fpscount=0
+lastfpscount=0
+lastsec=-1
+
+*main
+	// 視点計算
+	mx = ginfo_mx
+	my = ginfo_my
+	yaw   = (double(mx) / double(width_)  - 0.5) * 3.141592653589793 * 2.0
+	pitch = (double(my) / double(height_) - 0.5) * 1.2
+	; 図形中心は形状ごとにだいたいこのへん
+	cx = 0.0
+	cy = 0.0
+	cz = 3.9
+	build_mouse_mvp host_mvp, yaw, pitch, cx, cy, cz
+	
+	// GPU計算
+	HCLReleaseBuffer clmem_mvp
+	clmem_mvp = int64(HCLCreateBufferFromd2f(host_mvp))
+
+	HCLFillBuffer clmem_host1_vram,-1
+	HCLSetKrns krn_Transform_vertices_And_Raster, clmem_pos, clmem_mvp, clmem_idx, clmem_host1_vram, vertexCount, triCount ,width_, height_
+	HCLDoKrn1 krn_Transform_vertices_And_Raster, width_*height_ ,64
+	HCLReadBuffer clmem_host1_vram,host1_vram
+	
+	redraw 1
+	await 16
+	
+	fpscount++
+	if lastsec != gettime(6){
+		lastsec = gettime(6)
+		lastfpscount=fpscount
+		fpscount=0
+		title "fps" + lastfpscount
+		setting_sw = lastsec \ 6
+		gosub*setting3D
+	}
+	goto*main
+
+stop
+
+*setting3D
+	switch setting_sw
+	case 0
+		gosub*立方体初期設定
+		swbreak
+	case 1
+		gosub*円錐初期設定
+		swbreak
+	case 2
+		gosub*球初期設定
+		swbreak
+	case 3
+		gosub*八面体初期設定
+		swbreak
+	case 4
+		gosub*四角錐初期設定
+		swbreak
+	case 5
+		gosub*円柱初期設定
+		swbreak
+	default
+		swbreak
+	swend
+	
+	HCLReleaseBuffer clmem_pos
+	HCLReleaseBuffer clmem_idx
+	clmem_pos=int64(HCLCreateBufferFromd2f(host_pos))
+	clmem_idx=HCLCreateBufferFrom(host_idx)
+	clmem_screenClip=HCLCreateBuffer(vertexCount*4*4)
+	return
+
+
+#module
+
+#deffunc mat_identity4 array m
+	repeat 16
+		m(cnt) = 0.0
+	loop
+	m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+	return
+
+#deffunc mat_copy array dst, array src
+	repeat 16
+		dst(cnt) = src(cnt)
+	loop
+	return
+
+#deffunc mat_mul array out, array a, array b
+	ddim tmp, 16
+	repeat 4
+		r = cnt
+		repeat 4
+			c = cnt
+			tmp(r*4+c) = 0.0
+			repeat 4
+				k = cnt
+				tmp(r*4+c) += a(r*4+k) * b(k*4+c)
+			loop
+		loop
+	loop
+	repeat 16
+		out(cnt) = tmp(cnt)
+	loop
+	return
+
+#deffunc mat_translate array m, double tx, double ty, double tz
+	repeat 16
+		m(cnt) = 0.0
+	loop
+	m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+
+	m(3)  = tx
+	m(7)  = ty
+	m(11) = tz
+	return
+
+#deffunc mat_rotx array m, double ang
+	repeat 16
+		m(cnt) = 0.0
+	loop
+	m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+	
+	c = cos(ang)
+	s = sin(ang)
+	m(5)  = c
+	m(6)  = -s
+	m(9)  = s
+	m(10) = c
+	return
+
+#deffunc mat_roty array m, double ang
+	repeat 16
+		m(cnt) = 0.0
+	loop
+	m(0)=1.0 : m(5)=1.0 : m(10)=1.0 : m(15)=1.0
+	
+	c = cos(ang)
+	s = sin(ang)
+	m(0)  = c
+	m(2)  = s
+	m(8)  = -s
+	m(10) = c
+	return
+
+#deffunc mat_proj array m
+	aspect = double(width_@) / double(height_@)
+	fy = 1.0 / tan(3.14159 / 3 / 2)
+	fx = fy / aspect
+	zn = 0.12
+	zf = 120.0
+
+	repeat 16
+		m(cnt) = 0.0
+	loop
+
+	m(0)  = fx
+	m(5)  = fy
+	m(10) = zf/(zf-zn)
+	m(11) = -zn*zf/(zf-zn)
+	m(14) = 1.0
+	return
+
+#defcfunc HCLCreateBufferFromd2f array host_double_data
+	tmp = HCLCreateBufferFrom(host_double_data)
+	clmem_out = HCLCreateBuffer(length(host_double_data)*4)
+	HCLDoXd "F0[i]=(float)A[i];",tmp,clmem_out//doubleからfloat変換をGPUで
+	HCLFinish
+	HCLReleaseBuffer tmp
+	return str(clmem_out)
+#global
+
+#module build_mouse
+#deffunc build_mouse_mvp array mvp, double yaw, double pitch, double cx, double cy, double cz
+	ddim P,16
+	ddim T0,16
+	ddim T1,16
+	ddim RX,16
+	ddim RY,16
+	ddim R,16
+	ddim M0,16
+	ddim M1,16
+
+	mat_proj P
+
+	; 物体中心へ移動 -> 回転 -> 戻す
+	mat_translate T0, -cx, -cy, -cz
+	mat_translate T1,  cx,  cy,  cz
+	mat_rotx RX, -pitch
+	mat_roty RY, -yaw
+
+	mat_mul R, RX, RY
+	mat_mul M0, R, T0
+	mat_mul M1, T1, M0
+	mat_mul mvp, P, M1
+	return
+
+#global
